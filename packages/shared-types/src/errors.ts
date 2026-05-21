@@ -1,0 +1,12 @@
+/** 业务错误码 */
+export enum ErrorCode {
+  SUCCESS = 0,
+  BAD_REQUEST = 400,
+  UNAUTHORIZED = 401,
+  FORBIDDEN = 403,
+  NOT_FOUND = 404,
+  CONFLICT = 409,
+  BUSINESS_ERROR = 422,
+  RATE_LIMIT = 429,
+  INTERNAL_ERROR = 500,
+}

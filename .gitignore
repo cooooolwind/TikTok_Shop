@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build
+dist/
+build/
+.next/
+out/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Uploads
+packages/backend/uploads/
+
+# Temp
+tmp/
+temp/
+*.tmp
+
+# Docker
+.docker/
+
+# Turborepo
+.turbo/
+
+# Misc
+*.tsbuildinfo
+
+.claude/
