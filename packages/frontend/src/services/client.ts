@@ -16,9 +16,10 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
-// 响应拦截器 — 统一错误处理
+// 响应拦截器 — 剥离 AxiosResponse 外层，后续 .get<T, R> 直接拿到 R
 client.interceptors.response.use(
-  (response) => response.data as ApiResponse<unknown>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (response: any) => response.data,
   (error) => {
     const message = error.response?.data?.message || error.message || '网络错误';
     console.error('[API Error]', message);

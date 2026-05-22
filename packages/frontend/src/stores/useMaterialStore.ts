@@ -1,42 +1,99 @@
 import { create } from 'zustand';
-import type { Material, MaterialDetail, MaterialListQuery } from '@aigc/shared-types';
+import type { Material, MaterialDetail, MaterialListQuery, MaterialType } from '@aigc/shared-types';
+import type { MaterialState } from '../types';
 import { materialsApi } from '../services/materials.api';
+import { useUIStore } from './useAppStore';
 
-interface MaterialState {
-  items: Material[];
-  total: number;
-  loading: boolean;
-  selectedMaterial: MaterialDetail | null;
-  filters: MaterialListQuery;
-
-  fetchList: (params?: MaterialListQuery) => Promise<void>;
-  fetchDetail: (id: string) => Promise<void>;
-  remove: (id: string) => Promise<void>;
-  setFilters: (filters: MaterialListQuery) => void;
-}
-
-export const useMaterialStore = create<MaterialState>((set) => ({
+export const useMaterialStore = create<MaterialState>((set, get) => ({
   items: [],
   total: 0,
   loading: false,
   selectedMaterial: null,
   filters: { page: 1, pageSize: 20 },
+  uploadVisible: false,
+  uploading: false,
+  uploadProgress: 0,
 
   fetchList: async (params) => {
     set({ loading: true });
-    const res = await materialsApi.list(params);
-    set({ items: res.data.items, total: res.data.total, loading: false });
+    try {
+      const merged = { ...get().filters, ...params };
+      const res = await materialsApi.list(merged);
+      set({ items: res.data.items, total: res.data.total, loading: false });
+    } catch {
+      set({ loading: false });
+      useUIStore.getState().pushNotification({ type: 'error', title: '加载素材列表失败' });
+    }
   },
 
   fetchDetail: async (id) => {
-    const detail = await materialsApi.detail(id);
-    set({ selectedMaterial: detail });
+    try {
+      const detail = await materialsApi.detail(id);
+      set({ selectedMaterial: detail });
+    } catch {
+      useUIStore.getState().pushNotification({ type: 'error', title: '加载素材详情失败' });
+    }
+  },
+
+  upload: async (file, category, sourceDeclaration, tags) => {
+    set({ uploading: true, uploadProgress: 0 });
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('category', category);
+      formData.append('source_declaration', sourceDeclaration);
+      if (tags?.length) formData.append('tags', tags.join(','));
+      await materialsApi.upload(formData);
+      set({ uploading: false, uploadVisible: false, uploadProgress: 100 });
+      useUIStore.getState().pushNotification({ type: 'success', title: '上传成功', message: file.name });
+      get().fetchList();
+    } catch {
+      set({ uploading: false, uploadProgress: 0 });
+      useUIStore.getState().pushNotification({ type: 'error', title: '上传失败' });
+    }
   },
 
   remove: async (id) => {
-    await materialsApi.remove(id);
-    set((s) => ({ items: s.items.filter((m) => m.id !== id) }));
+    try {
+      await materialsApi.remove(id);
+      set((s) => ({ items: s.items.filter((m) => m.id !== id), total: s.total - 1 }));
+      useUIStore.getState().pushNotification({ type: 'success', title: '已删除' });
+    } catch {
+      useUIStore.getState().pushNotification({ type: 'error', title: '删除失败' });
+    }
   },
 
-  setFilters: (filters) => set({ filters }),
+  batchRemove: async (ids) => {
+    try {
+      await materialsApi.batchRemove(ids);
+      set((s) => ({
+        items: s.items.filter((m) => !ids.includes(m.id)),
+        total: s.total - ids.length,
+      }));
+      useUIStore.getState().pushNotification({ type: 'success', title: `已删除 ${ids.length} 项` });
+    } catch {
+      useUIStore.getState().pushNotification({ type: 'error', title: '批量删除失败' });
+    }
+  },
+
+  triggerAnalysis: async (id) => {
+    try {
+      await materialsApi.analyze(id);
+      set((s) => ({
+        items: s.items.map((m) => (m.id === id ? { ...m, status: 'processing' } : m)),
+      }));
+      useUIStore.getState().pushNotification({ type: 'info', title: 'AI 分析已触发' });
+    } catch {
+      useUIStore.getState().pushNotification({ type: 'error', title: '触发分析失败' });
+    }
+  },
+
+  similarSearch: async (query, type, limit, threshold) => {
+    const results = await materialsApi.searchSimilar({ query, type, limit, threshold });
+    return results;
+  },
+
+  setFilters: (filters) => set((s) => ({ filters: { ...s.filters, ...filters } })),
+  setUploadVisible: (visible) => set({ uploadVisible: visible }),
+  clearSelection: () => set({ selectedMaterial: null }),
 }));

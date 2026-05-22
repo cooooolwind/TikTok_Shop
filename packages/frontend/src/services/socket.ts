@@ -31,29 +31,29 @@ export function unsubscribeTask(taskId: string) {
   getSocket().emit(WsEvent.UNSUBSCRIBE, { task_id: taskId });
 }
 
-export function onTaskProgress(cb: (data: TaskProgressEvent) => void) {
+export function onTaskProgress(cb: (data: TaskProgressEvent) => void): () => void {
   getSocket().on(WsEvent.TASK_PROGRESS, cb);
-  return () => getSocket().off(WsEvent.TASK_PROGRESS, cb);
+  return () => { getSocket().off(WsEvent.TASK_PROGRESS, cb); };
 }
 
-export function onTaskCompleted(cb: (data: TaskCompletedEvent) => void) {
+export function onTaskCompleted(cb: (data: TaskCompletedEvent) => void): () => void {
   getSocket().on(WsEvent.TASK_COMPLETED, cb);
-  return () => getSocket().off(WsEvent.TASK_COMPLETED, cb);
+  return () => { getSocket().off(WsEvent.TASK_COMPLETED, cb); };
 }
 
-export function onTaskFailed(cb: (data: TaskFailedEvent) => void) {
+export function onTaskFailed(cb: (data: TaskFailedEvent) => void): () => void {
   getSocket().on(WsEvent.TASK_FAILED, cb);
-  return () => getSocket().off(WsEvent.TASK_FAILED, cb);
+  return () => { getSocket().off(WsEvent.TASK_FAILED, cb); };
 }
 
-export function onMaterialAnalyzed(cb: (data: MaterialAnalyzedEvent) => void) {
+export function onMaterialAnalyzed(cb: (data: MaterialAnalyzedEvent) => void): () => void {
   getSocket().on(WsEvent.MATERIAL_ANALYZED, cb);
-  return () => getSocket().off(WsEvent.MATERIAL_ANALYZED, cb);
+  return () => { getSocket().off(WsEvent.MATERIAL_ANALYZED, cb); };
 }
 
-export function onScriptGenerated(cb: (data: ScriptGeneratedEvent) => void) {
+export function onScriptGenerated(cb: (data: ScriptGeneratedEvent) => void): () => void {
   getSocket().on(WsEvent.SCRIPT_GENERATED, cb);
-  return () => getSocket().off(WsEvent.SCRIPT_GENERATED, cb);
+  return () => { getSocket().off(WsEvent.SCRIPT_GENERATED, cb); };
 }
 
 export function disconnectSocket() {

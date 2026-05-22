@@ -1,9 +1,9 @@
 /** 视频分辨率选项 */
 export const RESOLUTIONS = [
-  { label: '1080x1920 (9:16 竖版)', value: '1080x1920' },
-  { label: '1920x1080 (16:9 横版)', value: '1920x1080' },
-  { label: '1080x1080 (1:1 方形)', value: '1080x1080' },
-] as const;
+  { label: '1080x1920 (9:16 竖版)', value: '1080x1920' as const },
+  { label: '1920x1080 (16:9 横版)', value: '1920x1080' as const },
+  { label: '1080x1080 (1:1 方形)', value: '1080x1080' as const },
+];
 
 /** 画幅比例 */
 export const ASPECT_RATIOS = ['9:16', '16:9', '1:1'] as const;
