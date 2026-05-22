@@ -1,9 +1,21 @@
 import client from './client';
-import type { PaginatedResponse, Material, MaterialDetail, MaterialListQuery, SimilarSearchRequest, SimilarSearchResult } from '@aigc/shared-types';
+import type {
+  PaginatedResponse,
+  Material,
+  MaterialDetail,
+  MaterialListQuery,
+  MaterialUploadResponse,
+  SimilarSearchRequest,
+  SimilarSearchResult,
+} from '@aigc/shared-types';
 
 const BASE = '/materials';
 
 export const materialsApi = {
+  upload: (formData: FormData) =>
+    client.post<unknown, MaterialUploadResponse>(`${BASE}/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
   list: (params?: MaterialListQuery) => client.get<unknown, PaginatedResponse<Material>>(BASE, { params }),
   detail: (id: string) => client.get<unknown, MaterialDetail>(`${BASE}/${id}`),
   remove: (id: string) => client.delete<unknown, { message: string }>(`${BASE}/${id}`),

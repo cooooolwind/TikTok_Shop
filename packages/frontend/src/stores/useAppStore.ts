@@ -1,11 +1,30 @@
 import { create } from 'zustand';
+import type { UIState, NotificationItem } from '../types';
 
-interface AppState {
-  collapsed: boolean;
-  toggleCollapsed: () => void;
-}
+let notificationId = 0;
 
-export const useAppStore = create<AppState>((set) => ({
-  collapsed: false,
-  toggleCollapsed: () => set((s) => ({ collapsed: !s.collapsed })),
+export const useUIStore = create<UIState>((set) => ({
+  sidebarCollapsed: false,
+  globalLoading: false,
+  notifications: [],
+
+  toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+
+  setGlobalLoading: (loading) => set({ globalLoading: loading }),
+
+  pushNotification: (notif) => {
+    const id = `notif_${++notificationId}`;
+    set((s) => ({
+      notifications: [
+        ...s.notifications,
+        { ...notif, id, timestamp: Date.now() },
+      ],
+    }));
+  },
+
+  dismissNotification: (id) => {
+    set((s) => ({
+      notifications: s.notifications.filter((n) => n.id !== id),
+    }));
+  },
 }));
