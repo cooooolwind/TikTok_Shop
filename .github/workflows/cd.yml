@@ -1,4 +1,4 @@
-name: Deploy to ECS
+name: CD
 
 on:
   push:
@@ -16,10 +16,10 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-  ACR_REGISTRY: crpi-62l1ij6nulkvhb1f.cn-hangzhou.personal.cr.aliyuncs.com
+  ACR_REGISTRY: ${{ vars.ACR_REGISTRY }}
   ACR_NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
-  BACKEND_IMAGE: ${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/aigc-backend
-  FRONTEND_IMAGE: ${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/aigc-frontend
+  BACKEND_IMAGE: ${{ vars.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/aigc-backend
+  FRONTEND_IMAGE: ${{ vars.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/aigc-frontend
 
 jobs:
   ci:
