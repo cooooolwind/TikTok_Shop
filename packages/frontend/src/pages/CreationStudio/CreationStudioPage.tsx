@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Row, Col, Button, Space, Select, Empty } from 'antd';
+import { Row, Col, Button, Space, Select } from 'antd';
 import { PlusOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
 import TaskCard from '../../components/creation/TaskCard';

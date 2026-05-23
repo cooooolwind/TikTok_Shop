@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Card, Descriptions, Tag, Button, Space, Spin, Typography,
-  List, Row, Col, Divider,
+  List, Row, Col,
 } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';

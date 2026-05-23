@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Card, Form, Select, Slider, Button, Space, Typography,
-  Row, Col, Divider, Spin, Radio,
+  Card, Form, Select, Slider, Button, Typography,
+  Row, Col, Divider, Spin,
 } from 'antd';
 import { ThunderboltOutlined } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
@@ -53,21 +53,6 @@ export default function CreateTask() {
     });
   };
 
-  const handleQuick = () => {
-    // 快速成片：用第一个已确认的剧本
-    const confirmed = scripts.filter((s) => s.status === 'confirmed');
-    if (confirmed.length === 0) {
-      return;
-    }
-    form.validateFields().then((values) => {
-      quickGenerate({
-        product_info: selectedScript?.product_info || confirmed[0].product_info,
-        options: values,
-      }).then((task) => {
-        navigate(`/creation/tasks/${task.id}`);
-      });
-    });
-  };
 
   return (
     <div>

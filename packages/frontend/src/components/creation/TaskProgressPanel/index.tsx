@@ -1,4 +1,4 @@
-import { Card, Progress, Steps, Typography, Space, Descriptions } from 'antd';
+import { Card, Progress, Typography, Space, Descriptions } from 'antd';
 import type { GenerationTask } from '@aigc/shared-types';
 import StatusTag from '../../common/StatusTag';
 import { TASK_STATUS_LABELS } from '../../../constants';
