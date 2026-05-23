@@ -1,4 +1,4 @@
-.PHONY: dev build test lint typecheck clean docker-up docker-down db-migrate db-seed
+.PHONY: dev build test lint typecheck clean docker-up docker-down docker-prod-up docker-prod-down db-migrate db-seed deploy
 
 # 开发环境一键启动
 dev:
@@ -43,3 +43,14 @@ db-migrate:
 # 开发数据填充
 db-seed:
 	pnpm --filter @aigc/backend ts-node scripts/seed-db.ts
+
+# Docker 生产模式 (使用预构建镜像)
+docker-prod-up:
+	docker compose -f docker-compose.prod.yml up -d
+
+docker-prod-down:
+	docker compose -f docker-compose.prod.yml down
+
+# 本地部署到 ECS (需提前配置好 SSH Key)
+deploy:
+	./scripts/deploy.sh all

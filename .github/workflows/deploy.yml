@@ -1,0 +1,136 @@
+name: Deploy to ECS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_ci:
+        description: '跳过 CI 检查 (紧急修复)'
+        type: boolean
+        default: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  ACR_REGISTRY: registry.cn-shanghai.aliyuncs.com
+  ACR_NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
+  BACKEND_IMAGE: registry.cn-shanghai.aliyuncs.com/${{ secrets.ACR_NAMESPACE }}/aigc-backend
+  FRONTEND_IMAGE: registry.cn-shanghai.aliyuncs.com/${{ secrets.ACR_NAMESPACE }}/aigc-frontend
+
+jobs:
+  ci:
+    if: ${{ !inputs.skip_ci }}
+    uses: ./.github/workflows/ci.yml
+
+  build-and-push:
+    needs: [ci]
+    if: ${{ !cancelled() && (needs.ci.result == 'success' || needs.ci.result == 'skipped') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Alibaba Cloud ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_ID }}
+          password: ${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_SECRET }}
+
+      - name: Extract metadata (backend)
+        id: meta_backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.BACKEND_IMAGE }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/backend.Dockerfile
+          push: true
+          tags: ${{ steps.meta_backend.outputs.tags }}
+          labels: ${{ steps.meta_backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract metadata (frontend)
+        id: meta_frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.FRONTEND_IMAGE }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/frontend.Dockerfile
+          push: true
+          tags: ${{ steps.meta_frontend.outputs.tags }}
+          labels: ${{ steps.meta_frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: [build-and-push]
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy deployment files to ECS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          source: 'docker-compose.prod.yml,scripts/deploy.sh'
+          target: '/opt/aigc-platform/'
+
+      - name: Deploy on ECS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          script_stop: true
+          script: |
+            cd /opt/aigc-platform
+
+            # 登录阿里云 ACR
+            docker login registry.cn-shanghai.aliyuncs.com \
+              -u "$ACR_ACCESS_KEY_ID" \
+              -p "$ACR_ACCESS_KEY_SECRET"
+
+            # 拉取最新镜像
+            export BACKEND_IMAGE="registry.cn-shanghai.aliyuncs.com/$ACR_NAMESPACE/aigc-backend:latest"
+            export FRONTEND_IMAGE="registry.cn-shanghai.aliyuncs.com/$ACR_NAMESPACE/aigc-frontend:latest"
+
+            docker compose -f docker-compose.prod.yml pull
+
+            # 滚动更新
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+            # 清理旧镜像
+            docker image prune -af || true
+
+            # 健康检查
+            sleep 5
+            curl -f http://localhost:3000/api/v1/health && echo "Backend OK" || echo "Backend check failed"
+            curl -f http://localhost/ && echo "Frontend OK" || echo "Frontend check failed"
+
+            docker logout registry.cn-shanghai.aliyuncs.com
+          envs: |
+            ACR_ACCESS_KEY_ID=${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_ID }}
+            ACR_ACCESS_KEY_SECRET=${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_SECRET }}
+            ACR_NAMESPACE=${{ secrets.ACR_NAMESPACE }}
