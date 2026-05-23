@@ -138,22 +138,26 @@ jobs:
 
       - name: Deploy on ECS
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          ACR_USERNAME: ${{ steps.docker-creds.outputs.username }}
+          ACR_PASSWORD: ${{ steps.docker-creds.outputs.password }}
         with:
           host: ${{ secrets.ECS_HOST }}
           username: ${{ secrets.ECS_USER }}
           key: ${{ secrets.ECS_SSH_KEY }}
           script_stop: true
+          envs: ACR_USERNAME,ACR_PASSWORD,ACR_NAMESPACE,ACR_REGISTRY
           script: |
             cd /opt/aigc-platform
 
             # 登录阿里云 ACR
-            docker login crpi-62l1ij6nulkvhb1f.cn-hangzhou.personal.cr.aliyuncs.com \
+            docker login $ACR_REGISTRY \
               -u "$ACR_USERNAME" \
               -p "$ACR_PASSWORD"
 
             # 拉取最新镜像
-            export BACKEND_IMAGE="crpi-62l1ij6nulkvhb1f.cn-hangzhou.personal.cr.aliyuncs.com/$ACR_NAMESPACE/aigc-backend:latest"
-            export FRONTEND_IMAGE="crpi-62l1ij6nulkvhb1f.cn-hangzhou.personal.cr.aliyuncs.com/$ACR_NAMESPACE/aigc-frontend:latest"
+            export BACKEND_IMAGE="$ACR_REGISTRY/$ACR_NAMESPACE/aigc-backend:latest"
+            export FRONTEND_IMAGE="$ACR_REGISTRY/$ACR_NAMESPACE/aigc-frontend:latest"
 
             docker compose -f docker-compose.prod.yml pull
 
@@ -168,8 +172,4 @@ jobs:
             curl -f http://localhost:3000/api/v1/health && echo "Backend OK" || echo "Backend check failed"
             curl -f http://localhost/ && echo "Frontend OK" || echo "Frontend check failed"
 
-            docker logout crpi-62l1ij6nulkvhb1f.cn-hangzhou.personal.cr.aliyuncs.com
-          envs: |
-            ACR_USERNAME=${{ steps.docker-creds.outputs.username }}
-            ACR_PASSWORD=${{ steps.docker-creds.outputs.password }}
-            ACR_NAMESPACE=${{ secrets.ACR_NAMESPACE }}
+            docker logout $ACR_REGISTRY
