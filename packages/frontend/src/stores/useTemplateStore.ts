@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { TemplateState } from '../types';
 import { templatesApi } from '../services/templates.api';
 import { useUIStore } from './useAppStore';
+import { asArray } from '../services/response';
 
 export const useTemplateStore = create<TemplateState>((set, get) => ({
   items: [],
@@ -15,7 +16,8 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
     try {
       const merged = { ...get().filters, ...params };
       const res = await templatesApi.list(merged);
-      set({ items: res.data.items, total: res.data.total, loading: false });
+      const data = 'items' in res ? res : res.data;
+      set({ items: asArray(data.items), total: data.total ?? 0, loading: false, filters: merged });
     } catch {
       set({ loading: false });
       useUIStore.getState().pushNotification({ type: 'error', title: '加载模板失败' });

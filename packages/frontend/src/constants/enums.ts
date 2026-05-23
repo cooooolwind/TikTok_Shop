@@ -1,8 +1,3 @@
-/**
- * 业务枚举 → UI 标签映射
- * 所有列表/筛选/状态标签统一从此处取 label，确保全局一致
- */
-
 export const MATERIAL_STATUS_LABELS: Record<string, string> = {
   uploaded: '已上传',
   processing: '分析中',
@@ -24,13 +19,15 @@ export const SOURCE_DECLARATION_LABELS: Record<string, string> = {
 };
 
 export const SCRIPT_MODE_LABELS: Record<string, string> = {
-  template: '灵感模板',
-  imitation: '爆款仿写',
+  template: '模板生成',
+  imitation: '素材生成',
   free: '自由创作',
 };
 
 export const SCRIPT_STATUS_LABELS: Record<string, string> = {
+  generating: '生成中',
   draft: '草稿',
+  failed: '生成失败',
   confirmed: '已确认',
 };
 
@@ -48,12 +45,12 @@ export const ANALYSIS_STATUS_LABELS: Record<string, string> = {
   failed: '失败',
 };
 
-/** 状态对应的 Ant Design Tag 颜色 */
 export const STATUS_COLOR_MAP: Record<string, string> = {
   uploaded: 'default',
   processing: 'processing',
   ready: 'success',
   failed: 'error',
+  generating: 'processing',
   draft: 'warning',
   confirmed: 'success',
   queued: 'default',
