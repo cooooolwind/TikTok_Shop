@@ -1,9 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import type { Queue } from 'bullmq';
 import { randomUUID } from 'crypto';
+import { promises as fs } from 'fs';
+import { basename, join } from 'path';
 import type {
   AddSceneRequest,
   CreateScriptRequest,
@@ -24,6 +27,11 @@ import { Script } from './entities/script.entity';
 
 const DEFAULT_MERCHANT_ID = 'default';
 
+interface MaterialGenerationInput {
+  context: string;
+  media: { type: 'image' | 'video'; filename: string; imageUrl?: string; url?: string; thumbnailUrl?: string }[];
+}
+
 @Injectable()
 export class ScriptsService {
   constructor(
@@ -31,11 +39,12 @@ export class ScriptsService {
     @InjectRepository(Scene) private readonly scenesRepository: Repository<Scene>,
     @InjectRepository(Material) private readonly materialsRepository: Repository<Material>,
     private readonly templatesService: TemplatesService,
+    private readonly configService: ConfigService,
     @InjectQueue(QUEUES.SCRIPT_GENERATION) private readonly scriptQueue: Queue,
   ) {}
 
   async generate(data: GenerateScriptRequest): Promise<GenerateScriptQueuedResponse> {
-    const materialContext = await this.buildMaterialContext(data.material_ids ?? []);
+    const materialInput = await this.buildMaterialInput(data.material_ids ?? []);
     const template = data.template_id ? await this.templatesService.findRawById(data.template_id) : null;
     if (data.template_id && !template) throw new NotFoundException('Template not found');
 
@@ -71,7 +80,8 @@ export class ScriptsService {
         mode: data.mode,
         preferences: data.preferences,
         template,
-        materialContext,
+        materialContext: materialInput.context,
+        materialMedia: materialInput.media,
         manualText: data.manual_text,
       },
       { attempts: 2, removeOnComplete: true, removeOnFail: false },
@@ -237,7 +247,7 @@ export class ScriptsService {
     if (script.status !== 'failed') throw new BadRequestException('Only failed scripts can be retried');
     const taskId = `script_generation_${script.id}`;
     const template = script.templateId ? await this.templatesService.findRawById(script.templateId) : null;
-    const materialContext = await this.buildMaterialContext(script.sourceMaterialIds ?? []);
+    const materialInput = await this.buildMaterialInput(script.sourceMaterialIds ?? []);
     script.status = 'generating';
     script.generationTaskId = taskId;
     script.generationError = null;
@@ -250,7 +260,8 @@ export class ScriptsService {
         productInfo: script.productInfo,
         mode: script.mode,
         template,
-        materialContext,
+        materialContext: materialInput.context,
+        materialMedia: materialInput.media,
       },
       { attempts: 2, removeOnComplete: true, removeOnFail: false },
     );
@@ -272,10 +283,10 @@ export class ScriptsService {
     return script;
   }
 
-  private async buildMaterialContext(materialIds: string[]) {
-    if (materialIds.length === 0) return '';
+  private async buildMaterialInput(materialIds: string[]): Promise<MaterialGenerationInput> {
+    if (materialIds.length === 0) return { context: '', media: [] };
     const materials = await this.materialsRepository.findBy({ id: In(materialIds), merchantId: DEFAULT_MERCHANT_ID });
-    return materials
+    const context = materials
       .map((material) =>
         [
           `Material ${material.id}`,
@@ -289,6 +300,36 @@ export class ScriptsService {
         ].join('; '),
       )
       .join('\n');
+    const media = await Promise.all(materials.map((material) => this.toMaterialMedia(material)));
+    return { context, media: media.filter((item): item is NonNullable<typeof item> => Boolean(item)) };
+  }
+
+  private async toMaterialMedia(material: Material) {
+    if (material.type === 'image') {
+      const imageUrl = await this.toImageDataUrl(material);
+      return imageUrl ? { type: 'image' as const, filename: material.filename, imageUrl } : null;
+    }
+
+    return {
+      type: 'video' as const,
+      filename: material.filename,
+      url: material.url,
+      thumbnailUrl: material.thumbnailUrl ?? undefined,
+    };
+  }
+
+  private async toImageDataUrl(material: Material) {
+    try {
+      const storage = this.configService.get<{ localPath: string }>('storage');
+      const localPath = storage?.localPath ?? join(process.cwd(), 'uploads');
+      const relative = material.url.replace(/^\/uploads\/?/, '');
+      const filePath = join(localPath, relative || basename(material.url));
+      const bytes = await fs.readFile(filePath);
+      const mimeType = material.mimeType || 'image/jpeg';
+      return `data:${mimeType};base64,${bytes.toString('base64')}`;
+    } catch {
+      return undefined;
+    }
   }
 
   private async replaceScenes(scriptId: string, scenes: CreateScriptRequest['scenes']) {

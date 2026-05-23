@@ -18,6 +18,7 @@ interface ScriptGenerationJob {
   preferences?: ScriptPreferences;
   template?: unknown;
   materialContext?: string;
+  materialMedia?: { type: 'image' | 'video'; filename: string; imageUrl?: string; url?: string; thumbnailUrl?: string }[];
   manualText?: string;
 }
 
@@ -87,15 +88,43 @@ export class ScriptGenerationProcessor extends WorkerHost {
       },
       {
         role: 'user',
-        content: JSON.stringify({
-          product_info: data.productInfo,
-          mode: data.mode,
-          preferences: data.preferences,
-          template: data.template,
-          material_context: data.materialContext,
-          manual_text: data.manualText,
-        }),
+        content: this.buildUserContent(
+          {
+            product_info: data.productInfo,
+            mode: data.mode,
+            preferences: data.preferences,
+            template: data.template,
+            material_context: data.materialContext,
+            material_media: (data.materialMedia ?? []).map((item) => ({
+              type: item.type,
+              filename: item.filename,
+              url: item.url,
+              thumbnail_url: item.thumbnailUrl,
+            })),
+            manual_text: data.manualText,
+          },
+          data.materialMedia ?? [],
+        ),
       },
+    ];
+  }
+
+  private buildUserContent(payload: Record<string, unknown>, materialMedia: NonNullable<ScriptGenerationJob['materialMedia']>) {
+    const imageItems = materialMedia
+      .filter((item) => item.type === 'image' && item.imageUrl)
+      .map((item) => ({
+        type: 'image_url',
+        image_url: { url: item.imageUrl as string },
+      }));
+
+    if (imageItems.length === 0) return JSON.stringify(payload);
+
+    return [
+      {
+        type: 'text',
+        text: JSON.stringify(payload),
+      },
+      ...imageItems,
     ];
   }
 

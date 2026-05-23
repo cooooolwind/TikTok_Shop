@@ -1,4 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { promises as fsPromises } from 'fs';
 import { ScriptsService } from './scripts.service';
 import { Script } from './entities/script.entity';
 import { Scene } from './entities/scene.entity';
@@ -86,6 +87,12 @@ function makeService(options?: { script?: Script | null; scripts?: Script[] }) {
   const templatesService = {
     findRawById: jest.fn(async () => null),
   };
+  const configService = {
+    get: jest.fn((key: string) => {
+      if (key === 'storage') return { localPath: 'uploads-test' };
+      return undefined;
+    }),
+  };
   const scriptQueue = {
     add: jest.fn(async () => ({ id: 'job-1' })),
   };
@@ -95,6 +102,7 @@ function makeService(options?: { script?: Script | null; scripts?: Script[] }) {
     scenesRepository as never,
     materialsRepository as never,
     templatesService as never,
+    configService as never,
     scriptQueue as never,
   );
 
@@ -141,6 +149,44 @@ describe('ScriptsService', () => {
     expect(scriptQueue.add).toHaveBeenCalledWith(
       'generate',
       expect.objectContaining({ materialContext: expect.stringContaining('dress.jpg') }),
+      expect.anything(),
+    );
+  });
+
+  it('embeds local image materials as multimodal data URLs', async () => {
+    const { service, materialsRepository, scriptQueue } = makeService();
+    jest.spyOn(fsPromises, 'readFile').mockResolvedValue(Buffer.from('image-bytes'));
+    materialsRepository.findBy.mockResolvedValue([
+      {
+        id: 'material-1',
+        type: 'image',
+        url: '/uploads/materials/dress.jpg',
+        filename: 'dress.jpg',
+        tags: ['dress'],
+        aiTags: [],
+        aiDescription: '',
+        category: 'product',
+        status: 'uploaded',
+        mimeType: 'image/jpeg',
+      },
+    ] as never);
+
+    await service.generate({
+      product_info: { name: 'Dress', description: 'Desc', category: 'fashion', selling_points: [] },
+      mode: 'imitation',
+      material_ids: ['material-1'],
+    });
+
+    expect(scriptQueue.add).toHaveBeenCalledWith(
+      'generate',
+      expect.objectContaining({
+        materialMedia: [
+          expect.objectContaining({
+            type: 'image',
+            imageUrl: expect.stringMatching(/^data:image\/jpeg;base64,/),
+          }),
+        ],
+      }),
       expect.anything(),
     );
   });
