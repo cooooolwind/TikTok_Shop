@@ -3,7 +3,11 @@ import { registerAs } from '@nestjs/config';
 export default registerAs('volcano', () => ({
   apiKey: process.env.VOLCANO_API_KEY || '',
   baseUrl: process.env.VOLCANO_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3',
+  textApiKey: process.env.VOLCANO_TEXT_API_KEY || process.env.VOLCANO_API_KEY || '',
+  textBaseUrl: process.env.VOLCANO_TEXT_BASE_URL || process.env.VOLCANO_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3',
   textEndpoint: process.env.VOLCANO_TEXT_ENDPOINT || '',
+  videoApiKey: process.env.VOLCANO_VIDEO_API_KEY || process.env.VOLCANO_API_KEY || '',
+  videoBaseUrl: process.env.VOLCANO_VIDEO_BASE_URL || process.env.VOLCANO_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3',
   videoEndpoint: process.env.VOLCANO_VIDEO_ENDPOINT || '',
   mockMode: process.env.MOCK_MODE === 'true',
   rateLimit: {

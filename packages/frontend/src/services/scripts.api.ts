@@ -3,7 +3,9 @@ import type {
   ApiResponse,
   PaginatedResponse,
   Script,
+  CreateScriptRequest,
   GenerateScriptRequest,
+  GenerateScriptQueuedResponse,
   BatchGenerateRequest,
   BatchGenerateResponse,
   UpdateScriptRequest,
@@ -18,22 +20,37 @@ import { unwrapResponse } from './response';
 const BASE = '/scripts';
 
 export const scriptsApi = {
-  generate: (data: GenerateScriptRequest) => client.post<unknown, Script>(`${BASE}/generate`, data),
+  create: async (data: CreateScriptRequest) =>
+    unwrapResponse<Script>(await client.post<unknown, Script | ApiResponse<Script>>(BASE, data)),
+  generate: async (data: GenerateScriptRequest) =>
+    unwrapResponse<GenerateScriptQueuedResponse>(
+      await client.post<unknown, GenerateScriptQueuedResponse | ApiResponse<GenerateScriptQueuedResponse>>(`${BASE}/generate`, data),
+    ),
   batchGenerate: (data: BatchGenerateRequest) => client.post<unknown, BatchGenerateResponse>(`${BASE}/generate/batch`, data),
   list: async (params?: ScriptListQuery) =>
     unwrapResponse<PaginatedResponse<Script>['data'] | PaginatedResponse<Script>>(
       await client.get<unknown, PaginatedResponse<Script> | ApiResponse<PaginatedResponse<Script>['data']>>(BASE, { params }),
     ),
-  detail: (id: string) => client.get<unknown, Script>(`${BASE}/${id}`),
-  update: (id: string, data: UpdateScriptRequest) => client.put<unknown, Script>(`${BASE}/${id}`, data),
-  updateScene: (id: string, sceneId: string, data: UpdateSceneRequest) =>
-    client.put<unknown, Scene>(`${BASE}/${id}/scenes/${sceneId}`, data),
-  addScene: (id: string, data: AddSceneRequest) => client.post<unknown, Scene>(`${BASE}/${id}/scenes`, data),
+  detail: async (id: string) => unwrapResponse<Script>(await client.get<unknown, Script | ApiResponse<Script>>(`${BASE}/${id}`)),
+  update: async (id: string, data: UpdateScriptRequest) =>
+    unwrapResponse<Script>(await client.put<unknown, Script | ApiResponse<Script>>(`${BASE}/${id}`, data)),
+  updateScene: async (id: string, sceneId: string, data: UpdateSceneRequest) =>
+    unwrapResponse<Scene>(await client.put<unknown, Scene | ApiResponse<Scene>>(`${BASE}/${id}/scenes/${sceneId}`, data)),
+  addScene: async (id: string, data: AddSceneRequest) =>
+    unwrapResponse<Scene>(await client.post<unknown, Scene | ApiResponse<Scene>>(`${BASE}/${id}/scenes`, data)),
   removeScene: (id: string, sceneId: string) => client.delete<unknown, { message: string }>(`${BASE}/${id}/scenes/${sceneId}`),
-  reorderScenes: (id: string, sceneIds: string[]) =>
-    client.put<unknown, Scene[]>(`${BASE}/${id}/scenes/reorder`, { scene_ids: sceneIds }),
-  regenerateScene: (id: string, sceneId: string, data: RegenerateSceneRequest) =>
-    client.post<unknown, Scene>(`${BASE}/${id}/scenes/${sceneId}/regenerate`, data),
-  confirm: (id: string) => client.post<unknown, Script>(`${BASE}/${id}/confirm`),
+  reorderScenes: async (id: string, sceneIds: string[]) =>
+    unwrapResponse<Scene[]>(await client.put<unknown, Scene[] | ApiResponse<Scene[]>>(`${BASE}/${id}/scenes/reorder`, { scene_ids: sceneIds })),
+  regenerateScene: async (id: string, sceneId: string, data: RegenerateSceneRequest) =>
+    unwrapResponse<Scene>(
+      await client.post<unknown, Scene | ApiResponse<Scene>>(`${BASE}/${id}/scenes/${sceneId}/regenerate`, data),
+    ),
+  confirm: async (id: string) => unwrapResponse<Script>(await client.post<unknown, Script | ApiResponse<Script>>(`${BASE}/${id}/confirm`)),
+  retry: async (id: string) =>
+    unwrapResponse<{ task_id: string; status: 'queued' }>(
+      await client.post<unknown, { task_id: string; status: 'queued' } | ApiResponse<{ task_id: string; status: 'queued' }>>(
+        `${BASE}/${id}/retry`,
+      ),
+    ),
   remove: (id: string) => client.delete<unknown, { message: string }>(`${BASE}/${id}`),
 };

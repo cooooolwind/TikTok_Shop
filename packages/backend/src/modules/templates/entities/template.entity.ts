@@ -5,6 +5,9 @@ export class Template {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Column({ name: 'merchant_id', length: 64, default: 'default' })
+  merchantId: string;
+
   @Column({ length: 256 })
   name: string;
 
@@ -22,6 +25,9 @@ export class Template {
 
   @Column({ name: 'derived_from', type: 'jsonb', default: () => "'[]'" })
   derivedFrom: string[];
+
+  @Column({ name: 'is_builtin', default: false })
+  isBuiltin: boolean;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

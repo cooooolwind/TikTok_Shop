@@ -1,7 +1,7 @@
 import type {
   Material, MaterialDetail, MaterialListQuery, MaterialType,
   Script, Scene, ScriptListQuery, ScriptMode, ScriptStatus,
-  ProductInfo, ScriptPreferences,
+  CreateScriptRequest, GenerateScriptQueuedResponse, GenerateScriptRequest, ProductInfo,
   GenerationTask, GenerationStatus, GenerationListQuery,
   TaskProgress, TaskResult, TaskError, VideoOptions,
   ReferenceVideo, ReferenceListQuery,
@@ -93,13 +93,9 @@ export interface ScriptState {
   fetchList: (params?: ScriptListQuery) => Promise<void>;
   fetchDetail: (id: string) => Promise<void>;
 
-  generate: (params: {
-    product_info: ProductInfo;
-    template_id?: string;
-    reference_id?: string;
-    mode: ScriptMode;
-    preferences?: ScriptPreferences;
-  }) => Promise<Script>;
+  create: (params: CreateScriptRequest) => Promise<Script>;
+  generate: (params: GenerateScriptRequest) => Promise<GenerateScriptQueuedResponse>;
+  retry: (id: string) => Promise<{ task_id: string; status: 'queued' }>;
   batchGenerate: (params: {
     product_info: ProductInfo;
     count: number;

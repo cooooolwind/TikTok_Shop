@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Put, Delete, Param } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, Delete, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { TemplatesService } from './templates.service';
+import { TemplateListQueryDto, UpsertTemplateDto } from './dto/template.dto';
 
 @ApiTags('灵感模板 /templates')
 @Controller('templates')
@@ -9,14 +10,14 @@ export class TemplatesController {
 
   @Post()
   @ApiOperation({ summary: '2.5 创建灵感模板' })
-  create() {
-    return this.templatesService.create();
+  create(@Body() body: UpsertTemplateDto) {
+    return this.templatesService.create(body);
   }
 
   @Get()
   @ApiOperation({ summary: '2.6 模板列表' })
-  findAll() {
-    return this.templatesService.findAll();
+  findAll(@Query() query: TemplateListQueryDto) {
+    return this.templatesService.findAll(query);
   }
 
   @Get(':id')
@@ -27,8 +28,8 @@ export class TemplatesController {
 
   @Put(':id')
   @ApiOperation({ summary: '2.8 更新模板' })
-  update(@Param('id') id: string) {
-    return this.templatesService.update(id);
+  update(@Param('id') id: string, @Body() body: Partial<UpsertTemplateDto>) {
+    return this.templatesService.update(id, body);
   }
 
   @Delete(':id')
