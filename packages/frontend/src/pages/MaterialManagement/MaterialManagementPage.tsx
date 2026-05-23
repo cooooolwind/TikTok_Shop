@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Row, Col, Button, Input, Select, Space, Modal,
-  Upload, Form, message,
+  Upload, Form,
 } from 'antd';
 import {
   UploadOutlined, SearchOutlined, DeleteOutlined,
@@ -75,11 +75,6 @@ export default function MaterialManagementPage() {
     });
   };
 
-  const handleUploadOk = async (file: File) => {
-    // 需要 category 和 source_declaration 从表单获取
-    // 简化版：直接用默认值，完整版在 modal 中提供表单
-    await upload(file, 'product', 'owned');
-  };
 
   return (
     <div>
@@ -208,9 +203,9 @@ export default function MaterialManagementPage() {
         <UploadForm
           uploading={uploading}
           uploadProgress={uploadProgress}
-          onUpload={(values: { file: any; category: string; source_declaration: string; tags: string[] }) => {
-            const file = (values.file as any)?.originFileObj || values.file;
-            upload(file as File, values.category, values.source_declaration, values.tags);
+          onUpload={(values: { file: UploadFile | File; category: string; source_declaration: string; tags: string[] }) => {
+            const file = ('originFileObj' in values.file ? values.file.originFileObj : values.file) as File;
+            upload(file, values.category, values.source_declaration, values.tags);
           }}
           onCancel={() => setUploadVisible(false)}
         />
