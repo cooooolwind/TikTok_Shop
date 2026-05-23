@@ -16,10 +16,10 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-  ACR_REGISTRY: ${{ vars.ACR_REGISTRY }}
+  ACR_REGISTRY: ${{ secrets.ACR_REGISTRY }}
   ACR_NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
-  BACKEND_IMAGE: ${{ vars.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/aigc-backend
-  FRONTEND_IMAGE: ${{ vars.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/aigc-frontend
+  BACKEND_IMAGE: ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/aigc-backend
+  FRONTEND_IMAGE: ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/aigc-frontend
 
 jobs:
   ci:
