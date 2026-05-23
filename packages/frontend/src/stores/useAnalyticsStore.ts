@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { AnalyticsState } from '../types';
 import { analyticsApi } from '../services/analytics.api';
 import { useUIStore } from './useAppStore';
+import { asArray } from '../services/response';
 
 export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
   overview: null,
@@ -37,7 +38,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
         ...get().dateRange,
         granularity: get().granularity,
       });
-      set({ trends, trendsLoading: false });
+      set({ trends: asArray(trends), trendsLoading: false });
     } catch {
       set({ trendsLoading: false });
       useUIStore.getState().pushNotification({ type: 'error', title: '加载趋势数据失败' });
@@ -48,7 +49,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     set({ attributionLoading: true });
     try {
       const attribution = await analyticsApi.attribution();
-      set({ attribution, attributionLoading: false });
+      set({ attribution: asArray(attribution), attributionLoading: false });
     } catch {
       set({ attributionLoading: false });
       useUIStore.getState().pushNotification({ type: 'error', title: '加载归因数据失败' });
@@ -59,7 +60,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     set({ loading: true });
     try {
       const durationDistribution = await analyticsApi.durationDistribution();
-      set({ durationDistribution, loading: false });
+      set({ durationDistribution: asArray(durationDistribution), loading: false });
     } catch {
       set({ loading: false });
       useUIStore.getState().pushNotification({ type: 'error', title: '加载耗时分布失败' });

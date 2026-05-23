@@ -1,9 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class ScriptsService {
-  private readonly logger = new Logger(ScriptsService.name);
-
   generate() {
     return { message: 'not implemented' };
   }
@@ -25,23 +23,23 @@ export class ScriptsService {
   }
 
   updateScene(id: string, sceneId: string) {
-    return { id: sceneId, message: 'not implemented' };
+    return { id, scene_id: sceneId, message: 'not implemented' };
   }
 
   addScene(id: string) {
-    return { message: 'not implemented' };
+    return { id, message: 'not implemented' };
   }
 
   removeScene(id: string, sceneId: string) {
-    return { id: sceneId, message: 'deleted' };
+    return { id, scene_id: sceneId, message: 'deleted' };
   }
 
   reorderScenes(id: string) {
-    return [];
+    return { id, items: [] };
   }
 
   regenerateScene(id: string, sceneId: string) {
-    return { id: sceneId, message: 'not implemented' };
+    return { id, scene_id: sceneId, message: 'not implemented' };
   }
 
   confirm(id: string) {
@@ -49,6 +47,6 @@ export class ScriptsService {
   }
 
   remove(id: string) {
-    return { message: 'deleted' };
+    return { id, message: 'deleted' };
   }
 }

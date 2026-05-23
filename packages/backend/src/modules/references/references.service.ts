@@ -1,9 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class ReferencesService {
-  private readonly logger = new Logger(ReferencesService.name);
-
   create() {
     return { message: 'not implemented' };
   }
@@ -17,6 +15,6 @@ export class ReferencesService {
   }
 
   remove(id: string) {
-    return { message: 'deleted' };
+    return { id, message: 'deleted' };
   }
 }

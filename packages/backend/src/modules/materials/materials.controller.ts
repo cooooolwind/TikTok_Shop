@@ -1,16 +1,20 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Delete,
-  Param,
-  Query,
   Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiConsumes } from '@nestjs/swagger';
+import { ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { BatchDeleteDto } from '../../common/dto/batch-delete.dto';
+import { MaterialListQueryDto } from './dto/material-list-query.dto';
+import { SimilarSearchDto } from './dto/similar-search.dto';
+import { UploadMaterialDto } from './dto/upload-material.dto';
 import { MaterialsService } from './materials.service';
 
 @ApiTags('素材管理 /materials')
@@ -19,52 +23,52 @@ export class MaterialsController {
   constructor(private readonly materialsService: MaterialsService) {}
 
   @Post('upload')
-  @ApiOperation({ summary: '1.1 上传素材' })
+  @ApiOperation({ summary: '上传素材' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file'))
-  upload() {
-    return this.materialsService.upload();
+  upload(@UploadedFile() file: Express.Multer.File, @Body() body: UploadMaterialDto) {
+    return this.materialsService.upload(file, body);
   }
 
   @Get()
-  @ApiOperation({ summary: '1.2 素材列表' })
-  findAll() {
-    return this.materialsService.findAll();
+  @ApiOperation({ summary: '素材列表' })
+  findAll(@Query() query: MaterialListQueryDto) {
+    return this.materialsService.findAll(query);
+  }
+
+  @Delete('batch')
+  @ApiOperation({ summary: '批量删除素材' })
+  batchRemove(@Body() body: BatchDeleteDto) {
+    return this.materialsService.batchRemove(body.ids);
+  }
+
+  @Post('search/similar')
+  @ApiOperation({ summary: '相似素材搜索' })
+  searchSimilar(@Body() body: SimilarSearchDto) {
+    return this.materialsService.searchSimilar(body);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: '1.3 素材详情' })
+  @ApiOperation({ summary: '素材详情' })
   findOne(@Param('id') id: string) {
     return this.materialsService.findOne(id);
   }
 
-  @Delete(':id')
-  @ApiOperation({ summary: '1.4 删除素材' })
-  remove(@Param('id') id: string) {
-    return this.materialsService.remove(id);
-  }
-
-  @Delete('batch')
-  @ApiOperation({ summary: '1.5 批量删除素材' })
-  batchRemove() {
-    return this.materialsService.batchRemove();
-  }
-
   @Post(':id/analyze')
-  @ApiOperation({ summary: '1.6 触发 AI 打标' })
+  @ApiOperation({ summary: '触发 AI 打标' })
   analyze(@Param('id') id: string) {
     return this.materialsService.analyze(id);
   }
 
   @Get(':id/slices')
-  @ApiOperation({ summary: '1.7 视频切片列表' })
+  @ApiOperation({ summary: '视频切片列表' })
   findSlices(@Param('id') id: string) {
     return this.materialsService.findSlices(id);
   }
 
-  @Post('search/similar')
-  @ApiOperation({ summary: '1.8 向量相似搜索' })
-  searchSimilar() {
-    return this.materialsService.searchSimilar();
+  @Delete(':id')
+  @ApiOperation({ summary: '删除素材' })
+  remove(@Param('id') id: string) {
+    return this.materialsService.remove(id);
   }
 }

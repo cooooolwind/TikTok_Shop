@@ -3,6 +3,7 @@ import type { Scene, ScriptListQuery, ScriptPreferences, ProductInfo, ScriptMode
 import type { ScriptState } from '../types';
 import { scriptsApi } from '../services/scripts.api';
 import { useUIStore } from './useAppStore';
+import { asArray } from '../services/response';
 
 export const useScriptStore = create<ScriptState>((set, get) => ({
   items: [],
@@ -18,7 +19,8 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
     try {
       const merged = { ...get().filters, ...params };
       const res = await scriptsApi.list(merged);
-      set({ items: res.data.items, total: res.data.total, loading: false });
+      const data = 'items' in res ? res : res.data;
+      set({ items: asArray(data.items), total: data.total ?? 0, loading: false });
     } catch {
       set({ loading: false });
       useUIStore.getState().pushNotification({ type: 'error', title: '加载剧本列表失败' });

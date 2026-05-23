@@ -1,9 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class TemplatesService {
-  private readonly logger = new Logger(TemplatesService.name);
-
   create() {
     return { message: 'not implemented' };
   }
@@ -21,6 +19,6 @@ export class TemplatesService {
   }
 
   remove(id: string) {
-    return { message: 'deleted' };
+    return { id, message: 'deleted' };
   }
 }
