@@ -1,10 +1,11 @@
-{
+module.exports = {
   "root": true,
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": 2022,
     "sourceType": "module",
-    "project": "./tsconfig.base.json"
+    "project": true,
+    "tsconfigRootDir": __dirname
   },
   "plugins": ["@typescript-eslint"],
   "extends": [
@@ -18,4 +19,4 @@
     "@typescript-eslint/no-explicit-any": "warn"
   },
   "ignorePatterns": ["dist", "node_modules", "*.js", "*.cjs"]
-}
+};
