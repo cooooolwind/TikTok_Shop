@@ -1,10 +1,5 @@
-import { Card, Tag, Space, Typography, Tooltip, Button } from 'antd';
-import {
-  EditOutlined,
-  DeleteOutlined,
-  CaretRightOutlined,
-  ReloadOutlined,
-} from '@ant-design/icons';
+import { Button, Card, Space, Tag, Tooltip, Typography } from 'antd';
+import { DeleteOutlined, EditOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { Scene } from '@aigc/shared-types';
 import { formatDuration } from '../../../utils/format';
 
@@ -31,7 +26,7 @@ export default function SceneCard({ scene, index, onEdit, onDelete, onRegenerate
       }
       extra={
         <Space size="small">
-          <Tooltip title="重生成">
+          <Tooltip title="重新生成">
             <Button size="small" icon={<ReloadOutlined />} onClick={onRegenerate} />
           </Tooltip>
           <Tooltip title="编辑">
@@ -46,15 +41,19 @@ export default function SceneCard({ scene, index, onEdit, onDelete, onRegenerate
       <Space direction="vertical" style={{ width: '100%' }}>
         <div>
           <Text strong>画面描述：</Text>
-          <Paragraph ellipsis={{ rows: 2 }} style={{ margin: 0 }}>{scene.description}</Paragraph>
+          <Paragraph ellipsis={{ rows: 2 }} style={{ margin: 0 }}>
+            {scene.description || '暂无'}
+          </Paragraph>
         </div>
         <div>
           <Text strong>台词：</Text>
-          <Paragraph ellipsis={{ rows: 2 }} style={{ margin: 0 }}>{scene.dialogue || '（无）'}</Paragraph>
+          <Paragraph ellipsis={{ rows: 2 }} style={{ margin: 0 }}>
+            {scene.dialogue || '暂无'}
+          </Paragraph>
         </div>
         <Space wrap>
-          <Tag>{scene.camera_motion}</Tag>
-          <Tag>{scene.bgm_style}</Tag>
+          {scene.camera_motion && <Tag>{scene.camera_motion}</Tag>}
+          {scene.bgm_style && <Tag>{scene.bgm_style}</Tag>}
           {scene.subtitle && <Tag color="orange">字幕：{scene.subtitle}</Tag>}
         </Space>
       </Space>

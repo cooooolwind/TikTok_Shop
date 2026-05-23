@@ -1,6 +1,11 @@
 import { Module, Global } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Script } from '../modules/scripts/entities/script.entity';
+import { Scene } from '../modules/scripts/entities/scene.entity';
+import { WebsocketModule } from '../websocket/websocket.module';
+import { ScriptGenerationProcessor } from './processors/script-generation.processor';
 import { QUEUES } from './queues';
 
 @Global()
@@ -16,7 +21,10 @@ import { QUEUES } from './queues';
       { name: QUEUES.VIDEO_GENERATION },
       { name: QUEUES.REFERENCE_ANALYSIS },
     ),
+    TypeOrmModule.forFeature([Script, Scene]),
+    WebsocketModule,
   ],
+  providers: [ScriptGenerationProcessor],
   exports: [BullModule],
 })
 export class TasksModule {}

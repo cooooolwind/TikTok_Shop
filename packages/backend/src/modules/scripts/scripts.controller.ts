@@ -1,6 +1,15 @@
-import { Controller, Get, Post, Put, Delete, Param } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, Delete, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ScriptsService } from './scripts.service';
+import { CreateScriptDto, GenerateScriptDto, ScriptListQueryDto } from './dto/script.dto';
+import type {
+  AddSceneRequest,
+  RegenerateSceneRequest,
+  ReorderScenesRequest,
+  ScriptListQuery,
+  UpdateSceneRequest,
+  UpdateScriptRequest,
+} from '@aigc/shared-types';
 
 @ApiTags('剧本 /scripts')
 @Controller('scripts')
@@ -9,8 +18,14 @@ export class ScriptsController {
 
   @Post('generate')
   @ApiOperation({ summary: '3.1 生成剧本' })
-  generate() {
-    return this.scriptsService.generate();
+  generate(@Body() body: GenerateScriptDto) {
+    return this.scriptsService.generate(body);
+  }
+
+  @Post()
+  @ApiOperation({ summary: '创建手写剧本草稿' })
+  create(@Body() body: CreateScriptDto) {
+    return this.scriptsService.create(body as never);
   }
 
   @Post('generate/batch')
@@ -21,8 +36,8 @@ export class ScriptsController {
 
   @Get()
   @ApiOperation({ summary: '3.3 剧本列表' })
-  findAll() {
-    return this.scriptsService.findAll();
+  findAll(@Query() query: ScriptListQueryDto) {
+    return this.scriptsService.findAll(query as ScriptListQuery);
   }
 
   @Get(':id')
@@ -33,20 +48,20 @@ export class ScriptsController {
 
   @Put(':id')
   @ApiOperation({ summary: '3.5 更新剧本（整体）' })
-  update(@Param('id') id: string) {
-    return this.scriptsService.update(id);
+  update(@Param('id') id: string, @Body() body: UpdateScriptRequest) {
+    return this.scriptsService.update(id, body);
   }
 
   @Put(':id/scenes/:sceneId')
   @ApiOperation({ summary: '3.6 更新单个分镜' })
-  updateScene(@Param('id') id: string, @Param('sceneId') sceneId: string) {
-    return this.scriptsService.updateScene(id, sceneId);
+  updateScene(@Param('id') id: string, @Param('sceneId') sceneId: string, @Body() body: UpdateSceneRequest) {
+    return this.scriptsService.updateScene(id, sceneId, body);
   }
 
   @Post(':id/scenes')
   @ApiOperation({ summary: '3.7 添加分镜' })
-  addScene(@Param('id') id: string) {
-    return this.scriptsService.addScene(id);
+  addScene(@Param('id') id: string, @Body() body: AddSceneRequest) {
+    return this.scriptsService.addScene(id, body);
   }
 
   @Delete(':id/scenes/:sceneId')
@@ -57,14 +72,20 @@ export class ScriptsController {
 
   @Put(':id/scenes/reorder')
   @ApiOperation({ summary: '3.9 分镜排序' })
-  reorderScenes(@Param('id') id: string) {
-    return this.scriptsService.reorderScenes(id);
+  reorderScenes(@Param('id') id: string, @Body() body: ReorderScenesRequest) {
+    return this.scriptsService.reorderScenes(id, body);
   }
 
   @Post(':id/scenes/:sceneId/regenerate')
   @ApiOperation({ summary: '3.10 重新生成分镜台词' })
-  regenerateScene(@Param('id') id: string, @Param('sceneId') sceneId: string) {
+  regenerateScene(@Param('id') id: string, @Param('sceneId') sceneId: string, @Body() _body: RegenerateSceneRequest) {
     return this.scriptsService.regenerateScene(id, sceneId);
+  }
+
+  @Post(':id/retry')
+  @ApiOperation({ summary: '重新生成失败剧本' })
+  retry(@Param('id') id: string) {
+    return this.scriptsService.retry(id);
   }
 
   @Post(':id/confirm')
