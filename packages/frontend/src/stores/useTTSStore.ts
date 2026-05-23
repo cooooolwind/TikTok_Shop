@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { TTSState } from '../types';
 import { ttsApi } from '../services/tts.api';
 import { useUIStore } from './useAppStore';
+import { asArray } from '../services/response';
 
 export const useTTSStore = create<TTSState>((set) => ({
   voices: [],
@@ -13,7 +14,7 @@ export const useTTSStore = create<TTSState>((set) => ({
     set({ loading: true });
     try {
       const voices = await ttsApi.voices();
-      set({ voices, loading: false });
+      set({ voices: asArray(voices), loading: false });
     } catch {
       set({ loading: false });
       useUIStore.getState().pushNotification({ type: 'error', title: '加载音色列表失败' });

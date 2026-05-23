@@ -1,12 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { QUEUES } from '../../tasks/queues';
 
 @Injectable()
 export class GenerationService {
-  private readonly logger = new Logger(GenerationService.name);
-
   constructor(@InjectQueue(QUEUES.VIDEO_GENERATION) private readonly videoQueue: Queue) {}
 
   create() {
@@ -33,11 +31,12 @@ export class GenerationService {
     return { id: taskId, status: 'cancelled' };
   }
 
-  regenerateScene(taskId: string, sceneId: string) {
-    return { id: taskId, message: 'not implemented' };
+  async regenerateScene(taskId: string, sceneId: string) {
+    await this.videoQueue.add('regenerate-scene', { taskId, sceneId });
+    return { id: taskId, scene_id: sceneId, message: 'not implemented' };
   }
 
   export(taskId: string) {
-    return { download_url: 'stub', expires_at: new Date().toISOString() };
+    return { task_id: taskId, download_url: 'stub', expires_at: new Date().toISOString() };
   }
 }

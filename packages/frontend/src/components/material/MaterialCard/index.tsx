@@ -1,4 +1,5 @@
-import { Card, Image, Tag, Space, Typography } from 'antd';
+import { useState } from 'react';
+import { Button, Card, Image, Modal, Tag, Space, Typography } from 'antd';
 import {
   FileImageOutlined,
   VideoCameraOutlined,
@@ -20,7 +21,18 @@ interface MaterialCardProps {
 }
 
 export default function MaterialCard({ material, onClick, onDelete, selected }: MaterialCardProps) {
+  const [previewOpen, setPreviewOpen] = useState(false);
   const isVideo = material.type === 'video';
+  const previewSrc = material.url || material.thumbnail_url;
+
+  const handlePreview = (event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    if (isVideo || !previewSrc) {
+      onClick?.();
+      return;
+    }
+    setPreviewOpen(true);
+  };
 
   return (
     <Card
@@ -32,15 +44,70 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
       cover={
         <div style={{ position: 'relative', height: 160, overflow: 'hidden', background: '#f5f5f5' }}>
           {material.thumbnail_url ? (
-            <Image
-              src={material.thumbnail_url}
-              alt={material.filename}
-              preview={{ mask: <EyeOutlined /> }}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
-            />
+            <>
+              <Image
+                src={material.thumbnail_url}
+                alt={material.filename}
+                preview={false}
+                onClick={(event) => event.stopPropagation()}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+              />
+              {!isVideo && previewSrc && (
+                <>
+                  <Button
+                    type="text"
+                    icon={<EyeOutlined />}
+                    aria-label="预览图片"
+                    onClick={handlePreview}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      width: '100%',
+                      height: '100%',
+                      color: '#fff',
+                      fontSize: 20,
+                      background: 'rgba(0, 0, 0, 0)',
+                    }}
+                  />
+                  <Modal
+                    open={previewOpen}
+                    title={material.filename}
+                    footer={null}
+                    centered
+                    width="min(92vw, 960px)"
+                    onCancel={(event) => {
+                      event.stopPropagation();
+                      setPreviewOpen(false);
+                    }}
+                    modalRender={(node) => (
+                      <div onClick={(event) => event.stopPropagation()}>{node}</div>
+                    )}
+                  >
+                    <img
+                      src={previewSrc}
+                      alt={material.filename}
+                      onClick={(event) => event.stopPropagation()}
+                      style={{
+                        display: 'block',
+                        maxWidth: '100%',
+                        maxHeight: '76vh',
+                        margin: '0 auto',
+                        objectFit: 'contain',
+                      }}
+                    />
+                  </Modal>
+                </>
+              )}
+            </>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <div
+              onClick={(event) => {
+                event.stopPropagation();
+                handlePreview(event);
+              }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
+            >
               {isVideo ? (
                 <VideoCameraOutlined style={{ fontSize: 48, color: '#d9d9d9' }} />
               ) : (
@@ -58,7 +125,7 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
         </div>
       }
       actions={[
-        <EyeOutlined key="view" onClick={onClick} />,
+        <EyeOutlined key="view" onClick={handlePreview} />,
         <DeleteOutlined key="delete" onClick={(e) => { e.stopPropagation(); onDelete?.(); }} />,
       ]}
       onClick={onClick}

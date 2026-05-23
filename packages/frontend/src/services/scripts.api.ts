@@ -1,5 +1,6 @@
 import client from './client';
 import type {
+  ApiResponse,
   PaginatedResponse,
   Script,
   GenerateScriptRequest,
@@ -12,13 +13,17 @@ import type {
   ScriptListQuery,
   Scene,
 } from '@aigc/shared-types';
+import { unwrapResponse } from './response';
 
 const BASE = '/scripts';
 
 export const scriptsApi = {
   generate: (data: GenerateScriptRequest) => client.post<unknown, Script>(`${BASE}/generate`, data),
   batchGenerate: (data: BatchGenerateRequest) => client.post<unknown, BatchGenerateResponse>(`${BASE}/generate/batch`, data),
-  list: (params?: ScriptListQuery) => client.get<unknown, PaginatedResponse<Script>>(BASE, { params }),
+  list: async (params?: ScriptListQuery) =>
+    unwrapResponse<PaginatedResponse<Script>['data'] | PaginatedResponse<Script>>(
+      await client.get<unknown, PaginatedResponse<Script> | ApiResponse<PaginatedResponse<Script>['data']>>(BASE, { params }),
+    ),
   detail: (id: string) => client.get<unknown, Script>(`${BASE}/${id}`),
   update: (id: string, data: UpdateScriptRequest) => client.put<unknown, Script>(`${BASE}/${id}`, data),
   updateScene: (id: string, sceneId: string, data: UpdateSceneRequest) =>

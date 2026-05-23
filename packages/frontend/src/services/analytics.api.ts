@@ -7,12 +7,17 @@ import type {
   AttributionData,
   DurationDistribution,
 } from '@aigc/shared-types';
+import { unwrapResponse } from './response';
 
 const BASE = '/analytics';
 
 export const analyticsApi = {
-  overview: (params?: AnalyticsQuery) => client.get<unknown, OverviewData>(`${BASE}/overview`, { params }),
-  trends: (params?: TrendsQuery) => client.get<unknown, TrendData[]>(`${BASE}/trends`, { params }),
-  attribution: () => client.get<unknown, AttributionData[]>(`${BASE}/attribution`),
-  durationDistribution: () => client.get<unknown, DurationDistribution[]>(`${BASE}/duration-distribution`),
+  overview: async (params?: AnalyticsQuery): Promise<OverviewData> =>
+    unwrapResponse<OverviewData>((await client.get<unknown, unknown>(`${BASE}/overview`, { params })) as OverviewData),
+  trends: async (params?: TrendsQuery): Promise<TrendData[]> =>
+    unwrapResponse<TrendData[]>((await client.get<unknown, unknown>(`${BASE}/trends`, { params })) as TrendData[]),
+  attribution: async (): Promise<AttributionData[]> =>
+    unwrapResponse<AttributionData[]>((await client.get<unknown, unknown>(`${BASE}/attribution`)) as AttributionData[]),
+  durationDistribution: async (): Promise<DurationDistribution[]> =>
+    unwrapResponse<DurationDistribution[]>((await client.get<unknown, unknown>(`${BASE}/duration-distribution`)) as DurationDistribution[]),
 };

@@ -1,20 +1,29 @@
+import { Logger } from '@nestjs/common';
 import {
-  WebSocketGateway,
-  WebSocketServer,
-  SubscribeMessage,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
 } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
-import { WsEvent } from '@aigc/shared-types';
 import type {
-  TaskProgressEvent,
-  TaskCompletedEvent,
-  TaskFailedEvent,
   MaterialAnalyzedEvent,
   ScriptGeneratedEvent,
+  TaskCompletedEvent,
+  TaskFailedEvent,
+  TaskProgressEvent,
 } from '@aigc/shared-types';
+import { Server, Socket } from 'socket.io';
+
+const WsEvent = {
+  SUBSCRIBE: 'subscribe',
+  UNSUBSCRIBE: 'unsubscribe',
+  TASK_PROGRESS: 'task:progress',
+  TASK_COMPLETED: 'task:completed',
+  TASK_FAILED: 'task:failed',
+  MATERIAL_ANALYZED: 'material:analyzed',
+  SCRIPT_GENERATED: 'script:generated',
+} as const;
 
 @WebSocketGateway({
   namespace: '/tasks',
@@ -48,32 +57,29 @@ export class TasksGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(`Client ${client.id} left room ${room}`);
   }
 
-  /** 推送任务进度 */
   emitTaskProgress(taskId: string, progress: TaskProgressEvent['progress']) {
     this.server.to(`task:${taskId}`).emit(WsEvent.TASK_PROGRESS, { task_id: taskId, progress });
   }
 
-  /** 推送任务完成 */
   emitTaskCompleted(taskId: string, result: TaskCompletedEvent['result']) {
     this.server.to(`task:${taskId}`).emit(WsEvent.TASK_COMPLETED, { task_id: taskId, result });
   }
 
-  /** 推送任务失败 */
   emitTaskFailed(taskId: string, error: TaskFailedEvent['error']) {
     this.server.to(`task:${taskId}`).emit(WsEvent.TASK_FAILED, { task_id: taskId, error });
   }
 
-  /** 推送素材打标完成 */
   emitMaterialAnalyzed(materialId: string, aiTags: string[], aiDescription: string) {
-    this.server.emit(WsEvent.MATERIAL_ANALYZED, {
+    const payload: MaterialAnalyzedEvent = {
       material_id: materialId,
       ai_tags: aiTags,
       ai_description: aiDescription,
-    });
+    };
+    this.server.emit(WsEvent.MATERIAL_ANALYZED, payload);
   }
 
-  /** 推送剧本生成完成 */
   emitScriptGenerated(scriptId: string) {
-    this.server.emit(WsEvent.SCRIPT_GENERATED, { script_id: scriptId });
+    const payload: ScriptGeneratedEvent = { script_id: scriptId };
+    this.server.emit(WsEvent.SCRIPT_GENERATED, payload);
   }
 }

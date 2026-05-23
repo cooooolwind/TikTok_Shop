@@ -1,9 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class TtsService {
-  private readonly logger = new Logger(TtsService.name);
-
   getVoices() {
     return [];
   }
