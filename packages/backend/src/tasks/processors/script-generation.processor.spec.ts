@@ -54,7 +54,16 @@ function makeProcessor(aiContent: string | Error) {
     volcanoClient as never,
     tasksGateway as never,
   );
-  const job = {
+  const job: {
+    data: {
+      taskId: string;
+      scriptId: string;
+      productInfo: Script['productInfo'];
+      mode: string;
+      materialMedia?: { type: 'image' | 'video'; filename: string; imageUrl?: string }[];
+    };
+    updateProgress: jest.Mock;
+  } = {
     data: {
       taskId: 'script_generation_script-1',
       scriptId: 'script-1',
@@ -113,6 +122,42 @@ describe('ScriptGenerationProcessor', () => {
     expect(tasksGateway.emitTaskFailed).toHaveBeenCalledWith(
       'script_generation_script-1',
       expect.objectContaining({ code: 'SCRIPT_GENERATION_FAILED' }),
+    );
+  });
+
+  it('sends image materials to AI as OpenAI-compatible image_url content', async () => {
+    const { processor, volcanoClient, job } = makeProcessor(
+      JSON.stringify({
+        narrative_framework: 'Hook',
+        visual_style: 'clean',
+        total_duration: 3,
+        scenes: [{ description: 'Scene', duration: 3 }],
+      }),
+    );
+    job.data.materialMedia = [
+      {
+        type: 'image',
+        filename: 'dress.jpg',
+        imageUrl: 'data:image/jpeg;base64,aW1hZ2U=',
+      },
+    ];
+
+    await processor.process(job as never);
+
+    expect(volcanoClient.chatCompletion).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'user',
+          content: expect.arrayContaining([
+            expect.objectContaining({ type: 'text' }),
+            expect.objectContaining({
+              type: 'image_url',
+              image_url: { url: 'data:image/jpeg;base64,aW1hZ2U=' },
+            }),
+          ]),
+        }),
+      ]),
+      expect.anything(),
     );
   });
 });
