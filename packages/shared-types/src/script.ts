@@ -31,13 +31,16 @@ export interface Scene {
 // ===== 剧本 =====
 
 export type ScriptMode = 'template' | 'imitation' | 'free';
-export type ScriptStatus = 'draft' | 'confirmed';
+export type ScriptStatus = 'generating' | 'draft' | 'failed' | 'confirmed';
 
 export interface Script {
   id: string;
   product_info: ProductInfo;
   template_id?: string;
   reference_id?: string;
+  source_material_ids?: string[];
+  generation_task_id?: string;
+  generation_error?: string;
   mode: ScriptMode;
   narrative_framework: string;
   visual_style: string;
@@ -61,8 +64,28 @@ export interface GenerateScriptRequest {
   product_info: ProductInfo;
   template_id?: string;
   reference_id?: string;
+  material_ids?: string[];
+  manual_text?: string;
   mode: ScriptMode;
   preferences?: ScriptPreferences;
+}
+
+export interface GenerateScriptQueuedResponse {
+  script: Script;
+  task_id: string;
+  status: 'queued';
+}
+
+export interface CreateScriptRequest {
+  product_info: ProductInfo;
+  mode: ScriptMode;
+  template_id?: string;
+  reference_id?: string;
+  source_material_ids?: string[];
+  narrative_framework?: string;
+  visual_style?: string;
+  total_duration?: number;
+  scenes?: Omit<Scene, 'id' | 'order'>[];
 }
 
 export interface BatchGenerateRequest {

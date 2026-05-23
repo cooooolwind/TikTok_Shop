@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Scene, ScriptListQuery, ScriptPreferences, ProductInfo, ScriptMode } from '@aigc/shared-types';
+import type { Scene } from '@aigc/shared-types';
 import type { ScriptState } from '../types';
 import { scriptsApi } from '../services/scripts.api';
 import { useUIStore } from './useAppStore';
@@ -20,7 +20,7 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
       const merged = { ...get().filters, ...params };
       const res = await scriptsApi.list(merged);
       const data = 'items' in res ? res : res.data;
-      set({ items: asArray(data.items), total: data.total ?? 0, loading: false });
+      set({ items: asArray(data.items), total: data.total ?? 0, loading: false, filters: merged });
     } catch {
       set({ loading: false });
       useUIStore.getState().pushNotification({ type: 'error', title: '加载剧本列表失败' });
@@ -28,21 +28,37 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
   },
 
   fetchDetail: async (id) => {
+    set({ loading: true });
     try {
       const script = await scriptsApi.detail(id);
-      set({ currentScript: script, isDirty: false });
+      set({ currentScript: script, isDirty: false, loading: false });
     } catch {
+      set({ loading: false });
       useUIStore.getState().pushNotification({ type: 'error', title: '加载剧本详情失败' });
+    }
+  },
+
+  create: async (params) => {
+    set({ generating: true });
+    try {
+      const script = await scriptsApi.create(params);
+      set((s) => ({ generating: false, items: [script, ...s.items], total: s.total + 1 }));
+      useUIStore.getState().pushNotification({ type: 'success', title: '剧本草稿已创建' });
+      return script;
+    } catch {
+      set({ generating: false });
+      useUIStore.getState().pushNotification({ type: 'error', title: '创建剧本失败' });
+      throw new Error('create script failed');
     }
   },
 
   generate: async (params) => {
     set({ generating: true });
     try {
-      const script = await scriptsApi.generate(params);
-      set({ generating: false });
-      useUIStore.getState().pushNotification({ type: 'success', title: '剧本生成成功' });
-      return script;
+      const result = await scriptsApi.generate(params);
+      set((s) => ({ generating: false, items: [result.script, ...s.items], total: s.total + 1 }));
+      useUIStore.getState().pushNotification({ type: 'success', title: '剧本生成任务已提交' });
+      return result;
     } catch {
       set({ generating: false });
       useUIStore.getState().pushNotification({ type: 'error', title: '剧本生成失败' });
@@ -55,7 +71,7 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
     try {
       const result = await scriptsApi.batchGenerate(params);
       set({ generating: false });
-      useUIStore.getState().pushNotification({ type: 'success', title: `批量生成已提交 (${result.count} 个)` });
+      useUIStore.getState().pushNotification({ type: 'success', title: `批量生成已提交 (${result.count})` });
       return result;
     } catch {
       set({ generating: false });
@@ -89,17 +105,36 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
     }
   },
 
+  retry: async (id) => {
+    try {
+      const result = await scriptsApi.retry(id);
+      set((s) => ({
+        currentScript:
+          s.currentScript?.id === id
+            ? { ...s.currentScript, status: 'generating', generation_error: undefined, generation_task_id: result.task_id }
+            : s.currentScript,
+        items: s.items.map((sc) =>
+          sc.id === id ? { ...sc, status: 'generating', generation_error: undefined, generation_task_id: result.task_id } : sc,
+        ),
+      }));
+      useUIStore.getState().pushNotification({ type: 'success', title: '已重新提交生成任务' });
+      return result;
+    } catch {
+      useUIStore.getState().pushNotification({ type: 'error', title: '重新生成失败' });
+      throw new Error('retry script failed');
+    }
+  },
+
   remove: async (id) => {
     try {
       await scriptsApi.remove(id);
-      set((s) => ({ items: s.items.filter((sc) => sc.id !== id), total: s.total - 1 }));
+      set((s) => ({ items: s.items.filter((sc) => sc.id !== id), total: Math.max(s.total - 1, 0) }));
       useUIStore.getState().pushNotification({ type: 'success', title: '剧本已删除' });
     } catch {
       useUIStore.getState().pushNotification({ type: 'error', title: '删除剧本失败' });
     }
   },
 
-  // 分镜操作 — 乐观更新 + 脏标记
   updateScene: (scriptId, sceneId, data) => {
     set((s) => {
       if (!s.currentScript || s.currentScript.id !== scriptId) return s;
@@ -111,7 +146,6 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
         isDirty: true,
       };
     });
-    // 后台异步持久化
     scriptsApi.updateScene(scriptId, sceneId, data).catch(() => {
       useUIStore.getState().pushNotification({ type: 'error', title: '保存分镜失败' });
     });
@@ -125,7 +159,6 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
         const scenes = [...s.currentScript.scenes];
         const insertAt = afterOrder === 0 ? 0 : scenes.findIndex((sc) => sc.order === afterOrder) + 1;
         scenes.splice(insertAt, 0, { ...added, order: afterOrder + 1 });
-        // 重新编 order
         const reordered = scenes.map((sc, i) => ({ ...sc, order: i + 1 }));
         return { currentScript: { ...s.currentScript, scenes: reordered }, isDirty: false };
       });
@@ -183,3 +216,7 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
   setFilters: (filters) => set((s) => ({ filters: { ...s.filters, ...filters } })),
   resetCurrentScript: () => set({ currentScript: null, isDirty: false }),
 }));
+
+export function sortScenes(scenes: Scene[]) {
+  return [...scenes].sort((a, b) => a.order - b.order);
+}

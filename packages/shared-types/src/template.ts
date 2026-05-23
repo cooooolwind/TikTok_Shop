@@ -10,6 +10,7 @@ export interface Template {
   constraints: string[];
   applicable_categories: string[];
   derived_from: string[];
+  is_builtin?: boolean;
   created_at: string;
   updated_at: string;
 }
