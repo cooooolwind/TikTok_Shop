@@ -10,12 +10,16 @@ on:
         type: boolean
         default: false
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-  ACR_REGISTRY: registry.cn-shanghai.aliyuncs.com
+  ACR_REGISTRY: crpi-62l1ij6nulkvhb1f.cn-hangzhou.personal.cr.aliyuncs.com
   ACR_NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
-  BACKEND_IMAGE: registry.cn-shanghai.aliyuncs.com/${{ secrets.ACR_NAMESPACE }}/aigc-backend
-  FRONTEND_IMAGE: registry.cn-shanghai.aliyuncs.com/${{ secrets.ACR_NAMESPACE }}/aigc-frontend
+  BACKEND_IMAGE: ${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/aigc-backend
+  FRONTEND_IMAGE: ${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/aigc-frontend
 
 jobs:
   ci:
@@ -33,12 +37,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Alibaba Cloud ACR
-        uses: docker/login-action@v3
+      - name: Configure Aliyun credentials
+        uses: aliyun/configure-aliyun-credentials-action@v1
         with:
-          registry: ${{ env.ACR_REGISTRY }}
-          username: ${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_ID }}
-          password: ${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_SECRET }}
+          role-to-assume: ${{ secrets.ALIYUN_ROLE_ARN }}
+          oidc-provider-arn: ${{ secrets.ALIYUN_OIDC_PROVIDER_ARN }}
+          role-session-name: 'github-actions-build'
+
+      - name: Log in to Alibaba Cloud ACR
+        uses: aliyun/acr-login@v1
+        with:
+          login-server: ${{ env.ACR_REGISTRY }}
+          region-id: cn-hangzhou
+          access-key-id: ${{ env.ALIBABA_CLOUD_ACCESS_KEY_ID }}
+          access-key-secret: ${{ env.ALIBABA_CLOUD_ACCESS_KEY_SECRET }}
+          security-token: ${{ env.ALIBABA_CLOUD_SECURITY_TOKEN }}
 
       - name: Extract metadata (backend)
         id: meta_backend
@@ -88,6 +101,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configure Aliyun credentials
+        uses: aliyun/configure-aliyun-credentials-action@v1
+        with:
+          role-to-assume: ${{ secrets.ALIYUN_ROLE_ARN }}
+          oidc-provider-arn: ${{ secrets.ALIYUN_OIDC_PROVIDER_ARN }}
+          role-session-name: 'github-actions-deploy'
+
+      - name: Log in to Alibaba Cloud ACR
+        uses: aliyun/acr-login@v1
+        with:
+          login-server: ${{ env.ACR_REGISTRY }}
+          region-id: cn-hangzhou
+          access-key-id: ${{ env.ALIBABA_CLOUD_ACCESS_KEY_ID }}
+          access-key-secret: ${{ env.ALIBABA_CLOUD_ACCESS_KEY_SECRET }}
+          security-token: ${{ env.ALIBABA_CLOUD_SECURITY_TOKEN }}
+
+      - name: Extract Docker Credentials for ECS
+        id: docker-creds
+        run: |
+          AUTH=$(jq -r '.auths["${{ env.ACR_REGISTRY }}"].auth' ~/.docker/config.json)
+          USER=$(echo $AUTH | base64 -d | cut -d: -f1)
+          PASS=$(echo $AUTH | base64 -d | cut -d: -f2)
+          echo "username=$USER" >> $GITHUB_OUTPUT
+          echo "password=$PASS" >> $GITHUB_OUTPUT
+
       - name: Copy deployment files to ECS
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -108,13 +146,13 @@ jobs:
             cd /opt/aigc-platform
 
             # 登录阿里云 ACR
-            docker login registry.cn-shanghai.aliyuncs.com \
-              -u "$ACR_ACCESS_KEY_ID" \
-              -p "$ACR_ACCESS_KEY_SECRET"
+            docker login crpi-62l1ij6nulkvhb1f.cn-hangzhou.personal.cr.aliyuncs.com \
+              -u "$ACR_USERNAME" \
+              -p "$ACR_PASSWORD"
 
             # 拉取最新镜像
-            export BACKEND_IMAGE="registry.cn-shanghai.aliyuncs.com/$ACR_NAMESPACE/aigc-backend:latest"
-            export FRONTEND_IMAGE="registry.cn-shanghai.aliyuncs.com/$ACR_NAMESPACE/aigc-frontend:latest"
+            export BACKEND_IMAGE="crpi-62l1ij6nulkvhb1f.cn-hangzhou.personal.cr.aliyuncs.com/$ACR_NAMESPACE/aigc-backend:latest"
+            export FRONTEND_IMAGE="crpi-62l1ij6nulkvhb1f.cn-hangzhou.personal.cr.aliyuncs.com/$ACR_NAMESPACE/aigc-frontend:latest"
 
             docker compose -f docker-compose.prod.yml pull
 
@@ -129,8 +167,8 @@ jobs:
             curl -f http://localhost:3000/api/v1/health && echo "Backend OK" || echo "Backend check failed"
             curl -f http://localhost/ && echo "Frontend OK" || echo "Frontend check failed"
 
-            docker logout registry.cn-shanghai.aliyuncs.com
+            docker logout crpi-62l1ij6nulkvhb1f.cn-hangzhou.personal.cr.aliyuncs.com
           envs: |
-            ACR_ACCESS_KEY_ID=${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_ID }}
-            ACR_ACCESS_KEY_SECRET=${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_SECRET }}
+            ACR_USERNAME=${{ steps.docker-creds.outputs.username }}
+            ACR_PASSWORD=${{ steps.docker-creds.outputs.password }}
             ACR_NAMESPACE=${{ secrets.ACR_NAMESPACE }}

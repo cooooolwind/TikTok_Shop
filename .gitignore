@@ -52,4 +52,15 @@ temp/
 # Misc
 *.tsbuildinfo
 
+# AI Tools
 .claude/
+.antigravitycli/
+
+# Package Manager Cache
+.pnpm-store/
+
+# Linting
+.eslintcache
+
+# Husky
+.husky/_
