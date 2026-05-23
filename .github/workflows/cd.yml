@@ -35,9 +35,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Configure Aliyun credentials
         uses: aliyun/configure-aliyun-credentials-action@v1
         with:
@@ -53,6 +50,9 @@ jobs:
           access-key-id: ${{ env.ALIBABA_CLOUD_ACCESS_KEY_ID }}
           access-key-secret: ${{ env.ALIBABA_CLOUD_ACCESS_KEY_SECRET }}
           security-token: ${{ env.ALIBABA_CLOUD_SECURITY_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Extract metadata (backend)
         id: meta_backend
@@ -121,9 +121,9 @@ jobs:
       - name: Extract Docker Credentials for ECS
         id: docker-creds
         run: |
-          AUTH=$(jq -r '.auths["${{ env.ACR_REGISTRY }}"].auth' ~/.docker/config.json)
-          USER=$(echo $AUTH | base64 -d | cut -d: -f1)
-          PASS=$(echo $AUTH | base64 -d | cut -d: -f2)
+          AUTH=$(jq -r '.auths["${{ env.ACR_REGISTRY }}"].auth' ${DOCKER_CONFIG:-~/.docker}/config.json)
+          USER=$(echo "$AUTH" | base64 -d | cut -d: -f1)
+          PASS=$(echo "$AUTH" | base64 -d | cut -d: -f2)
           echo "username=$USER" >> $GITHUB_OUTPUT
           echo "password=$PASS" >> $GITHUB_OUTPUT
 
