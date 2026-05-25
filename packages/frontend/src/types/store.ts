@@ -143,6 +143,7 @@ export interface CreationState {
 
   retry: (taskId: string) => Promise<void>;
   cancel: (taskId: string) => Promise<void>;
+  remove: (taskId: string) => Promise<void>;
   exportVideo: (taskId: string, format: string, resolution: string, quality: string) => Promise<{ download_url: string; expires_at: string }>;
   regenerateSceneVideo: (taskId: string, sceneId: string, instruction?: string, materialId?: string) => Promise<void>;
 

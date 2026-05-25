@@ -83,6 +83,7 @@ function makeService(options?: { script?: Script | null; task?: GenerationTask |
     create: jest.fn((data) => makeTask(data)),
     save: jest.fn(async (data) => data),
     findOne: jest.fn(async () => task),
+    remove: jest.fn(async (data) => data),
     createQueryBuilder: jest.fn(() => ({
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
@@ -94,6 +95,7 @@ function makeService(options?: { script?: Script | null; task?: GenerationTask |
   };
   const videosRepository = {
     findOne: jest.fn(async () => video),
+    delete: jest.fn(async () => ({ affected: video ? 1 : 0 })),
   };
   const videoQueue = {
     add: jest.fn(async () => ({ id: 'queue-job-1' })),
@@ -165,6 +167,25 @@ describe('GenerationService', () => {
 
     expect(result.download_url).toBe('https://example.com/video.mp4');
     expect(new Date(result.expires_at).getTime()).toBeGreaterThan(now.getTime());
+  });
+
+  it('removes a completed generation task and its video record', async () => {
+    const doneTask = makeTask({ status: 'done', result: makeVideoResult() });
+    const { service, tasksRepository, videosRepository } = makeService({ task: doneTask });
+
+    const result = await service.remove('task-1');
+
+    expect(videosRepository.delete).toHaveBeenCalledWith({ taskId: 'task-1' });
+    expect(tasksRepository.remove).toHaveBeenCalledWith(doneTask);
+    expect(result).toEqual({ message: 'deleted' });
+  });
+
+  it('rejects removing active generation tasks', async () => {
+    const { service, tasksRepository, videosRepository } = makeService({ task: makeTask({ status: 'processing' }) });
+
+    await expect(service.remove('task-1')).rejects.toBeInstanceOf(BadRequestException);
+    expect(videosRepository.delete).not.toHaveBeenCalled();
+    expect(tasksRepository.remove).not.toHaveBeenCalled();
   });
 });
 

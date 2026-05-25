@@ -120,15 +120,13 @@ export class VolcanoClientProvider {
       },
       body: JSON.stringify({
         model,
-        content: [{ type: 'text', text: input.prompt }],
-        parameters: {
-          duration: input.duration,
-          ratio: input.ratio,
-          resolution: input.resolution,
-        },
-        ...(input.imageUrls?.length
-          ? { image_urls: input.imageUrls }
-          : {}),
+        content: [
+          { type: 'text', text: this.buildVideoPromptText(input) },
+          ...(input.imageUrls ?? []).map((url) => ({
+            type: 'image_url',
+            image_url: { url },
+          })),
+        ],
       }),
     });
 
@@ -182,4 +180,13 @@ export class VolcanoClientProvider {
     return { audio_url: 'stub' };
   }
 
+  private buildVideoPromptText(input: CreateVideoTaskInput) {
+    const duration = this.resolveVideoDuration(input.duration);
+    return `${input.prompt} --duration ${duration} --camerafixed false --watermark true`;
+  }
+
+  private resolveVideoDuration(duration: number) {
+    const maxDuration = this.configService.get<number>('volcano.videoMaxDuration') ?? 12;
+    return Math.min(Math.max(Math.round(duration || 1), 1), maxDuration);
+  }
 }

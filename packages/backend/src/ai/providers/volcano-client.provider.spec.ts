@@ -91,7 +91,7 @@ describe('VolcanoClientProvider video generation', () => {
       content: [
         {
           type: 'text',
-          text: 'product demo --duration 8 --ratio 9:16 --camerafixed false --watermark false',
+          text: 'product demo --duration 8 --camerafixed false --watermark true',
         },
         {
           type: 'image_url',
@@ -107,5 +107,26 @@ describe('VolcanoClientProvider video generation', () => {
         content: { video_url: 'https://example.com/video.mp4', last_frame_url: 'https://example.com/thumb.png' },
       }),
     );
+  });
+
+  it('keeps durations up to the configured maximum and caps longer requests', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({ id: 'cgt-1' }), { status: 200 }));
+    const { provider } = makeProvider({
+      'volcano.mockMode': false,
+      'volcano.videoApiKey': 'key',
+      'volcano.videoBaseUrl': 'https://ark.cn-beijing.volces.com/api/v3',
+      'volcano.videoEndpoint': 'ep-20260514120705-pqv86',
+      'volcano.videoMaxDuration': 12,
+    });
+
+    await provider.createVideoTask({
+      prompt: 'product demo',
+      ratio: '9:16',
+      resolution: '1080p',
+      duration: 18,
+    });
+
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.content[0].text).toBe('product demo --duration 12 --camerafixed false --watermark true');
   });
 });

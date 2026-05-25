@@ -2,6 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import type { VideoOptions, TaskError, TaskProgress, TaskResult } from '@aigc/shared-types';
 import { VolcanoClientProvider, type VolcanoVideoTask } from '../../ai/providers/volcano-client.provider';
@@ -26,6 +27,7 @@ const DEFAULT_POLLING: PollingOptions = {
   maxAttempts: 30,
   intervalMs: 5000,
 };
+const MAX_TARGET_DURATION_SECONDS = 15;
 
 @Processor(QUEUES.VIDEO_GENERATION)
 export class VideoGenerationProcessor extends WorkerHost {
@@ -38,12 +40,23 @@ export class VideoGenerationProcessor extends WorkerHost {
     @InjectRepository(Video) private readonly videosRepository: Repository<Video>,
     private readonly volcanoClient: VolcanoClientProvider,
     private readonly tasksGateway: TasksGateway,
+    private readonly configService: ConfigService,
   ) {
     super();
+    this.polling = this.resolvePollingOptions();
   }
 
   configurePollingForTest(options: PollingOptions) {
     this.polling = options;
+  }
+
+  private resolvePollingOptions(): PollingOptions {
+    const maxAttempts = this.configService.get<number>('volcano.videoPollingMaxAttempts') ?? DEFAULT_POLLING.maxAttempts;
+    const intervalMs = this.configService.get<number>('volcano.videoPollingIntervalMs') ?? DEFAULT_POLLING.intervalMs;
+    return {
+      maxAttempts: Number.isFinite(maxAttempts) && maxAttempts > 0 ? Math.floor(maxAttempts) : DEFAULT_POLLING.maxAttempts,
+      intervalMs: Number.isFinite(intervalMs) && intervalMs >= 0 ? Math.floor(intervalMs) : DEFAULT_POLLING.intervalMs,
+    };
   }
 
   async process(job: Job<VideoGenerationJob>): Promise<Record<string, unknown>> {
@@ -58,7 +71,7 @@ export class VideoGenerationProcessor extends WorkerHost {
 
       await this.updateProgress(job, 1, 5, 'prepare', '正在读取剧本与分镜...');
       const script = await this.findScript(scriptId);
-      const duration = Math.min(Math.max(Math.round(Number(script.totalDuration) || 5), 5), 10);
+      const duration = this.resolveDuration(script);
 
       await this.updateProgress(job, 2, 5, 'build_prompt', '正在整理视频生成提示词...');
       const prompt = this.buildPrompt(script);
@@ -138,7 +151,7 @@ export class VideoGenerationProcessor extends WorkerHost {
       .join('\n');
 
     return [
-      'Create a polished TikTok Shop product video under 15 seconds.',
+      `Create a polished TikTok Shop product video around ${this.resolveDuration(script)} seconds.`,
       `Product: ${script.productInfo.name}`,
       `Category: ${script.productInfo.category}`,
       `Selling points: ${(script.productInfo.selling_points ?? []).join(', ')}`,
@@ -232,6 +245,10 @@ export class VideoGenerationProcessor extends WorkerHost {
       message,
       estimated_remaining: (totalSteps - currentStep) * 15,
     };
+  }
+
+  private resolveDuration(script: Script) {
+    return Math.min(Math.max(Math.round(Number(script.totalDuration) || 5), 1), MAX_TARGET_DURATION_SECONDS);
   }
 
   private inferAspectRatio(resolution?: string) {
