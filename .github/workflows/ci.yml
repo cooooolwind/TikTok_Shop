@@ -7,34 +7,103 @@ on:
     branches: [main]
   workflow_call:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
 jobs:
-  lint:
+  # ──────────────────────────────────────────────
+  # Stage 1: 检测受影响的 packages
+  # ──────────────────────────────────────────────
+  detect-affected:
     runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.affected.outputs.backend }}
+      frontend: ${{ steps.affected.outputs.frontend }}
+      shared-types: ${{ steps.affected.outputs.shared-types }}
+      any_affected: ${{ steps.affected.outputs.any_affected }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
 
-  typecheck:
+      - name: Detect affected packages
+        id: affected
+        run: |
+          # 使用 turbo --affected --dry-run 获取受影响的 packages
+          AFFECTED=$(pnpm turbo build lint test typecheck --affected --dry-run=json 2>/dev/null | jq -r '.packages[]' | sort -u)
+
+          echo "Affected packages: $AFFECTED"
+
+          # 设置每个 package 的 affected 状态
+          if echo "$AFFECTED" | grep -q "@aigc/backend"; then
+            echo "backend=true" >> $GITHUB_OUTPUT
+          else
+            echo "backend=false" >> $GITHUB_OUTPUT
+          fi
+
+          if echo "$AFFECTED" | grep -q "@aigc/frontend"; then
+            echo "frontend=true" >> $GITHUB_OUTPUT
+          else
+            echo "frontend=false" >> $GITHUB_OUTPUT
+          fi
+
+          if echo "$AFFECTED" | grep -q "@aigc/shared-types"; then
+            echo "shared-types=true" >> $GITHUB_OUTPUT
+          else
+            echo "shared-types=false" >> $GITHUB_OUTPUT
+          fi
+
+          # 判断是否有任何 package 受影响
+          if [ -z "$AFFECTED" ] || [ "$AFFECTED" = "//" ]; then
+            echo "any_affected=false" >> $GITHUB_OUTPUT
+          else
+            echo "any_affected=true" >> $GITHUB_OUTPUT
+          fi
+
+  # ──────────────────────────────────────────────
+  # Stage 2: Lint & Typecheck (只跑 affected)
+  # ──────────────────────────────────────────────
+  lint-and-typecheck:
+    needs: [detect-affected]
+    if: needs.detect-affected.outputs.any_affected == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
 
+      - name: Lint affected packages
+        run: pnpm turbo lint --affected
+
+      - name: Typecheck affected packages
+        run: pnpm turbo typecheck --affected
+
+  # ──────────────────────────────────────────────
+  # Stage 3: Test Backend (条件执行)
+  # ──────────────────────────────────────────────
   test-backend:
+    needs: [detect-affected]
+    if: >-
+      needs.detect-affected.outputs.backend == 'true' ||
+      needs.detect-affected.outputs.shared-types == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -46,7 +115,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U aigc"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -70,35 +139,56 @@ jobs:
       MOCK_MODE: 'true'
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @aigc/backend test
+      - run: pnpm turbo test --filter=@aigc/backend
 
+  # ──────────────────────────────────────────────
+  # Stage 4: Test Frontend (条件执行)
+  # ──────────────────────────────────────────────
   test-frontend:
+    needs: [detect-affected]
+    if: >-
+      needs.detect-affected.outputs.frontend == 'true' ||
+      needs.detect-affected.outputs.shared-types == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @aigc/frontend test
+      - run: pnpm turbo test --filter=@aigc/frontend
 
+  # ──────────────────────────────────────────────
+  # Stage 5: Build (仅 affected packages)
+  # ──────────────────────────────────────────────
   build:
-    needs: [lint, typecheck, test-backend, test-frontend]
+    needs: [detect-affected, lint-and-typecheck, test-backend, test-frontend]
+    if: >-
+      !cancelled() &&
+      !contains(needs.*.result, 'failure') &&
+      needs.detect-affected.outputs.any_affected == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+      - run: pnpm turbo build --affected
+
