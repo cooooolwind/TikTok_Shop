@@ -4,8 +4,11 @@ import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Script } from '../modules/scripts/entities/script.entity';
 import { Scene } from '../modules/scripts/entities/scene.entity';
+import { GenerationTask } from '../modules/generation/entities/generation-task.entity';
+import { Video } from '../modules/generation/entities/video.entity';
 import { WebsocketModule } from '../websocket/websocket.module';
 import { ScriptGenerationProcessor } from './processors/script-generation.processor';
+import { VideoGenerationProcessor } from './processors/video-generation.processor';
 import { QUEUES } from './queues';
 
 @Global()
@@ -21,10 +24,10 @@ import { QUEUES } from './queues';
       { name: QUEUES.VIDEO_GENERATION },
       { name: QUEUES.REFERENCE_ANALYSIS },
     ),
-    TypeOrmModule.forFeature([Script, Scene]),
+    TypeOrmModule.forFeature([Script, Scene, GenerationTask, Video]),
     WebsocketModule,
   ],
-  providers: [ScriptGenerationProcessor],
+  providers: [ScriptGenerationProcessor, VideoGenerationProcessor],
   exports: [BullModule],
 })
 export class TasksModule {}

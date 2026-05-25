@@ -2,6 +2,7 @@ import { Card, Progress, Typography, Space, Descriptions } from 'antd';
 import type { GenerationTask } from '@aigc/shared-types';
 import StatusTag from '../../common/StatusTag';
 import { TASK_STATUS_LABELS } from '../../../constants';
+import { getDisplayProgress } from './progress';
 
 const { Text, Title } = Typography;
 
@@ -17,6 +18,7 @@ interface TaskProgressPanelProps {
 export default function TaskProgressPanel({ task }: TaskProgressPanelProps) {
   const isActive = task.status === 'queued' || task.status === 'processing';
   const isDone = task.status === 'done';
+  const progress = getDisplayProgress(task);
 
   return (
     <Card>
@@ -29,16 +31,16 @@ export default function TaskProgressPanel({ task }: TaskProgressPanelProps) {
         {isActive && (
           <>
             <Progress
-              percent={task.progress.percentage}
+              percent={progress.percentage}
               status="active"
               strokeColor={{ from: '#1677ff', to: '#52c41a' }}
             />
             <Descriptions column={3} size="small" bordered>
-              <Descriptions.Item label="当前阶段">{task.progress.step_name}</Descriptions.Item>
-              <Descriptions.Item label="步骤">{task.progress.current_step} / {task.progress.total_steps}</Descriptions.Item>
-              <Descriptions.Item label="预计剩余">{task.progress.estimated_remaining}s</Descriptions.Item>
+              <Descriptions.Item label="当前阶段">{progress.step_name}</Descriptions.Item>
+              <Descriptions.Item label="步骤">{progress.current_step} / {progress.total_steps}</Descriptions.Item>
+              <Descriptions.Item label="预计剩余">{progress.estimated_remaining}s</Descriptions.Item>
             </Descriptions>
-            <Text type="secondary">{task.progress.message}</Text>
+            <Text type="secondary">{progress.message}</Text>
           </>
         )}
 

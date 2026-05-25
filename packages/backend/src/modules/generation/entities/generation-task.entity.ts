@@ -52,13 +52,13 @@ export class GenerationTask {
   status: GenerationStatus;
 
   @Column({ type: 'jsonb', nullable: true })
-  progress: TaskProgress;
+  progress: TaskProgress | null;
 
   @Column({ type: 'jsonb', nullable: true })
-  result: TaskResult;
+  result: TaskResult | null;
 
   @Column({ type: 'jsonb', nullable: true })
-  error: TaskError;
+  error: TaskError | null;
 
   @Column({ name: 'retry_count', type: 'int', default: 0 })
   retryCount: number;
@@ -67,7 +67,7 @@ export class GenerationTask {
   createdAt: Date;
 
   @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
-  completedAt: Date;
+  completedAt: Date | null;
 
   @ManyToOne(() => Script)
   @JoinColumn({ name: 'script_id' })

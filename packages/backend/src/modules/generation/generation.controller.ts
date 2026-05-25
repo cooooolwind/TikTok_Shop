@@ -1,5 +1,12 @@
-import { Controller, Get, Post, Param } from '@nestjs/common';
+import { Body, Controller, Get, Post, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import type {
+  CreateVideoRequest,
+  ExportRequest,
+  GenerationListQuery,
+  QuickGenerateRequest,
+  RegenerateSceneVideoRequest,
+} from '@aigc/shared-types';
 import { GenerationService } from './generation.service';
 
 @ApiTags('视频创作 /generation')
@@ -9,20 +16,20 @@ export class GenerationController {
 
   @Post('create')
   @ApiOperation({ summary: '4.1 一键成片' })
-  create() {
-    return this.generationService.create();
+  create(@Body() data: CreateVideoRequest) {
+    return this.generationService.create(data);
   }
 
   @Post('quick')
   @ApiOperation({ summary: '4.2 快速成片（跳过剧本步骤）' })
-  quickCreate() {
-    return this.generationService.quickCreate();
+  quickCreate(@Body() data: QuickGenerateRequest) {
+    return this.generationService.quickCreate(data);
   }
 
   @Get('tasks')
   @ApiOperation({ summary: '4.3 任务列表' })
-  findTasks() {
-    return this.generationService.findTasks();
+  findTasks(@Query() query: GenerationListQuery) {
+    return this.generationService.findTasks(query);
   }
 
   @Get('tasks/:taskId')
@@ -45,13 +52,17 @@ export class GenerationController {
 
   @Post('tasks/:taskId/scenes/:sceneId/regenerate')
   @ApiOperation({ summary: '4.7 单分镜重新生成' })
-  regenerateScene(@Param('taskId') taskId: string, @Param('sceneId') sceneId: string) {
-    return this.generationService.regenerateScene(taskId, sceneId);
+  regenerateScene(
+    @Param('taskId') taskId: string,
+    @Param('sceneId') sceneId: string,
+    @Body() data: RegenerateSceneVideoRequest,
+  ) {
+    return this.generationService.regenerateScene(taskId, sceneId, data);
   }
 
   @Post('tasks/:taskId/export')
   @ApiOperation({ summary: '4.8 视频导出' })
-  export(@Param('taskId') taskId: string) {
+  export(@Param('taskId') taskId: string, @Body() _data: ExportRequest) {
     return this.generationService.export(taskId);
   }
 }
