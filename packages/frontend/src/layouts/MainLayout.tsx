@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, theme } from 'antd';
+import { Layout, Menu, theme, Dropdown, Button } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   HomeOutlined,
@@ -9,11 +9,13 @@ import {
   BarChartOutlined,
   BookOutlined,
   BulbOutlined,
+  SkinOutlined,
 } from '@ant-design/icons';
 import { useUIStore } from '../stores/useAppStore';
 import { ROUTES } from '../constants';
+import { useTheme } from '../hooks/useTheme';
 
-const { Sider, Content } = Layout;
+const { Sider, Content, Header } = Layout;
 
 type MenuItem = Required<MenuProps>['items'][number];
 
@@ -103,16 +105,34 @@ export default function MainLayout() {
 
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const setThemeMode = useUIStore((s) => s.setThemeMode);
+
+  const { isDark, themeMode } = useTheme();
 
   const { selectedKey, openKeys } = deriveMenuState(location.pathname);
 
+  const themeMenuItems: MenuProps['items'] = [
+    { key: 'system', label: '跟随系统' },
+    { key: 'light', label: '浅色模式' },
+    { key: 'dark', label: '深色模式' },
+  ];
+
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ minHeight: '100vh', background: 'transparent' }}>
       <Sider
         collapsible
         collapsed={collapsed}
         onCollapse={toggleSidebar}
-        style={{ borderRight: `1px solid ${token.colorBorderSecondary}` }}
+        theme={isDark ? 'dark' : 'light'}
+        style={{
+          borderRight: `1px solid ${token.colorBorderSecondary}`,
+          background: isDark ? '#161823' : '#ffffff',
+          position: 'sticky',
+          top: 0,
+          height: '100vh',
+          overflow: 'auto',
+          zIndex: 10,
+        }}
       >
         {/* Logo 区：折叠时显示简短图标文字 */}
         <div
@@ -134,11 +154,15 @@ export default function MainLayout() {
         </div>
 
         <Menu
-          theme="dark"
+          theme={isDark ? 'dark' : 'light'}
           mode="inline"
           selectedKeys={[selectedKey]}
           defaultOpenKeys={openKeys}
           items={menuItems}
+          style={{
+            background: 'transparent',
+            borderRight: 'none',
+          }}
           onClick={({ key }) => {
             // 跳过父菜单组
             if (key === 'scripts-group') return;
@@ -147,15 +171,43 @@ export default function MainLayout() {
         />
       </Sider>
 
-      <Layout>
+      <Layout style={{ background: 'transparent' }}>
+        <Header
+          style={{
+            padding: '0 24px',
+            background: isDark ? 'rgba(22, 24, 35, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+            backdropFilter: 'blur(10px)',
+            borderBottom: `1px solid ${token.colorBorderSecondary}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            position: 'sticky',
+            top: 0,
+            zIndex: 9,
+          }}
+        >
+          <Dropdown
+            menu={{
+              items: themeMenuItems,
+              selectedKeys: [themeMode],
+              onClick: ({ key }) => setThemeMode(key as 'system' | 'light' | 'dark'),
+            }}
+            placement="bottomRight"
+          >
+            <Button type="text" icon={<SkinOutlined />} style={{ color: token.colorText }}>
+              主题切换
+            </Button>
+          </Dropdown>
+        </Header>
         <Content
           style={{
-            margin: 16,
+            margin: '24px 24px',
             padding: 24,
-            background: token.colorBgContainer,
+            background: isDark ? 'transparent' : token.colorBgContainer,
             borderRadius: token.borderRadius,
-            minHeight: 360,
+            minHeight: 280,
           }}
+          className="hover-scale"
         >
           <Outlet />
         </Content>

@@ -7,6 +7,7 @@ export const useUIStore = create<UIState>((set) => ({
   sidebarCollapsed: false,
   globalLoading: false,
   notifications: [],
+  themeMode: 'system',
 
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
 
@@ -27,4 +28,6 @@ export const useUIStore = create<UIState>((set) => ({
       notifications: s.notifications.filter((n) => n.id !== id),
     }));
   },
+
+  setThemeMode: (mode) => set({ themeMode: mode }),
 }));

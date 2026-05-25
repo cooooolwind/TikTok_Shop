@@ -210,7 +210,7 @@ export interface AnalyticsState {
 // UI Store
 // ==============================
 
-export type ThemeMode = 'light' | 'dark';
+export type ThemeMode = 'system' | 'light' | 'dark';
 
 export interface NotificationItem {
   id: string;
@@ -224,9 +224,11 @@ export interface UIState {
   sidebarCollapsed: boolean;
   globalLoading: boolean;
   notifications: NotificationItem[];
+  themeMode: ThemeMode;
 
   toggleSidebar: () => void;
   setGlobalLoading: (loading: boolean) => void;
   pushNotification: (notif: Omit<NotificationItem, 'id' | 'timestamp'>) => void;
   dismissNotification: (id: string) => void;
+  setThemeMode: (mode: ThemeMode) => void;
 }
