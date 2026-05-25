@@ -26,9 +26,12 @@ jobs:
     if: ${{ !inputs.skip_ci }}
     uses: ./.github/workflows/ci.yml
 
-  build-and-push:
+  build-and-push-backend:
     needs: [ci]
-    if: ${{ !cancelled() && (needs.ci.result == 'success' || needs.ci.result == 'skipped') }}
+    if: >-
+      !cancelled() && 
+      (needs.ci.result == 'success' || needs.ci.result == 'skipped') &&
+      (inputs.skip_ci || needs.ci.outputs.backend == 'true' || needs.ci.outputs.shared-types == 'true')
     runs-on: ubuntu-latest
     environment: production
 
@@ -73,6 +76,40 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Logout from ACR
+        if: always()
+        run: docker logout ${{ env.ACR_REGISTRY }}
+
+  build-and-push-frontend:
+    needs: [ci]
+    if: >-
+      !cancelled() && 
+      (needs.ci.result == 'success' || needs.ci.result == 'skipped') &&
+      (inputs.skip_ci || needs.ci.outputs.frontend == 'true' || needs.ci.outputs.shared-types == 'true')
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure Aliyun credentials
+        uses: aliyun/configure-aliyun-credentials-action@v1
+        with:
+          role-to-assume: ${{ secrets.ALIYUN_ROLE_ARN }}
+          oidc-provider-arn: ${{ secrets.ALIYUN_OIDC_PROVIDER_ARN }}
+          role-session-name: github-actions-build
+
+      - name: Login to Alibaba Cloud ACR
+        run: |
+          echo "${{ secrets.ACR_PASSWORD }}" | docker login \
+            ${{ env.ACR_REGISTRY }} \
+            --username "${{ secrets.ACR_USERNAME }}" \
+            --password-stdin
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Extract frontend metadata
         id: meta_frontend
         uses: docker/metadata-action@v5.6.1
@@ -98,7 +135,10 @@ jobs:
         run: docker logout ${{ env.ACR_REGISTRY }}
 
   deploy:
-    needs: [build-and-push]
+    needs: [build-and-push-backend, build-and-push-frontend]
+    if: >-
+      !cancelled() &&
+      (needs.build-and-push-backend.result == 'success' || needs.build-and-push-frontend.result == 'success')
     runs-on: ubuntu-latest
     environment: production
 
@@ -122,12 +162,14 @@ jobs:
           ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
           ACR_NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
           ACR_REGISTRY: ${{ env.ACR_REGISTRY }}
+          UPDATE_BACKEND: ${{ needs.build-and-push-backend.result == 'success' }}
+          UPDATE_FRONTEND: ${{ needs.build-and-push-frontend.result == 'success' }}
         with:
           host: ${{ secrets.ECS_HOST }}
           username: ${{ secrets.ECS_USER }}
           key: ${{ secrets.ECS_SSH_KEY }}
           script_stop: true
-          envs: ACR_USERNAME,ACR_PASSWORD,ACR_NAMESPACE,ACR_REGISTRY
+          envs: ACR_USERNAME,ACR_PASSWORD,ACR_NAMESPACE,ACR_REGISTRY,UPDATE_BACKEND,UPDATE_FRONTEND
           script: |
             set -e
             cd /opt/aigc-platform
@@ -140,26 +182,42 @@ jobs:
             export BACKEND_IMAGE="$ACR_REGISTRY/$ACR_NAMESPACE/aigc-backend:latest"
             export FRONTEND_IMAGE="$ACR_REGISTRY/$ACR_NAMESPACE/aigc-frontend:latest"
 
-            echo "Pull latest images..."
-            docker compose -f docker-compose.prod.yml pull backend frontend
+            SERVICES_TO_PULL=""
+            if [ "$UPDATE_BACKEND" = "true" ]; then
+              SERVICES_TO_PULL="backend"
+            fi
+            if [ "$UPDATE_FRONTEND" = "true" ]; then
+              SERVICES_TO_PULL="$SERVICES_TO_PULL frontend"
+            fi
 
-            echo "Rolling update..."
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
-
-            echo "Cleanup old images..."
-            docker image prune -a -f || true
-
-            echo "Waiting for services..."
-            sleep 10
-
-            echo "Backend health check..."
-            curl -fsS http://localhost:3000/api/v1/health \
-              && echo "Backend OK" \
-              || (echo "Backend health check failed" && exit 1)
-
-            echo "Frontend health check..."
-            curl -fsS http://localhost/ \
-              && echo "Frontend OK" \
-              || (echo "Frontend health check failed" && exit 1)
+            if [ -n "$SERVICES_TO_PULL" ]; then
+              echo "Pull latest images for: $SERVICES_TO_PULL"
+              docker compose -f docker-compose.prod.yml pull $SERVICES_TO_PULL
+              
+              echo "Rolling update..."
+              docker compose -f docker-compose.prod.yml up -d --remove-orphans
+              
+              echo "Cleanup old images..."
+              docker image prune -a -f || true
+              
+              echo "Waiting for services..."
+              sleep 10
+              
+              if [ "$UPDATE_BACKEND" = "true" ]; then
+                echo "Backend health check..."
+                curl -fsS http://localhost:3000/api/v1/health \
+                  && echo "Backend OK" \
+                  || (echo "Backend health check failed" && exit 1)
+              fi
+              
+              if [ "$UPDATE_FRONTEND" = "true" ]; then
+                echo "Frontend health check..."
+                curl -fsS http://localhost/ \
+                  && echo "Frontend OK" \
+                  || (echo "Frontend health check failed" && exit 1)
+              fi
+            else
+              echo "No services to update."
+            fi
 
             docker logout $ACR_REGISTRY
