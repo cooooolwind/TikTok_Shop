@@ -145,18 +145,16 @@ jobs:
           username: ${{ secrets.ECS_USER }}
           key: ${{ secrets.ECS_SSH_KEY }}
           script_stop: true
-          envs: ACR_USERNAME,ACR_PASSWORD,ACR_NAMESPACE,ACR_REGISTRY
+          envs: ACR_USERNAME,ACR_PASSWORD,ACR_NAMESPACE,ACR_REGISTRY,$ACR_INTERNAL_REGISTRY
           script: |
             cd /opt/aigc-platform
 
             # 登录阿里云 ACR
-            docker login $ACR_REGISTRY \
-              -u "$ACR_USERNAME" \
-              -p "$ACR_PASSWORD"
+            docker login $ACR_INTERNAL_REGISTRY
 
             # 拉取最新镜像
-            export BACKEND_IMAGE="$ACR_REGISTRY/$ACR_NAMESPACE/aigc-backend:latest"
-            export FRONTEND_IMAGE="$ACR_REGISTRY/$ACR_NAMESPACE/aigc-frontend:latest"
+            export BACKEND_IMAGE="$ACR_INTERNAL_REGISTRY/$ACR_NAMESPACE/aigc-backend:latest"
+            export FRONTEND_IMAGE="$ACR_INTERNAL_REGISTRY/$ACR_NAMESPACE/aigc-frontend:latest"
 
             docker compose -f docker-compose.prod.yml pull
 
