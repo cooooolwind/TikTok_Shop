@@ -25,20 +25,20 @@ export class Video {
   @Column({ length: 1024 })
   url: string;
 
-  @Column({ name: 'thumbnail_url', length: 1024, nullable: true })
-  thumbnailUrl: string;
+  @Column({ name: 'thumbnail_url', type: 'varchar', length: 1024, nullable: true })
+  thumbnailUrl: string | null;
 
   @Column({ type: 'float', nullable: true })
-  duration: number;
+  duration: number | null;
 
-  @Column({ length: 32, nullable: true })
-  resolution: string;
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  resolution: string | null;
 
-  @Column({ name: 'aspect_ratio', length: 16, nullable: true })
-  aspectRatio: string;
+  @Column({ name: 'aspect_ratio', type: 'varchar', length: 16, nullable: true })
+  aspectRatio: string | null;
 
   @Column({ name: 'file_size', type: 'bigint', nullable: true })
-  fileSize: number;
+  fileSize: number | null;
 
   @Column({ name: 'export_formats', type: 'jsonb', default: () => "'[]'" })
   exportFormats: Record<string, unknown>[];
