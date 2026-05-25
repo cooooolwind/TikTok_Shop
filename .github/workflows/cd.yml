@@ -147,7 +147,7 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
             echo "Cleanup old images..."
-            docker image prune -af || true
+            docker image prune -a -f || true
 
             echo "Waiting for services..."
             sleep 10
