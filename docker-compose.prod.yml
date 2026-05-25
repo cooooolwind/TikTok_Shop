@@ -12,9 +12,9 @@ services:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aigc}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aigc} -d ${POSTGRES_DB:-aigc_platform}"]
       interval: 5s
       timeout: 5s
       retries: 5
