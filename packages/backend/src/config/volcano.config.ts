@@ -14,6 +14,9 @@ export default registerAs('volcano', () => ({
     '',
   videoBaseUrl: process.env.VOLCANO_VIDEO_BASE_URL || process.env.VOLCANO_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3',
   videoEndpoint: process.env.VOLCANO_VIDEO_ENDPOINT || '',
+  videoMaxDuration: Number(process.env.VOLCANO_VIDEO_MAX_DURATION || '12'),
+  videoPollingMaxAttempts: Number(process.env.VOLCANO_VIDEO_POLLING_MAX_ATTEMPTS || '120'),
+  videoPollingIntervalMs: Number(process.env.VOLCANO_VIDEO_POLLING_INTERVAL_MS || '5000'),
   mockVideoUrl:
     process.env.MOCK_VIDEO_URL ||
     'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
