@@ -113,6 +113,17 @@ export class GenerationService {
     return this.toTaskResponse(await this.tasksRepository.save(task));
   }
 
+  async remove(taskId: string) {
+    const task = await this.findRawTask(taskId);
+    if (task.status === 'queued' || task.status === 'processing') {
+      throw new BadRequestException('Active generation tasks must be cancelled before deletion');
+    }
+
+    await this.videosRepository.delete({ taskId });
+    await this.tasksRepository.remove(task);
+    return { message: 'deleted' };
+  }
+
   async regenerateScene(taskId: string, sceneId: string, data: RegenerateSceneVideoRequest = {}) {
     const task = await this.findRawTask(taskId);
     await this.videoQueue.add('regenerate-scene', { taskId, sceneId, instruction: data.instruction, materialId: data.material_id });

@@ -20,6 +20,7 @@ export const generationApi = {
   taskDetail: (taskId: string) => client.get<unknown, GenerationTask>(`${BASE}/tasks/${taskId}`),
   retry: (taskId: string) => client.post<unknown, GenerationTask>(`${BASE}/tasks/${taskId}/retry`),
   cancel: (taskId: string) => client.post<unknown, GenerationTask>(`${BASE}/tasks/${taskId}/cancel`),
+  remove: (taskId: string) => client.delete<unknown, { message: string }>(`${BASE}/tasks/${taskId}`),
   regenerateScene: (taskId: string, sceneId: string, data: RegenerateSceneVideoRequest) =>
     client.post<unknown, GenerationTask>(`${BASE}/tasks/${taskId}/scenes/${sceneId}/regenerate`, data),
   export: (taskId: string, data: ExportRequest) =>
