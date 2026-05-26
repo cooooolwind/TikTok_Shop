@@ -64,7 +64,10 @@ function makeTask(overrides: Partial<GenerationTask> = {}): GenerationTask {
   };
 }
 
-function makeProcessor(videoStatus: 'succeeded' | 'failed' | 'running' = 'succeeded') {
+function makeProcessor(
+  videoStatus: 'succeeded' | 'failed' | 'running' = 'succeeded',
+  options: { videoStatuses?: ('succeeded' | 'failed' | 'running')[]; pollingMaxAttempts?: number; pollingIntervalMs?: number } = {},
+) {
   const task = makeTask();
   const script = makeScript();
   const tasksRepository = {
@@ -81,10 +84,11 @@ function makeProcessor(videoStatus: 'succeeded' | 'failed' | 'running' = 'succee
   const volcanoClient = {
     createVideoTask: jest.fn(async () => ({ id: 'volcano-task-1' })),
     getVideoTask: jest.fn(async () => {
-      if (videoStatus === 'failed') {
+      const currentStatus = options.videoStatuses?.shift() ?? videoStatus;
+      if (currentStatus === 'failed') {
         return { id: 'volcano-task-1', status: 'failed', error: { code: 'BAD_PROMPT', message: 'bad prompt' } };
       }
-      if (videoStatus === 'running') return { id: 'volcano-task-1', status: 'running' };
+      if (currentStatus === 'running') return { id: 'volcano-task-1', status: 'running' };
       return {
         id: 'volcano-task-1',
         status: 'succeeded',
@@ -100,12 +104,20 @@ function makeProcessor(videoStatus: 'succeeded' | 'failed' | 'running' = 'succee
     emitTaskCompleted: jest.fn(),
     emitTaskFailed: jest.fn(),
   };
+  const configService = {
+    get: jest.fn((key: string) => {
+      if (key === 'volcano.videoPollingMaxAttempts') return options.pollingMaxAttempts;
+      if (key === 'volcano.videoPollingIntervalMs') return options.pollingIntervalMs;
+      return undefined;
+    }),
+  };
   const processor = new VideoGenerationProcessor(
     tasksRepository as never,
     scriptsRepository as never,
     videosRepository as never,
     volcanoClient as never,
     tasksGateway as never,
+    configService as never,
   );
   const job = {
     data: { taskId: 'task-1', scriptId: 'script-1', options: { resolution: '1080x1920', aspect_ratio: '9:16' } },
@@ -130,6 +142,16 @@ describe('VideoGenerationProcessor', () => {
       expect.objectContaining({ video_url: 'https://example.com/video.mp4' }),
     );
     expect(result).toEqual(expect.objectContaining({ status: 'done', taskId: 'task-1' }));
+  });
+
+  it('clamps the target script duration to the 15 second product limit before video generation', async () => {
+    const { processor, volcanoClient, job } = makeProcessor('succeeded');
+    const longScript = makeScript({ totalDuration: 18 });
+    (processor as unknown as { scriptsRepository: { findOne: jest.Mock } }).scriptsRepository.findOne.mockResolvedValueOnce(longScript);
+
+    await processor.process(job as never);
+
+    expect(volcanoClient.createVideoTask).toHaveBeenCalledWith(expect.objectContaining({ duration: 15 }));
   });
 
   it('marks task failed and emits failure when provider returns failed', async () => {
@@ -159,6 +181,27 @@ describe('VideoGenerationProcessor', () => {
       expect.objectContaining({
         status: 'failed',
         error: expect.objectContaining({ code: 'VIDEO_GENERATION_TIMEOUT', retryable: true }),
+      }),
+    );
+    expect(tasksGateway.emitTaskFailed).toHaveBeenCalledWith(
+      'task-1',
+      expect.objectContaining({ code: 'VIDEO_GENERATION_TIMEOUT' }),
+    );
+  });
+
+  it('uses configured polling attempts when waiting for provider results', async () => {
+    const { processor, tasksRepository, tasksGateway, job } = makeProcessor('succeeded', {
+      videoStatuses: ['running', 'running', 'succeeded'],
+      pollingMaxAttempts: 2,
+      pollingIntervalMs: 0,
+    });
+
+    await expect(processor.process(job as never)).rejects.toThrow('Video generation timed out');
+
+    expect(tasksRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'failed',
+        error: expect.objectContaining({ code: 'VIDEO_GENERATION_TIMEOUT' }),
       }),
     );
     expect(tasksGateway.emitTaskFailed).toHaveBeenCalledWith(

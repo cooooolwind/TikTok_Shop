@@ -1,5 +1,5 @@
-import { Card, Progress, Space, Typography, Tag } from 'antd';
-import { ClockCircleOutlined } from '@ant-design/icons';
+import { Button, Card, Progress, Space, Typography, Tag, Tooltip } from 'antd';
+import { ClockCircleOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { GenerationTask } from '@aigc/shared-types';
 import StatusTag from '../../common/StatusTag';
 import { TASK_STATUS_LABELS } from '../../../constants';
@@ -9,9 +9,10 @@ const { Text } = Typography;
 interface TaskCardProps {
   task: GenerationTask;
   onClick?: () => void;
+  onDelete?: () => void;
 }
 
-export default function TaskCard({ task, onClick }: TaskCardProps) {
+export default function TaskCard({ task, onClick, onDelete }: TaskCardProps) {
   const isActive = task.status === 'queued' || task.status === 'processing';
   const isDone = task.status === 'done';
 
@@ -24,7 +25,24 @@ export default function TaskCard({ task, onClick }: TaskCardProps) {
       <Space direction="vertical" style={{ width: '100%' }} size="small">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text strong ellipsis style={{ maxWidth: 200 }}>任务 {task.id}</Text>
-          <StatusTag status={task.status} labels={TASK_STATUS_LABELS} />
+          <Space size={4}>
+            <StatusTag status={task.status} labels={TASK_STATUS_LABELS} />
+            {onDelete && !isActive && (
+              <Tooltip title="删除任务">
+                <Button
+                  aria-label="delete task"
+                  size="small"
+                  type="text"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDelete();
+                  }}
+                />
+              </Tooltip>
+            )}
+          </Space>
         </div>
 
         {isActive && (

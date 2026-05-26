@@ -89,6 +89,20 @@ export const useCreationStore = create<CreationState>((set, get) => ({
     }
   },
 
+  remove: async (taskId) => {
+    try {
+      await generationApi.remove(taskId);
+      set((s) => ({
+        tasks: s.tasks.filter((t) => t.id !== taskId),
+        total: Math.max(s.total - 1, 0),
+        currentTask: s.currentTask?.id === taskId ? null : s.currentTask,
+      }));
+      useUIStore.getState().pushNotification({ type: 'success', title: '任务已删除' });
+    } catch {
+      useUIStore.getState().pushNotification({ type: 'error', title: '删除任务失败' });
+    }
+  },
+
   exportVideo: async (taskId, format, resolution, quality) => {
     const result = unwrapResponse(await generationApi.export(taskId, { format: format as 'mp4' | 'webm', resolution: resolution as '1080x1920' | '1920x1080' | '720x1280', quality: quality as 'high' | 'medium' | 'low' }));
     return result;
