@@ -19,6 +19,8 @@ export default registerAs('volcano', () => ({
     'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
   mockVideoThumbnailUrl: process.env.MOCK_VIDEO_THUMBNAIL_URL || '',
   mockMode: process.env.MOCK_MODE === 'true',
+  videoCreateRetryAttempts: parseInt(process.env.VOLCANO_VIDEO_CREATE_RETRY_ATTEMPTS || '3', 10),
+  videoCreateRetryDelayMs: parseInt(process.env.VOLCANO_VIDEO_CREATE_RETRY_DELAY_MS || '15000', 10),
   rateLimit: {
     rpm: 100,
     tpm: 500000,

@@ -108,4 +108,35 @@ describe('VolcanoClientProvider video generation', () => {
       }),
     );
   });
+
+  it('retries video task creation when Ark returns an RPM rate limit error', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: {
+              code: 'EndpointAccountRpmRateLimitExceeded',
+              message: 'RPM limit exceeded',
+              type: 'TooManyRequests',
+            },
+          }),
+          { status: 429 },
+        ),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'cgt-after-retry' }), { status: 200 }));
+    const { provider } = makeProvider({
+      'volcano.mockMode': false,
+      'volcano.videoApiKey': 'key',
+      'volcano.videoBaseUrl': 'https://ark.cn-beijing.volces.com/api/v3',
+      'volcano.videoEndpoint': 'ep-video',
+      'volcano.videoCreateRetryAttempts': 2,
+      'volcano.videoCreateRetryDelayMs': 0,
+    });
+
+    const created = await provider.createVideoTask({ prompt: 'product demo', ratio: '9:16', resolution: '1080p', duration: 5 });
+
+    expect(created).toEqual({ id: 'cgt-after-retry' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

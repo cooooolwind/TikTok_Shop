@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Row, Col, Button, Space, Select } from 'antd';
+import { Button, Col, Modal, Row, Select, Space } from 'antd';
 import { PlusOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
 import TaskCard from '../../components/creation/TaskCard';
@@ -8,12 +8,14 @@ import EmptyState from '../../components/common/EmptyState';
 import { useCreationStore } from '../../stores/useGenerationStore';
 import { usePagination } from '../../hooks/usePagination';
 import { TASK_STATUS_LABELS } from '../../constants';
+import { formatGenerationTaskDisplayId } from '../../utils/format';
+import type { GenerationTask } from '@aigc/shared-types';
 
 export default function CreationStudioPage() {
   const navigate = useNavigate();
   const {
     tasks, total, loading, filters,
-    fetchTasks, setFilters,
+    fetchTasks, setFilters, remove,
   } = useCreationStore();
   const pagination = usePagination({ defaultPageSize: 12 });
 
@@ -24,6 +26,20 @@ export default function CreationStudioPage() {
   useEffect(() => {
     pagination.setTotal(total);
   }, [total]);
+
+  const deleteTask = (task: GenerationTask) => {
+    Modal.confirm({
+      title: '删除创作任务',
+      content: `确认删除「${formatGenerationTaskDisplayId(task)}」吗？关联的视频记录也会一起删除。`,
+      okText: '删除',
+      cancelText: '取消',
+      okType: 'danger',
+      onOk: async () => {
+        await remove(task.id);
+        fetchTasks({ ...filters, ...pagination.query });
+      },
+    });
+  };
 
   return (
     <div>
@@ -41,7 +57,6 @@ export default function CreationStudioPage() {
         }
       />
 
-      {/* 状态筛选 */}
       <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
         <Col>
           <Select
@@ -62,12 +77,13 @@ export default function CreationStudioPage() {
         />
       ) : (
         <>
-          <Row gutter={[16, 16]}>
+          <Row gutter={[16, 16]} align="stretch">
             {tasks.map((task) => (
-              <Col xs={24} sm={12} md={8} lg={6} key={task.id}>
+              <Col xs={24} sm={12} md={8} lg={6} key={task.id} style={{ display: 'flex' }}>
                 <TaskCard
                   task={task}
                   onClick={() => navigate(`/creation/tasks/${task.id}`)}
+                  onDelete={() => deleteTask(task)}
                 />
               </Col>
             ))}

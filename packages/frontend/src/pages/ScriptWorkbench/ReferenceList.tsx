@@ -12,6 +12,7 @@ import { useReferenceStore } from '../../stores/useReferenceStore';
 import { usePagination } from '../../hooks/usePagination';
 import { ANALYSIS_STATUS_LABELS } from '../../constants';
 import EmptyState from '../../components/common/EmptyState';
+import { formatBeijingDateTime } from '../../utils/format';
 
 const columns: ColumnsType<ReferenceVideo> = [
   { title: '来源平台', dataIndex: 'source_platform', width: 100, render: (p: string) => <Tag>{p}</Tag> },
@@ -30,7 +31,7 @@ const columns: ColumnsType<ReferenceVideo> = [
   },
   {
     title: '添加时间', dataIndex: 'created_at', width: 180,
-    render: (t: string) => new Date(t).toLocaleString(),
+    render: (t: string) => formatBeijingDateTime(t),
   },
 ];
 

@@ -12,6 +12,7 @@ import { useTTSStore } from '../../stores/useTTSStore';
 import { useBGMStore } from '../../stores/useBGMStore';
 import { RESOLUTIONS } from '../../utils/constants';
 import type { Script } from '@aigc/shared-types';
+import { formatScriptDisplayId } from '../../utils/format';
 
 const { Text } = Typography;
 
@@ -82,7 +83,7 @@ export default function CreateTask() {
                   options={scripts
                     .filter((s) => s.status === 'confirmed')
                     .map((s) => ({
-                      label: `${s.product_info.name} (${s.scenes.length} 分镜)`,
+                      label: `${formatScriptDisplayId(s.created_at)} ${s.product_info.name} (${s.scenes.length} 分镜)`,
                       value: s.id,
                     }))}
                   notFoundContent={scriptsLoading ? <Spin size="small" /> : '无已确认的剧本，请先在剧本工作台中确认剧本'}

@@ -3,10 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Card, Button, Space, Spin, Descriptions, Typography,
 } from 'antd';
-import { ArrowLeftOutlined, DownloadOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, DownloadOutlined, EditOutlined } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
 import { useCreationStore } from '../../stores/useGenerationStore';
-import { formatBytes, formatDuration } from '../../utils/format';
+import { formatBytes, formatDuration, formatGenerationTaskDisplayId } from '../../utils/format';
 
 const { Text } = Typography;
 
@@ -46,6 +46,9 @@ export default function VideoPreview() {
             <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/creation/tasks/${t.id}`)}>
               返回任务
             </Button>
+            <Button icon={<EditOutlined />} onClick={() => navigate(`/scripts/${t.script_id}?returnTask=${t.id}`)}>
+              修改剧本
+            </Button>
             <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport}>
               导出视频
             </Button>
@@ -53,7 +56,6 @@ export default function VideoPreview() {
         }
       />
 
-      {/* 视频播放器 */}
       <Card style={{ marginBottom: 24, textAlign: 'center', background: '#000' }}>
         {result?.video_url ? (
           <video
@@ -73,7 +75,6 @@ export default function VideoPreview() {
         )}
       </Card>
 
-      {/* 视频详情 */}
       {result && (
         <Card title="视频信息">
           <Descriptions column={3} size="small" bordered>
@@ -81,7 +82,7 @@ export default function VideoPreview() {
             <Descriptions.Item label="分辨率">{result.resolution}</Descriptions.Item>
             <Descriptions.Item label="画幅比例">{result.aspect_ratio}</Descriptions.Item>
             <Descriptions.Item label="文件大小">{formatBytes(result.file_size)}</Descriptions.Item>
-            <Descriptions.Item label="任务 ID">{t.id}</Descriptions.Item>
+            <Descriptions.Item label="任务 ID">{formatGenerationTaskDisplayId(t)}</Descriptions.Item>
           </Descriptions>
         </Card>
       )}

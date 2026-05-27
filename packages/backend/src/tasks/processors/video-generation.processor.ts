@@ -58,7 +58,7 @@ export class VideoGenerationProcessor extends WorkerHost {
 
       await this.updateProgress(job, 1, 5, 'prepare', '正在读取剧本与分镜...');
       const script = await this.findScript(scriptId);
-      const duration = Math.min(Math.max(Math.round(Number(script.totalDuration) || 5), 5), 10);
+      const duration = this.toProviderDuration(script.totalDuration);
 
       await this.updateProgress(job, 2, 5, 'build_prompt', '正在整理视频生成提示词...');
       const prompt = this.buildPrompt(script);
@@ -238,6 +238,11 @@ export class VideoGenerationProcessor extends WorkerHost {
     if (resolution === '1920x1080') return '16:9';
     if (resolution === '1080x1080') return '1:1';
     return '9:16';
+  }
+
+  private toProviderDuration(duration?: number) {
+    const requested = Math.round(Number(duration) || 5);
+    return requested <= 5 ? 5 : 10;
   }
 
   private toProviderResolution(resolution?: string) {
