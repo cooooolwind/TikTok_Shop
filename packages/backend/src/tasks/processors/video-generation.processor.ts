@@ -1,4 +1,5 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+﻿import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
@@ -8,6 +9,7 @@ import { VolcanoClientProvider, type VolcanoVideoTask } from '../../ai/providers
 import { GenerationTask } from '../../modules/generation/entities/generation-task.entity';
 import { Video } from '../../modules/generation/entities/video.entity';
 import { Script } from '../../modules/scripts/entities/script.entity';
+import { Scene } from '../../modules/scripts/entities/scene.entity';
 import { TasksGateway } from '../../websocket/tasks.gateway';
 import { QUEUES } from '../queues';
 
@@ -22,8 +24,15 @@ interface PollingOptions {
   intervalMs: number;
 }
 
+interface VideoSegmentPlan {
+  index: number;
+  scenes: Scene[];
+  duration: number;
+}
+
+const SUPPORTED_VIDEO_DURATIONS = [5, 10] as const;
 const DEFAULT_POLLING: PollingOptions = {
-  maxAttempts: 30,
+  maxAttempts: 180,
   intervalMs: 5000,
 };
 
@@ -38,8 +47,10 @@ export class VideoGenerationProcessor extends WorkerHost {
     @InjectRepository(Video) private readonly videosRepository: Repository<Video>,
     private readonly volcanoClient: VolcanoClientProvider,
     private readonly tasksGateway: TasksGateway,
+    private readonly configService: ConfigService,
   ) {
     super();
+    this.polling = this.getPollingOptions();
   }
 
   configurePollingForTest(options: PollingOptions) {
@@ -56,29 +67,45 @@ export class VideoGenerationProcessor extends WorkerHost {
       task.error = null;
       await this.tasksRepository.save(task);
 
-      await this.updateProgress(job, 1, 5, 'prepare', '正在读取剧本与分镜...');
+      await this.updateProgress(job, 1, 5, 'prepare', 'Reading script and scenes...');
       const script = await this.findScript(scriptId);
-      const duration = this.toProviderDuration(script.totalDuration);
 
-      await this.updateProgress(job, 2, 5, 'build_prompt', '正在整理视频生成提示词...');
-      const prompt = this.buildPrompt(script);
+      await this.updateProgress(job, 2, 5, 'build_segments', 'Building one video generation segment per scene...');
+      const segments = this.buildSegments(script);
+      const segmentResults: NonNullable<TaskResult['segments']> = [];
 
-      await this.updateProgress(job, 3, 5, 'submit_video_task', '正在提交视频生成任务...');
-      const created = await this.volcanoClient.createVideoTask({
-        prompt,
-        ratio: options?.aspect_ratio ?? this.inferAspectRatio(options?.resolution),
-        resolution: this.toProviderResolution(options?.resolution),
-        duration,
-        imageUrls: script.productInfo.images ?? [],
-      });
+      for (const segment of segments) {
+        await this.updateProgress(
+          job,
+          3,
+          5,
+          'submit_video_task',
+          `Submitting video segment ${segment.index + 1}/${segments.length}...`,
+        );
+        const created = await this.volcanoClient.createVideoTask({
+          prompt: this.buildPrompt(script, segment),
+          ratio: options?.aspect_ratio ?? this.inferAspectRatio(options?.resolution),
+          resolution: this.toProviderResolution(options?.resolution),
+          duration: segment.duration,
+          imageUrls: script.productInfo.images ?? [],
+        });
 
-      await this.updateProgress(job, 4, 5, 'wait_result', '正在等待视频生成结果...');
-      const providerTask = await this.waitForProviderTask(created.id);
-      const result = this.toTaskResult(providerTask, options, duration);
+        await this.updateProgress(
+          job,
+          4,
+          5,
+          'wait_result',
+          `Waiting for video segment ${segment.index + 1}/${segments.length} result...`,
+        );
+        const providerTask = await this.waitForProviderTask(created.id);
+        segmentResults.push(this.toSegmentResult(providerTask, options, segment));
+      }
 
-      await this.updateProgress(job, 5, 5, 'persist_result', '正在保存成片结果...');
+      const result = this.toTaskResult(segmentResults, options);
+
+      await this.updateProgress(job, 5, 5, 'persist_result', 'Saving segmented video results...');
       task.status = 'done';
-      task.progress = this.makeProgress(5, 5, 'done', '视频生成完成');
+      task.progress = this.makeProgress(5, 5, 'done', 'Video segments generated');
       task.result = result;
       task.error = null;
       task.completedAt = new Date();
@@ -105,6 +132,19 @@ export class VideoGenerationProcessor extends WorkerHost {
     }
   }
 
+  private getPollingOptions(): PollingOptions {
+    return {
+      maxAttempts: this.readPositiveInt('VOLCANO_VIDEO_POLL_ATTEMPTS', DEFAULT_POLLING.maxAttempts),
+      intervalMs: this.readPositiveInt('VOLCANO_VIDEO_POLL_INTERVAL_MS', DEFAULT_POLLING.intervalMs),
+    };
+  }
+
+  private readPositiveInt(key: string, fallback: number) {
+    const raw = this.configService.get<string>(key) ?? process.env[key];
+    const value = Number.parseInt(raw ?? '', 10);
+    return Number.isFinite(value) && value > 0 ? value : fallback;
+  }
+
   private async findTask(taskId: string) {
     const task = await this.tasksRepository.findOne({ where: { id: taskId } });
     if (!task) throw new Error(`Generation task ${taskId} not found`);
@@ -121,9 +161,22 @@ export class VideoGenerationProcessor extends WorkerHost {
     return script;
   }
 
-  private buildPrompt(script: Script) {
-    const scenes = [...(script.scenes ?? [])]
-      .sort((a, b) => a.order - b.order)
+  private buildSegments(script: Script): VideoSegmentPlan[] {
+    const scenes = [...(script.scenes ?? [])].sort((a, b) => a.order - b.order);
+    if (scenes.length === 0) {
+      return [{ index: 0, scenes: [], duration: this.toProviderDuration(script.totalDuration) }];
+    }
+
+    return scenes.map((scene, index) => ({
+      index,
+      scenes: [scene],
+      duration: this.toProviderDuration(scene.duration),
+    }));
+  }
+
+  private buildPrompt(script: Script, segment: VideoSegmentPlan) {
+    const sortedScenes = [...segment.scenes].sort((a, b) => a.order - b.order);
+    const scenes = sortedScenes
       .map((scene) =>
         [
           `Scene ${scene.order}`,
@@ -138,14 +191,16 @@ export class VideoGenerationProcessor extends WorkerHost {
       .join('\n');
 
     return [
-      'Create a polished TikTok Shop product video under 15 seconds.',
+      `Create a standalone TikTok Shop product video for scene ${sortedScenes[0]?.order ?? segment.index + 1}.`,
+      `This video must be no longer than ${segment.duration} seconds.`,
       `Product: ${script.productInfo.name}`,
       `Category: ${script.productInfo.category}`,
       `Selling points: ${(script.productInfo.selling_points ?? []).join(', ')}`,
       `Visual style: ${script.visualStyle || 'clean product demo'}`,
       `Narrative: ${script.narrativeFramework || 'Hook, benefits, CTA'}`,
+      `Segment scenes: ${sortedScenes.map((scene) => scene.order).join(', ') || 'single product demo'}`,
       scenes,
-      'Keep the product visible, commercially safe, and suitable for e-commerce conversion.',
+      'Do not merge this scene with other scenes. Keep the product visible, commercially safe, and suitable for e-commerce conversion.',
     ]
       .filter(Boolean)
       .join('\n');
@@ -170,17 +225,32 @@ export class VideoGenerationProcessor extends WorkerHost {
     throw timeout;
   }
 
-  private toTaskResult(providerTask: VolcanoVideoTask, options: VideoOptions | undefined, duration: number): TaskResult {
+  private toSegmentResult(providerTask: VolcanoVideoTask, options: VideoOptions | undefined, segment: VideoSegmentPlan) {
     const videoUrl = providerTask.content?.video_url || providerTask.content?.file_url || '';
     if (!videoUrl) throw new Error('Video generation succeeded without video_url');
 
     return {
+      index: segment.index,
       video_url: videoUrl,
       thumbnail_url: providerTask.content?.last_frame_url || '',
-      duration: providerTask.duration ?? duration,
+      duration: providerTask.duration ?? segment.duration,
       resolution: options?.resolution ?? this.fromProviderResolution(providerTask.resolution),
       aspect_ratio: options?.aspect_ratio ?? providerTask.ratio ?? this.inferAspectRatio(options?.resolution),
+      scene_orders: segment.scenes.map((scene) => scene.order),
+    };
+  }
+
+  private toTaskResult(segments: NonNullable<TaskResult['segments']>, options: VideoOptions | undefined): TaskResult {
+    const first = segments[0];
+    if (!first) throw new Error('Video generation completed without segments');
+    return {
+      video_url: first.video_url,
+      thumbnail_url: first.thumbnail_url,
+      duration: segments.reduce((sum, segment) => sum + segment.duration, 0),
+      resolution: options?.resolution ?? first.resolution,
+      aspect_ratio: options?.aspect_ratio ?? first.aspect_ratio,
       file_size: 0,
+      segments,
     };
   }
 
@@ -242,7 +312,7 @@ export class VideoGenerationProcessor extends WorkerHost {
 
   private toProviderDuration(duration?: number) {
     const requested = Math.round(Number(duration) || 5);
-    return requested <= 5 ? 5 : 10;
+    return requested <= 5 ? SUPPORTED_VIDEO_DURATIONS[0] : SUPPORTED_VIDEO_DURATIONS[1];
   }
 
   private toProviderResolution(resolution?: string) {

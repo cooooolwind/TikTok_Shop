@@ -65,7 +65,7 @@ export default function ScriptGenerate() {
               form={form}
               layout="vertical"
               onFinish={handleSubmit}
-              initialValues={{ duration: 15, language: 'zh', entry: 'material' }}
+              initialValues={{ duration: 12, language: 'zh', entry: 'material' }}
             >
               <Text strong>创作入口</Text>
               <Divider />
@@ -171,7 +171,7 @@ export default function ScriptGenerate() {
               <Text strong>偏好设置</Text>
               <Divider />
               <Form.Item name="duration" label="目标时长">
-                <Slider min={5} max={60} step={1} marks={{ 5: '5s', 15: '15s', 30: '30s', 60: '60s' }} />
+                <Slider min={5} max={12} step={1} marks={{ 5: '5s', 10: '10s', 12: '12s' }} />
               </Form.Item>
               <Row gutter={16}>
                 <Col xs={24} md={8}>

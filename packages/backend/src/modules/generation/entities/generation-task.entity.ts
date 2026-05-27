@@ -28,6 +28,15 @@ interface TaskResult {
   resolution: string;
   aspect_ratio: string;
   file_size: number;
+  segments?: {
+    index: number;
+    video_url: string;
+    thumbnail_url: string;
+    duration: number;
+    resolution: string;
+    aspect_ratio: string;
+    scene_orders: number[];
+  }[];
 }
 
 interface TaskError {

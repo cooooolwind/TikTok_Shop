@@ -285,7 +285,7 @@ export default function ScriptEditor() {
             </Col>
             <Col span={12}>
               <Form.Item name="duration" label="时长（秒）">
-                <InputNumber min={1} max={15} step={0.5} style={{ width: '100%' }} />
+                <InputNumber min={1} max={12} step={0.5} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
           </Row>

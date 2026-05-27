@@ -64,7 +64,10 @@ function makeTask(overrides: Partial<GenerationTask> = {}): GenerationTask {
   };
 }
 
-function makeProcessor(videoStatus: 'succeeded' | 'failed' | 'running' = 'succeeded') {
+function makeProcessor(
+  videoStatus: 'succeeded' | 'failed' | 'running' = 'succeeded',
+  configValues: Record<string, string | undefined> = {},
+) {
   const task = makeTask();
   const script = makeScript();
   const tasksRepository = {
@@ -100,18 +103,22 @@ function makeProcessor(videoStatus: 'succeeded' | 'failed' | 'running' = 'succee
     emitTaskCompleted: jest.fn(),
     emitTaskFailed: jest.fn(),
   };
+  const configService = {
+    get: jest.fn((key: string) => configValues[key]),
+  };
   const processor = new VideoGenerationProcessor(
     tasksRepository as never,
     scriptsRepository as never,
     videosRepository as never,
     volcanoClient as never,
     tasksGateway as never,
+    configService as never,
   );
   const job = {
     data: { taskId: 'task-1', scriptId: 'script-1', options: { resolution: '1080x1920', aspect_ratio: '9:16' } },
     updateProgress: jest.fn(),
   };
-  return { processor, tasksRepository, scriptsRepository, videosRepository, volcanoClient, tasksGateway, job, task };
+  return { processor, tasksRepository, scriptsRepository, videosRepository, volcanoClient, tasksGateway, configService, job, task };
 }
 
 describe('VideoGenerationProcessor', () => {
@@ -121,7 +128,7 @@ describe('VideoGenerationProcessor', () => {
     const result = await processor.process(job as never);
 
     expect(volcanoClient.createVideoTask).toHaveBeenCalledWith(
-      expect.objectContaining({ prompt: expect.stringContaining('Dress'), ratio: '9:16', duration: 10 }),
+      expect.objectContaining({ prompt: expect.stringContaining('Dress'), ratio: '9:16', duration: 5 }),
     );
     expect(tasksRepository.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'done' }));
     expect(videosRepository.save).toHaveBeenCalledWith(expect.objectContaining({ taskId: 'task-1', scriptId: 'script-1' }));
@@ -132,13 +139,34 @@ describe('VideoGenerationProcessor', () => {
     expect(result).toEqual(expect.objectContaining({ status: 'done', taskId: 'task-1' }));
   });
 
-  it('uses supported Seedance duration values for provider requests', async () => {
+  it('creates one provider request per scene', async () => {
     const { processor, volcanoClient, scriptsRepository, job } = makeProcessor('succeeded');
-    scriptsRepository.findOne.mockResolvedValue(makeScript({ totalDuration: 15 }));
+    scriptsRepository.findOne.mockResolvedValue(
+      makeScript({
+        totalDuration: 15,
+        scenes: [
+          makeScene({ id: 'scene-1', order: 1, duration: 4, description: 'Opening product hero' }),
+          makeScene({ id: 'scene-2', order: 2, duration: 7, description: 'Show product details' }),
+          makeScene({ id: 'scene-3', order: 3, duration: 4, description: 'Call to action' }),
+        ],
+      }),
+    );
 
     await processor.process(job as never);
 
-    expect(volcanoClient.createVideoTask).toHaveBeenCalledWith(expect.objectContaining({ duration: 10 }));
+    expect(volcanoClient.createVideoTask).toHaveBeenCalledTimes(3);
+    expect(volcanoClient.createVideoTask).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ duration: 5, prompt: expect.stringContaining('Segment scenes: 1') }),
+    );
+    expect(volcanoClient.createVideoTask).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ duration: 10, prompt: expect.stringContaining('Segment scenes: 2') }),
+    );
+    expect(volcanoClient.createVideoTask).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({ duration: 5, prompt: expect.stringContaining('Segment scenes: 3') }),
+    );
   });
 
   it('marks task failed and emits failure when provider returns failed', async () => {
@@ -174,5 +202,16 @@ describe('VideoGenerationProcessor', () => {
       'task-1',
       expect.objectContaining({ code: 'VIDEO_GENERATION_TIMEOUT' }),
     );
+  });
+
+  it('uses configured polling values for long-running provider tasks', async () => {
+    const { processor, volcanoClient, job } = makeProcessor('running', {
+      VOLCANO_VIDEO_POLL_ATTEMPTS: '3',
+      VOLCANO_VIDEO_POLL_INTERVAL_MS: '1',
+    });
+
+    await expect(processor.process(job as never)).rejects.toThrow('Video generation timed out');
+
+    expect(volcanoClient.getVideoTask).toHaveBeenCalledTimes(3);
   });
 });

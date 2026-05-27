@@ -37,6 +37,17 @@ export interface TaskResult {
   resolution: string;
   aspect_ratio: string;
   file_size: number;
+  segments?: VideoSegmentResult[];
+}
+
+export interface VideoSegmentResult {
+  index: number;
+  video_url: string;
+  thumbnail_url: string;
+  duration: number;
+  resolution: string;
+  aspect_ratio: string;
+  scene_orders: number[];
 }
 
 // ===== 任务错误 =====

@@ -91,7 +91,7 @@ describe('VolcanoClientProvider video generation', () => {
       content: [
         {
           type: 'text',
-          text: 'product demo --duration 8 --ratio 9:16 --camerafixed false --watermark false',
+          text: 'product demo --duration 10 --ratio 9:16 --camerafixed false --watermark false',
         },
         {
           type: 'image_url',
