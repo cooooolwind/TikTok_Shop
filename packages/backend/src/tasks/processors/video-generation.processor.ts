@@ -5,7 +5,11 @@ import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import type { VideoOptions, TaskError, TaskProgress, TaskResult } from '@aigc/shared-types';
-import { VolcanoClientProvider, type VolcanoVideoTask } from '../../ai/providers/volcano-client.provider';
+import {
+  VolcanoClientProvider,
+  type CreateVideoTaskInput,
+  type VolcanoVideoTask,
+} from '../../ai/providers/volcano-client.provider';
 import { GenerationTask } from '../../modules/generation/entities/generation-task.entity';
 import { Video } from '../../modules/generation/entities/video.entity';
 import { Script } from '../../modules/scripts/entities/script.entity';
@@ -29,6 +33,8 @@ interface VideoSegmentPlan {
   scenes: Scene[];
   duration: number;
 }
+
+type ContinuitySource = 'product_image' | 'previous_last_frame' | 'text_only';
 
 const SUPPORTED_VIDEO_DURATIONS = [5, 10] as const;
 const DEFAULT_POLLING: PollingOptions = {
@@ -73,8 +79,25 @@ export class VideoGenerationProcessor extends WorkerHost {
       await this.updateProgress(job, 2, 5, 'build_segments', 'Building one video generation segment per scene...');
       const segments = this.buildSegments(script);
       const segmentResults: NonNullable<TaskResult['segments']> = [];
+      const continuityWarnings: string[] = [];
+      const productImageUrls = script.productInfo.images ?? [];
+      let previousLastFrameUrl = '';
 
       for (const segment of segments) {
+        const isFirstSegment = segment.index === 0;
+        const firstFrameUrl = isFirstSegment ? undefined : previousLastFrameUrl || undefined;
+        const imageUrls = isFirstSegment ? productImageUrls : [];
+        const inputFrameUrl = firstFrameUrl ?? (isFirstSegment ? productImageUrls[0] ?? '' : '');
+        const continuitySource: ContinuitySource = firstFrameUrl
+          ? 'previous_last_frame'
+          : isFirstSegment && productImageUrls.length > 0
+            ? 'product_image'
+            : 'text_only';
+
+        if (!isFirstSegment && !firstFrameUrl) {
+          continuityWarnings.push(`Segment ${segment.index + 1} generated without previous last frame input`);
+        }
+
         await this.updateProgress(
           job,
           3,
@@ -82,12 +105,15 @@ export class VideoGenerationProcessor extends WorkerHost {
           'submit_video_task',
           `Submitting video segment ${segment.index + 1}/${segments.length}...`,
         );
-        const created = await this.volcanoClient.createVideoTask({
-          prompt: this.buildPrompt(script, segment),
+        const createdTask = await this.createVideoTaskForSegment(script, segment, {
           ratio: options?.aspect_ratio ?? this.inferAspectRatio(options?.resolution),
           resolution: this.toProviderResolution(options?.resolution),
           duration: segment.duration,
-          imageUrls: script.productInfo.images ?? [],
+          imageUrls,
+          firstFrameUrl,
+          inputFrameUrl,
+          continuitySource,
+          continuityWarnings,
         });
 
         await this.updateProgress(
@@ -97,11 +123,19 @@ export class VideoGenerationProcessor extends WorkerHost {
           'wait_result',
           `Waiting for video segment ${segment.index + 1}/${segments.length} result...`,
         );
-        const providerTask = await this.waitForProviderTask(created.id);
-        segmentResults.push(this.toSegmentResult(providerTask, options, segment));
+        const providerTask = await this.waitForProviderTask(createdTask.id);
+        const segmentResult = this.toSegmentResult(
+          providerTask,
+          options,
+          segment,
+          createdTask.inputFrameUrl,
+          createdTask.continuitySource,
+        );
+        segmentResults.push(segmentResult);
+        previousLastFrameUrl = segmentResult.thumbnail_url;
       }
 
-      const result = this.toTaskResult(segmentResults, options);
+      const result = this.toTaskResult(segmentResults, options, continuityWarnings);
 
       await this.updateProgress(job, 5, 5, 'persist_result', 'Saving segmented video results...');
       task.status = 'done';
@@ -174,7 +208,7 @@ export class VideoGenerationProcessor extends WorkerHost {
     }));
   }
 
-  private buildPrompt(script: Script, segment: VideoSegmentPlan) {
+  private buildPrompt(script: Script, segment: VideoSegmentPlan, continuitySource: ContinuitySource) {
     const sortedScenes = [...segment.scenes].sort((a, b) => a.order - b.order);
     const scenes = sortedScenes
       .map((scene) =>
@@ -193,6 +227,11 @@ export class VideoGenerationProcessor extends WorkerHost {
     return [
       `Create a standalone TikTok Shop product video for scene ${sortedScenes[0]?.order ?? segment.index + 1}.`,
       `This video must be no longer than ${segment.duration} seconds.`,
+      continuitySource === 'previous_last_frame'
+        ? 'Continue from the provided first frame. Preserve the same product, subject, background, lighting, composition, and visual identity while only performing the current scene action.'
+        : continuitySource === 'product_image'
+          ? 'Use the provided product image as the visual anchor. Keep the product identity, color, shape, and key details consistent.'
+          : 'No image input is available. Keep the product identity and visual style consistent with the script description.',
       `Product: ${script.productInfo.name}`,
       `Category: ${script.productInfo.category}`,
       `Selling points: ${(script.productInfo.selling_points ?? []).join(', ')}`,
@@ -200,10 +239,66 @@ export class VideoGenerationProcessor extends WorkerHost {
       `Narrative: ${script.narrativeFramework || 'Hook, benefits, CTA'}`,
       `Segment scenes: ${sortedScenes.map((scene) => scene.order).join(', ') || 'single product demo'}`,
       scenes,
-      'Do not merge this scene with other scenes. Keep the product visible, commercially safe, and suitable for e-commerce conversion.',
+      'Generate only this scene, but make it visually continuous with the provided input frame when one is present. Keep the product visible, commercially safe, and suitable for e-commerce conversion.',
     ]
       .filter(Boolean)
       .join('\n');
+  }
+
+  private async createVideoTaskForSegment(
+    script: Script,
+    segment: VideoSegmentPlan,
+    input: {
+      ratio: string;
+      resolution: string;
+      duration: number;
+      imageUrls: string[];
+      firstFrameUrl?: string;
+      inputFrameUrl: string;
+      continuitySource: ContinuitySource;
+      continuityWarnings: string[];
+    },
+  ) {
+    const create = (overrides: Partial<CreateVideoTaskInput>, continuitySource: ContinuitySource) =>
+      this.volcanoClient.createVideoTask({
+        prompt: this.buildPrompt(script, segment, continuitySource),
+        ratio: input.ratio,
+        resolution: input.resolution,
+        duration: input.duration,
+        imageUrls: input.imageUrls,
+        firstFrameUrl: input.firstFrameUrl,
+        ...overrides,
+      });
+
+    try {
+      const created = await create({}, input.continuitySource);
+      return { ...created, inputFrameUrl: input.inputFrameUrl, continuitySource: input.continuitySource };
+    } catch (error) {
+      if (!input.firstFrameUrl || !this.isContinuityInputRejected(error)) throw error;
+
+      input.continuityWarnings.push(
+        `Segment ${segment.index + 1} first-frame input was rejected by provider; retried as plain image input`,
+      );
+    }
+
+    try {
+      const created = await create({ firstFrameUrl: undefined, imageUrls: [input.firstFrameUrl] }, 'previous_last_frame');
+      return { ...created, inputFrameUrl: input.firstFrameUrl, continuitySource: 'previous_last_frame' as const };
+    } catch (error) {
+      if (!this.isContinuityInputRejected(error)) throw error;
+
+      input.continuityWarnings.push(
+        `Segment ${segment.index + 1} plain image input was rejected by provider; retried as text-only`,
+      );
+    }
+
+    const created = await create({ firstFrameUrl: undefined, imageUrls: [] }, 'text_only');
+    return { ...created, inputFrameUrl: '', continuitySource: 'text_only' as const };
+  }
+
+  private isContinuityInputRejected(error: unknown) {
+    const maybe = error as { status?: number; code?: string };
+    return maybe.status === 400 || maybe.status === 404 || maybe.code === 'InvalidParameter';
   }
 
   private async waitForProviderTask(providerTaskId: string) {
@@ -225,7 +320,13 @@ export class VideoGenerationProcessor extends WorkerHost {
     throw timeout;
   }
 
-  private toSegmentResult(providerTask: VolcanoVideoTask, options: VideoOptions | undefined, segment: VideoSegmentPlan) {
+  private toSegmentResult(
+    providerTask: VolcanoVideoTask,
+    options: VideoOptions | undefined,
+    segment: VideoSegmentPlan,
+    inputFrameUrl: string,
+    continuitySource: ContinuitySource,
+  ) {
     const videoUrl = providerTask.content?.video_url || providerTask.content?.file_url || '';
     if (!videoUrl) throw new Error('Video generation succeeded without video_url');
 
@@ -237,13 +338,19 @@ export class VideoGenerationProcessor extends WorkerHost {
       resolution: options?.resolution ?? this.fromProviderResolution(providerTask.resolution),
       aspect_ratio: options?.aspect_ratio ?? providerTask.ratio ?? this.inferAspectRatio(options?.resolution),
       scene_orders: segment.scenes.map((scene) => scene.order),
+      input_frame_url: inputFrameUrl,
+      continuity_source: continuitySource,
     };
   }
 
-  private toTaskResult(segments: NonNullable<TaskResult['segments']>, options: VideoOptions | undefined): TaskResult {
+  private toTaskResult(
+    segments: NonNullable<TaskResult['segments']>,
+    options: VideoOptions | undefined,
+    continuityWarnings: string[] = [],
+  ): TaskResult {
     const first = segments[0];
     if (!first) throw new Error('Video generation completed without segments');
-    return {
+    const result: TaskResult = {
       video_url: first.video_url,
       thumbnail_url: first.thumbnail_url,
       duration: segments.reduce((sum, segment) => sum + segment.duration, 0),
@@ -252,6 +359,10 @@ export class VideoGenerationProcessor extends WorkerHost {
       file_size: 0,
       segments,
     };
+    if (continuityWarnings.length > 0) {
+      result.continuity_warning = continuityWarnings.join('; ');
+    }
+    return result;
   }
 
   private async markFailed(taskId: string, error: unknown) {

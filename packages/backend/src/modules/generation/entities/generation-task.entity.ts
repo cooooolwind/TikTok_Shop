@@ -28,6 +28,7 @@ interface TaskResult {
   resolution: string;
   aspect_ratio: string;
   file_size: number;
+  continuity_warning?: string;
   segments?: {
     index: number;
     video_url: string;
@@ -36,6 +37,8 @@ interface TaskResult {
     resolution: string;
     aspect_ratio: string;
     scene_orders: number[];
+    input_frame_url?: string;
+    continuity_source?: 'product_image' | 'previous_last_frame' | 'text_only';
   }[];
 }
 
