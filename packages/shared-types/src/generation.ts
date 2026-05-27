@@ -38,6 +38,7 @@ export interface TaskResult {
   aspect_ratio: string;
   file_size: number;
   segments?: VideoSegmentResult[];
+  continuity_warning?: string;
 }
 
 export interface VideoSegmentResult {
@@ -48,6 +49,8 @@ export interface VideoSegmentResult {
   resolution: string;
   aspect_ratio: string;
   scene_orders: number[];
+  input_frame_url?: string;
+  continuity_source?: 'product_image' | 'previous_last_frame' | 'text_only';
 }
 
 // ===== 任务错误 =====

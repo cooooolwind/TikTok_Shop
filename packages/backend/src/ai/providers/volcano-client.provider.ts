@@ -7,6 +7,8 @@ export interface CreateVideoTaskInput {
   resolution: string;
   duration: number;
   imageUrls?: string[];
+  firstFrameUrl?: string;
+  referenceImageUrls?: string[];
 }
 
 export interface VolcanoVideoTask {
@@ -33,6 +35,8 @@ interface VolcanoErrorBody {
     type?: string;
   };
 }
+
+const DEFAULT_VIDEO_FETCH_TIMEOUT_MS = 60000;
 
 @Injectable()
 export class VolcanoClientProvider {
@@ -123,27 +127,13 @@ export class VolcanoClientProvider {
     const retryAttempts = this.configService.get<number>('volcano.videoCreateRetryAttempts') ?? 3;
     const retryDelayMs = this.configService.get<number>('volcano.videoCreateRetryDelayMs') ?? 15000;
     const duration = this.normalizeVideoDuration(input.duration);
+    const content = this.buildVideoContent(input, duration);
 
     for (let attempt = 0; attempt <= retryAttempts; attempt += 1) {
-      const response = await fetch(`${baseUrl.replace(/\/$/, '')}/contents/generations/tasks`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          content: [
-            {
-              type: 'text',
-              text: `${input.prompt} --duration ${duration} --ratio ${input.ratio} --camerafixed false --watermark false`,
-            },
-            ...(input.imageUrls ?? []).map((url) => ({
-              type: 'image_url',
-              image_url: { url },
-            })),
-          ],
-        }),
+      const response = await this.postVideoTask(baseUrl, apiKey, {
+        model,
+        content,
+        return_last_frame: true,
       });
 
       if (response.ok) {
@@ -153,6 +143,19 @@ export class VolcanoClientProvider {
       }
 
       const errorText = await response.text();
+      if (response.status === 404) {
+        const fallbackResponse = await this.postVideoTask(baseUrl, apiKey, {
+          model,
+          content,
+        });
+        if (fallbackResponse.ok) {
+          const data = (await fallbackResponse.json()) as { id?: string };
+          if (!data.id) throw new Error('Volcano video task creation returned empty id');
+          this.logger.warn('Volcano video task creation retried without return_last_frame after 404');
+          return { id: data.id };
+        }
+      }
+
       if (response.status === 429 && attempt < retryAttempts) {
         const delayMs = this.getRetryDelayMs(response, retryDelayMs, attempt);
         this.logger.warn(`Volcano video task creation rate limited; retrying in ${delayMs}ms`);
@@ -187,13 +190,7 @@ export class VolcanoClientProvider {
     const baseUrl = this.configService.get<string>('volcano.videoBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
     if (!apiKey) throw new Error('VOLCANO_VIDEO_API_KEY is required');
 
-    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/contents/generations/tasks/${taskId}`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await this.fetchVideoTask(baseUrl, apiKey, taskId);
 
     if (!response.ok) {
       throw new Error(`Volcano video task query failed: ${response.status} ${await response.text()}`);
@@ -216,6 +213,45 @@ export class VolcanoClientProvider {
     return fallbackDelayMs * Math.pow(2, attempt);
   }
 
+  private async postVideoTask(
+    baseUrl: string,
+    apiKey: string,
+    body: {
+      model: string;
+      content: ReturnType<VolcanoClientProvider['buildVideoContent']>;
+      return_last_frame?: true;
+    },
+  ) {
+    try {
+      return await fetch(`${baseUrl.replace(/\/$/, '')}/contents/generations/tasks`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(this.getVideoFetchTimeoutMs()),
+      });
+    } catch (error) {
+      throw this.toVolcanoNetworkError('Volcano video task creation network failed', error);
+    }
+  }
+
+  private async fetchVideoTask(baseUrl: string, apiKey: string, taskId: string) {
+    try {
+      return await fetch(`${baseUrl.replace(/\/$/, '')}/contents/generations/tasks/${taskId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(this.getVideoFetchTimeoutMs()),
+      });
+    } catch (error) {
+      throw this.toVolcanoNetworkError('Volcano video task query network failed', error);
+    }
+  }
+
   private toVolcanoRequestError(prefix: string, status: number, bodyText: string) {
     let parsed: VolcanoErrorBody | null = null;
     try {
@@ -232,9 +268,60 @@ export class VolcanoClientProvider {
     return error;
   }
 
+  private toVolcanoNetworkError(prefix: string, error: unknown) {
+    const maybe = error as { message?: string; cause?: { message?: string; code?: string } };
+    const details = [
+      maybe.message || 'network request failed',
+      maybe.cause?.message ? `cause=${maybe.cause.message}` : '',
+      maybe.cause?.code ? `code=${maybe.cause.code}` : '',
+    ].filter(Boolean);
+    const wrapped = new Error(`${prefix}: ${details.join('; ')}`);
+    Object.assign(wrapped, {
+      code: maybe.cause?.code || 'VOLCANO_NETWORK_ERROR',
+      retryable: true,
+    });
+    return wrapped;
+  }
+
+  private getVideoFetchTimeoutMs() {
+    const configured = this.configService.get<number>('volcano.videoFetchTimeoutMs') ?? Number(process.env.VOLCANO_VIDEO_FETCH_TIMEOUT_MS);
+    return Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_VIDEO_FETCH_TIMEOUT_MS;
+  }
+
   private normalizeVideoDuration(duration?: number) {
     const requested = Math.round(Number(duration) || 5);
     return requested <= 5 ? 5 : 10;
+  }
+
+  private buildVideoContent(input: CreateVideoTaskInput, duration: number) {
+    const content: Array<{
+      type: 'text' | 'image_url';
+      text?: string;
+      image_url?: { url: string };
+      role?: 'first_frame';
+    }> = [
+      {
+        type: 'text',
+        text: `${input.prompt} --duration ${duration} --ratio ${input.ratio} --camerafixed false --watermark false`,
+      },
+    ];
+
+    if (input.firstFrameUrl) {
+      content.push({
+        type: 'image_url',
+        image_url: { url: input.firstFrameUrl },
+        role: 'first_frame',
+      });
+    }
+
+    for (const url of input.referenceImageUrls ?? input.imageUrls ?? []) {
+      content.push({
+        type: 'image_url',
+        image_url: { url },
+      });
+    }
+
+    return content;
   }
 
   private sleep(ms: number) {
