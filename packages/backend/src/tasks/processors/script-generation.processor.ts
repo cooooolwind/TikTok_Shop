@@ -56,7 +56,7 @@ export class ScriptGenerationProcessor extends WorkerHost {
   async process(job: Job<ScriptGenerationJob>): Promise<{ script_id: string; status: 'draft' }> {
     const { taskId, scriptId } = job.data;
     try {
-      await this.updateProgress(job, 1, 4, 'prepare', '正在整理剧本生成上下文...');
+      await this.updateProgress(job, 1, 4, 'prepare', '正在整理剧本生成上下�?..');
       const script = await this.scriptsRepository.findOne({ where: { id: scriptId }, relations: { scenes: true } });
       if (!script) throw new Error(`Script ${scriptId} not found`);
 
@@ -84,7 +84,7 @@ export class ScriptGenerationProcessor extends WorkerHost {
       {
         role: 'system',
         content:
-          'You are a TikTok Shop short-video script director. Return strict JSON with narrative_framework, visual_style, total_duration, and scenes[]. Each scene needs description, camera_motion, duration, dialogue, bgm_style, subtitle, visual_prompt, constraints.',
+          'You are a TikTok Shop short-video script director. Return strict JSON with narrative_framework, visual_style, total_duration, and scenes[]. The whole script must be no longer than 12 seconds. Each scene needs description, camera_motion, duration, dialogue, bgm_style, subtitle, visual_prompt, constraints.',
       },
       {
         role: 'user',
@@ -142,7 +142,7 @@ export class ScriptGenerationProcessor extends WorkerHost {
 
   private async persistResult(script: Script, result: AiScriptResult) {
     await this.scenesRepository.delete({ scriptId: script.id });
-    const scenes = result.scenes ?? [];
+    const scenes = this.normalizeScenes(result.scenes ?? []);
     const columnsPerScene = 9;
     const valuesSql = scenes
       .map((_, sceneIndex) => {
@@ -189,10 +189,24 @@ export class ScriptGenerationProcessor extends WorkerHost {
       [
         result.narrative_framework ?? script.narrativeFramework ?? '',
         result.visual_style ?? script.visualStyle ?? '',
-        result.total_duration ?? scenes.reduce((sum, scene) => sum + (scene.duration ?? 3), 0),
+        Math.min(result.total_duration ?? scenes.reduce((sum, scene) => sum + (scene.duration ?? 3), 0), 12),
         script.id,
       ],
     );
+  }
+
+  private normalizeScenes(scenes: AiScene[]) {
+    let remaining = 12;
+    const normalized: AiScene[] = [];
+
+    for (const scene of scenes) {
+      if (remaining <= 0) break;
+      const duration = Math.min(Math.max(Math.round(Number(scene.duration) || 3), 1), remaining);
+      normalized.push({ ...scene, duration });
+      remaining -= duration;
+    }
+
+    return normalized.length > 0 ? normalized : [{ description: 'Product demo', duration: 5 }];
   }
 
   private async markFailed(scriptId: string, taskId: string, error: unknown) {

@@ -51,7 +51,7 @@ export class VolcanoClientProvider {
         content: JSON.stringify({
           narrative_framework: 'Hook - product benefits - CTA',
           visual_style: 'clean product demo',
-          total_duration: 15,
+          total_duration: 12,
           scenes: [
             {
               description: '展示商品核心卖点',
@@ -122,6 +122,7 @@ export class VolcanoClientProvider {
 
     const retryAttempts = this.configService.get<number>('volcano.videoCreateRetryAttempts') ?? 3;
     const retryDelayMs = this.configService.get<number>('volcano.videoCreateRetryDelayMs') ?? 15000;
+    const duration = this.normalizeVideoDuration(input.duration);
 
     for (let attempt = 0; attempt <= retryAttempts; attempt += 1) {
       const response = await fetch(`${baseUrl.replace(/\/$/, '')}/contents/generations/tasks`, {
@@ -135,7 +136,7 @@ export class VolcanoClientProvider {
           content: [
             {
               type: 'text',
-              text: `${input.prompt} --duration ${input.duration} --ratio ${input.ratio} --camerafixed false --watermark false`,
+              text: `${input.prompt} --duration ${duration} --ratio ${input.ratio} --camerafixed false --watermark false`,
             },
             ...(input.imageUrls ?? []).map((url) => ({
               type: 'image_url',
@@ -229,6 +230,11 @@ export class VolcanoClientProvider {
       retryable: status === 429,
     });
     return error;
+  }
+
+  private normalizeVideoDuration(duration?: number) {
+    const requested = Math.round(Number(duration) || 5);
+    return requested <= 5 ? 5 : 10;
   }
 
   private sleep(ms: number) {
