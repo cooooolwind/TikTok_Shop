@@ -26,6 +26,14 @@ export interface VolcanoVideoTask {
   ratio?: string;
 }
 
+interface VolcanoErrorBody {
+  error?: {
+    code?: string;
+    message?: string;
+    type?: string;
+  };
+}
+
 @Injectable()
 export class VolcanoClientProvider {
   private readonly logger = new Logger(VolcanoClientProvider.name);
@@ -112,33 +120,49 @@ export class VolcanoClientProvider {
       throw new Error('VOLCANO_VIDEO_API_KEY and VOLCANO_VIDEO_ENDPOINT are required');
     }
 
-    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/contents/generations/tasks`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        content: [{ type: 'text', text: input.prompt }],
-        parameters: {
-          duration: input.duration,
-          ratio: input.ratio,
-          resolution: input.resolution,
-        },
-        ...(input.imageUrls?.length
-          ? { image_urls: input.imageUrls }
-          : {}),
-      }),
-    });
+    const retryAttempts = this.configService.get<number>('volcano.videoCreateRetryAttempts') ?? 3;
+    const retryDelayMs = this.configService.get<number>('volcano.videoCreateRetryDelayMs') ?? 15000;
 
-    if (!response.ok) {
-      throw new Error(`Volcano video task creation failed: ${response.status} ${await response.text()}`);
+    for (let attempt = 0; attempt <= retryAttempts; attempt += 1) {
+      const response = await fetch(`${baseUrl.replace(/\/$/, '')}/contents/generations/tasks`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          content: [
+            {
+              type: 'text',
+              text: `${input.prompt} --duration ${input.duration} --ratio ${input.ratio} --camerafixed false --watermark false`,
+            },
+            ...(input.imageUrls ?? []).map((url) => ({
+              type: 'image_url',
+              image_url: { url },
+            })),
+          ],
+        }),
+      });
+
+      if (response.ok) {
+        const data = (await response.json()) as { id?: string };
+        if (!data.id) throw new Error('Volcano video task creation returned empty id');
+        return { id: data.id };
+      }
+
+      const errorText = await response.text();
+      if (response.status === 429 && attempt < retryAttempts) {
+        const delayMs = this.getRetryDelayMs(response, retryDelayMs, attempt);
+        this.logger.warn(`Volcano video task creation rate limited; retrying in ${delayMs}ms`);
+        await this.sleep(delayMs);
+        continue;
+      }
+
+      throw this.toVolcanoRequestError('Volcano video task creation failed', response.status, errorText);
     }
 
-    const data = (await response.json()) as { id?: string };
-    if (!data.id) throw new Error('Volcano video task creation returned empty id');
-    return { id: data.id };
+    throw new Error('Volcano video task creation failed after retries');
   }
 
   async getVideoTask(taskId: string): Promise<VolcanoVideoTask> {
@@ -182,4 +206,32 @@ export class VolcanoClientProvider {
     return { audio_url: 'stub' };
   }
 
+  private getRetryDelayMs(response: Response, fallbackDelayMs: number, attempt: number) {
+    const retryAfter = response.headers.get('retry-after');
+    const retryAfterSeconds = retryAfter ? Number(retryAfter) : NaN;
+    if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0) {
+      return retryAfterSeconds * 1000;
+    }
+    return fallbackDelayMs * Math.pow(2, attempt);
+  }
+
+  private toVolcanoRequestError(prefix: string, status: number, bodyText: string) {
+    let parsed: VolcanoErrorBody | null = null;
+    try {
+      parsed = JSON.parse(bodyText) as VolcanoErrorBody;
+    } catch {
+      parsed = null;
+    }
+    const error = new Error(`${prefix}: ${status} ${bodyText}`);
+    Object.assign(error, {
+      code: parsed?.error?.code,
+      status,
+      retryable: status === 429,
+    });
+    return error;
+  }
+
+  private sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 }

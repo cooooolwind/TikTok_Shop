@@ -89,7 +89,7 @@ function makeProcessor(videoStatus: 'succeeded' | 'failed' | 'running' = 'succee
         id: 'volcano-task-1',
         status: 'succeeded',
         content: { video_url: 'https://example.com/video.mp4', last_frame_url: 'https://example.com/thumb.png' },
-        duration: 12,
+        duration: 10,
         resolution: '1080p',
         ratio: '9:16',
       };
@@ -121,7 +121,7 @@ describe('VideoGenerationProcessor', () => {
     const result = await processor.process(job as never);
 
     expect(volcanoClient.createVideoTask).toHaveBeenCalledWith(
-      expect.objectContaining({ prompt: expect.stringContaining('Dress'), ratio: '9:16', duration: 12 }),
+      expect.objectContaining({ prompt: expect.stringContaining('Dress'), ratio: '9:16', duration: 10 }),
     );
     expect(tasksRepository.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'done' }));
     expect(videosRepository.save).toHaveBeenCalledWith(expect.objectContaining({ taskId: 'task-1', scriptId: 'script-1' }));
@@ -130,6 +130,15 @@ describe('VideoGenerationProcessor', () => {
       expect.objectContaining({ video_url: 'https://example.com/video.mp4' }),
     );
     expect(result).toEqual(expect.objectContaining({ status: 'done', taskId: 'task-1' }));
+  });
+
+  it('uses supported Seedance duration values for provider requests', async () => {
+    const { processor, volcanoClient, scriptsRepository, job } = makeProcessor('succeeded');
+    scriptsRepository.findOne.mockResolvedValue(makeScript({ totalDuration: 15 }));
+
+    await processor.process(job as never);
+
+    expect(volcanoClient.createVideoTask).toHaveBeenCalledWith(expect.objectContaining({ duration: 10 }));
   });
 
   it('marks task failed and emits failure when provider returns failed', async () => {

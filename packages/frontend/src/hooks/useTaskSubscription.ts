@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useSocket } from './useSocket';
 import { useCreationStore } from '../stores/useGenerationStore';
 import { generationApi } from '../services/generation.api';
+import { unwrapResponse } from '../services/response';
 
 /**
  * 订阅单个任务的实时进度 — WebSocket 为主，5s 轮询为降级兜底
@@ -33,7 +34,7 @@ export function useTaskSubscription(taskId: string | undefined) {
     // 降级：5s 轮询兜底，防止 WebSocket 连接失败丢进度
     const pollInterval = setInterval(async () => {
       try {
-        const task = await generationApi.taskDetail(taskId);
+        const task = unwrapResponse(await generationApi.taskDetail(taskId));
         if (task.status === 'done' && task.result) {
           setTaskDone(taskId, task.result);
           clearInterval(pollInterval);

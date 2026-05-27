@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Param, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import type {
   CreateVideoRequest,
@@ -48,6 +48,12 @@ export class GenerationController {
   @ApiOperation({ summary: '4.6 取消任务' })
   cancel(@Param('taskId') taskId: string) {
     return this.generationService.cancel(taskId);
+  }
+
+  @Delete('tasks/:taskId')
+  @ApiOperation({ summary: '删除创作任务' })
+  remove(@Param('taskId') taskId: string) {
+    return this.generationService.remove(taskId);
   }
 
   @Post('tasks/:taskId/scenes/:sceneId/regenerate')

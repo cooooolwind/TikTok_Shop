@@ -77,15 +77,18 @@ function makeService(options?: { script?: Script | null; task?: GenerationTask |
   const video = options && 'video' in options ? options.video : makeVideo();
   const scriptsRepository = {
     findOne: jest.fn(async () => script),
+    find: jest.fn(async () => (script ? [script] : [])),
     save: jest.fn(async (data) => data),
   };
   const tasksRepository = {
     create: jest.fn((data) => makeTask(data)),
     save: jest.fn(async (data) => data),
     findOne: jest.fn(async () => task),
+    remove: jest.fn(async (data) => data),
     createQueryBuilder: jest.fn(() => ({
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
       skip: jest.fn().mockReturnThis(),
       take: jest.fn().mockReturnThis(),
@@ -94,6 +97,7 @@ function makeService(options?: { script?: Script | null; task?: GenerationTask |
   };
   const videosRepository = {
     findOne: jest.fn(async () => video),
+    delete: jest.fn(async () => ({ affected: 1 })),
   };
   const videoQueue = {
     add: jest.fn(async () => ({ id: 'queue-job-1' })),
@@ -165,6 +169,15 @@ describe('GenerationService', () => {
 
     expect(result.download_url).toBe('https://example.com/video.mp4');
     expect(new Date(result.expires_at).getTime()).toBeGreaterThan(now.getTime());
+  });
+
+  it('removes a task and its generated video', async () => {
+    const { service, tasksRepository, videosRepository } = makeService();
+
+    await service.remove('task-1');
+
+    expect(videosRepository.delete).toHaveBeenCalledWith({ taskId: 'task-1' });
+    expect(tasksRepository.remove).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-1' }));
   });
 });
 

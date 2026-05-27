@@ -6,9 +6,11 @@ import { Script } from './entities/script.entity';
 import { Scene } from './entities/scene.entity';
 import { Material } from '../materials/entities/material.entity';
 import { TemplatesModule } from '../templates/templates.module';
+import { GenerationTask } from '../generation/entities/generation-task.entity';
+import { Video } from '../generation/entities/video.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Script, Scene, Material]), TemplatesModule],
+  imports: [TypeOrmModule.forFeature([Script, Scene, Material, GenerationTask, Video]), TemplatesModule],
   controllers: [ScriptsController],
   providers: [ScriptsService],
   exports: [ScriptsService],

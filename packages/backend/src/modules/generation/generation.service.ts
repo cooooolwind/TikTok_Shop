@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectQueue } from '@nestjs/bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Queue } from 'bullmq';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import type {
   CreateVideoRequest,
   GenerationListQuery,
@@ -23,6 +23,36 @@ const DEFAULT_PROGRESS = {
   message: '任务已排队，等待开始生成',
   estimated_remaining: 75,
 };
+
+const BEIJING_DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Asia/Shanghai',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+  hour12: false,
+});
+
+function getBeijingCompactParts(date: Date) {
+  const parts = Object.fromEntries(
+    BEIJING_DATE_TIME_FORMATTER.formatToParts(date).map((part) => [part.type, part.value]),
+  );
+  return {
+    year: parts.year,
+    month: parts.month,
+    day: parts.day,
+    hour: parts.hour,
+    minute: parts.minute,
+  };
+}
+
+function toScriptDisplayId(createdAt?: Date) {
+  if (!createdAt) return undefined;
+  const parts = getBeijingCompactParts(createdAt);
+  return `JB${parts.year}${parts.month}${parts.day}-${parts.hour}${parts.minute}`;
+}
 
 @Injectable()
 export class GenerationService {
@@ -51,6 +81,7 @@ export class GenerationService {
         completedAt: null,
       }),
     );
+    task.script = script;
     await this.enqueue(task.id, script.id, data.options);
     return this.toTaskResponse(task);
   }
@@ -74,8 +105,10 @@ export class GenerationService {
       .take(pageSize)
       .getManyAndCount();
 
+    const scriptsById = await this.findScriptsByTaskScriptId(tasks);
+
     return {
-      items: tasks.map((task) => this.toTaskResponse(task)),
+      items: tasks.map((task) => this.toTaskResponse(task, scriptsById.get(task.scriptId))),
       total,
       page,
       pageSize,
@@ -84,7 +117,9 @@ export class GenerationService {
   }
 
   async findTask(taskId: string) {
-    return this.toTaskResponse(await this.findRawTask(taskId));
+    const task = await this.findRawTask(taskId);
+    const script = await this.scriptsRepository.findOne({ where: { id: task.scriptId } });
+    return this.toTaskResponse(task, script ?? undefined);
   }
 
   async retry(taskId: string) {
@@ -111,6 +146,13 @@ export class GenerationService {
     task.error = { code: 'TASK_CANCELLED', message: 'Task cancelled by user', retryable: true };
     task.completedAt = new Date();
     return this.toTaskResponse(await this.tasksRepository.save(task));
+  }
+
+  async remove(taskId: string) {
+    const task = await this.findRawTask(taskId);
+    await this.videosRepository.delete({ taskId });
+    await this.tasksRepository.remove(task);
+    return { message: 'deleted' };
   }
 
   async regenerateScene(taskId: string, sceneId: string, data: RegenerateSceneVideoRequest = {}) {
@@ -146,10 +188,23 @@ export class GenerationService {
     return task;
   }
 
-  private toTaskResponse(task: GenerationTask): GenerationTaskResponse {
+  private async findScriptsByTaskScriptId(tasks: GenerationTask[]) {
+    const scriptIds = [...new Set(tasks.map((task) => task.scriptId).filter(Boolean))];
+    if (scriptIds.length === 0) return new Map<string, Script>();
+    const scripts = await this.scriptsRepository.find({ where: { id: In(scriptIds) } });
+    return new Map(scripts.map((script) => [script.id, script]));
+  }
+
+  private toTaskResponse(task: GenerationTask, script?: Script): GenerationTaskResponse {
+    const scriptDisplayId = toScriptDisplayId(script?.createdAt ?? task.script?.createdAt);
+    const taskParts = getBeijingCompactParts(task.createdAt);
     return {
       id: task.id,
+      display_id: scriptDisplayId
+        ? `${scriptDisplayId}-SP${taskParts.hour}${taskParts.minute}`
+        : `SP${taskParts.year}${taskParts.month}${taskParts.day}-${taskParts.hour}${taskParts.minute}`,
       script_id: task.scriptId,
+      script_display_id: scriptDisplayId,
       status: task.status,
       progress: task.progress ?? DEFAULT_PROGRESS,
       result: task.result ?? undefined,
