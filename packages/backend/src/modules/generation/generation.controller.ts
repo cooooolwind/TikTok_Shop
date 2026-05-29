@@ -51,11 +51,7 @@ export class GenerationController {
   }
 
   @Delete('tasks/:taskId')
-<<<<<<< HEAD
-  @ApiOperation({ summary: '4.7 删除创作任务' })
-=======
   @ApiOperation({ summary: '删除创作任务' })
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
   remove(@Param('taskId') taskId: string) {
     return this.generationService.remove(taskId);
   }

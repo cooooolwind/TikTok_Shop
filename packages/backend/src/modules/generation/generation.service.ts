@@ -150,13 +150,6 @@ export class GenerationService {
 
   async remove(taskId: string) {
     const task = await this.findRawTask(taskId);
-<<<<<<< HEAD
-    if (task.status === 'queued' || task.status === 'processing') {
-      throw new BadRequestException('Active generation tasks must be cancelled before deletion');
-    }
-
-=======
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
     await this.videosRepository.delete({ taskId });
     await this.tasksRepository.remove(task);
     return { message: 'deleted' };

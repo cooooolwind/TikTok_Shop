@@ -124,30 +124,10 @@ export class VolcanoClientProvider {
       throw new Error('VOLCANO_VIDEO_API_KEY and VOLCANO_VIDEO_ENDPOINT are required');
     }
 
-<<<<<<< HEAD
-    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/contents/generations/tasks`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        content: [
-          { type: 'text', text: this.buildVideoPromptText(input) },
-          ...(input.imageUrls ?? []).map((url) => ({
-            type: 'image_url',
-            image_url: { url },
-          })),
-        ],
-      }),
-    });
-=======
     const retryAttempts = this.configService.get<number>('volcano.videoCreateRetryAttempts') ?? 3;
     const retryDelayMs = this.configService.get<number>('volcano.videoCreateRetryDelayMs') ?? 15000;
     const duration = this.normalizeVideoDuration(input.duration);
     const content = this.buildVideoContent(input, duration);
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
 
     for (let attempt = 0; attempt <= retryAttempts; attempt += 1) {
       const response = await this.postVideoTask(baseUrl, apiKey, {
@@ -224,16 +204,6 @@ export class VolcanoClientProvider {
     return { audio_url: 'stub' };
   }
 
-<<<<<<< HEAD
-  private buildVideoPromptText(input: CreateVideoTaskInput) {
-    const duration = this.resolveVideoDuration(input.duration);
-    return `${input.prompt} --duration ${duration} --camerafixed false --watermark true`;
-  }
-
-  private resolveVideoDuration(duration: number) {
-    const maxDuration = this.configService.get<number>('volcano.videoMaxDuration') ?? 12;
-    return Math.min(Math.max(Math.round(duration || 1), 1), maxDuration);
-=======
   private getRetryDelayMs(response: Response, fallbackDelayMs: number, attempt: number) {
     const retryAfter = response.headers.get('retry-after');
     const retryAfterSeconds = retryAfter ? Number(retryAfter) : NaN;
@@ -356,6 +326,5 @@ export class VolcanoClientProvider {
 
   private sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
   }
 }
