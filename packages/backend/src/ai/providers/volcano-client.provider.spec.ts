@@ -92,7 +92,7 @@ describe('VolcanoClientProvider video generation', () => {
       content: [
         {
           type: 'text',
-          text: 'product demo --duration 10 --ratio 9:16 --camerafixed false --watermark false',
+          text: 'product demo --duration 8 --ratio 9:16 --camerafixed false --watermark false',
         },
         {
           type: 'image_url',
@@ -135,7 +135,7 @@ describe('VolcanoClientProvider video generation', () => {
     expect(body.content).toEqual([
       {
         type: 'text',
-        text: 'continue this product video --duration 5 --ratio 9:16 --camerafixed false --watermark false',
+        text: 'continue this product video --duration 4 --ratio 9:16 --camerafixed false --watermark false',
       },
       {
         type: 'image_url',
@@ -178,6 +178,27 @@ describe('VolcanoClientProvider video generation', () => {
 
     expect(created).toEqual({ id: 'cgt-after-retry' });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('clamps Seedance 1.5 pro video duration to 4-12 seconds', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'cgt-low' }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'cgt-high' }), { status: 200 }));
+    const { provider } = makeProvider({
+      'volcano.mockMode': false,
+      'volcano.videoApiKey': 'key',
+      'volcano.videoBaseUrl': 'https://ark.cn-beijing.volces.com/api/v3',
+      'volcano.videoEndpoint': 'ep-video',
+    });
+
+    await provider.createVideoTask({ prompt: 'short product demo', ratio: '9:16', resolution: '1080p', duration: 2 });
+    await provider.createVideoTask({ prompt: 'long product demo', ratio: '9:16', resolution: '1080p', duration: 15 });
+
+    const lowBody = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    const highBody = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string);
+    expect(lowBody.content[0].text).toContain('--duration 4');
+    expect(highBody.content[0].text).toContain('--duration 12');
   });
 
   it('retries video task creation without return_last_frame when Ark rejects that parameter with 404', async () => {

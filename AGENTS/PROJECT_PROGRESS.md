@@ -100,7 +100,7 @@
 
 | # | 任务 | 状态 | 说明 |
 |---|------|:----:|------|
-| D6 | 智能剪辑：分镜拼接 + 转场 + 字幕（FFmpeg） | 🔧 | 已接入 FFmpeg 自动下载并拼接火山引擎分段视频，物理输出到 `packages/backend/uploads/generated/{taskId}.mp4`，并通过 `/uploads/generated/{taskId}.mp4` 作为完整预览；旧任务导出时会自动补拼接；转场、字幕、BGM 混音暂未实现 |
+| D6 | 智能剪辑：分镜拼接 + 转场 + 字幕（FFmpeg） | 🔧 | 已接入分镜优先视频 prompt、尾帧续接首帧和 FFmpeg 自动拼接：后端逐分镜生成火山引擎视频片段，物理输出完整 MP4 到 `packages/backend/uploads/generated/{taskId}.mp4`，并通过 `/uploads/generated/{taskId}.mp4` 作为完整预览；旧任务导出时会自动补拼接；转场、字幕、BGM 混音暂未实现 |
 | D7 | BGM 配乐库 + 按风格自动匹配 | ⬜ | BGM module 返回空列表，前端有 UI 但无数据 |
 | D8 | 分镜级编辑器前端（时间轴 + 拖拽） | 🔨 | `ScriptEditor.tsx` 完全实现分镜卡片流、字段编辑等（尚无拖拽功能） |
 | D9 | 分镜干预 API（单分镜重生成/替换/调时长） | ✅ | 提供单分镜的 regenerate 接口（目前为同步模拟，未调度异步任务） |

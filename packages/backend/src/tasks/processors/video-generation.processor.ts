@@ -37,7 +37,8 @@ interface VideoSegmentPlan {
 
 type ContinuitySource = 'product_image' | 'previous_last_frame' | 'text_only';
 
-const SUPPORTED_VIDEO_DURATIONS = [5, 10] as const;
+const MIN_PROVIDER_DURATION = 4;
+const MAX_PROVIDER_DURATION = 12;
 const DEFAULT_POLLING: PollingOptions = {
   maxAttempts: 180,
   intervalMs: 5000,
@@ -212,39 +213,51 @@ export class VideoGenerationProcessor extends WorkerHost {
 
   private buildPrompt(script: Script, segment: VideoSegmentPlan, continuitySource: ContinuitySource) {
     const sortedScenes = [...segment.scenes].sort((a, b) => a.order - b.order);
-    const scenes = sortedScenes
-      .map((scene) =>
-        [
-          `Scene ${scene.order}`,
-          `visual=${scene.visualPrompt || scene.description || ''}`,
-          `camera=${scene.cameraMotion || 'fixed'}`,
-          `duration=${scene.duration}s`,
-          `voiceover=${scene.dialogue || ''}`,
-          `subtitle=${scene.subtitle || ''}`,
-          `constraints=${(scene.constraints ?? []).join(', ')}`,
-        ].join('; '),
-      )
-      .join('\n');
+    const scene = sortedScenes[0];
+    const visualAction = scene?.visualPrompt || scene?.description || 'Show the product clearly.';
+    const continuityInstruction = this.getContinuityInstruction(continuitySource);
 
     return [
-      `Create a standalone TikTok Shop product video for scene ${sortedScenes[0]?.order ?? segment.index + 1}.`,
-      `This video must be no longer than ${segment.duration} seconds.`,
-      continuitySource === 'previous_last_frame'
-        ? 'Continue from the provided first frame. Preserve the same product, subject, background, lighting, composition, and visual identity while only performing the current scene action.'
-        : continuitySource === 'product_image'
-          ? 'Use the provided product image as the visual anchor. Keep the product identity, color, shape, and key details consistent.'
-          : 'No image input is available. Keep the product identity and visual style consistent with the script description.',
-      `Product: ${script.productInfo.name}`,
-      `Category: ${script.productInfo.category}`,
-      `Selling points: ${(script.productInfo.selling_points ?? []).join(', ')}`,
-      `Visual style: ${script.visualStyle || 'clean product demo'}`,
-      `Narrative: ${script.narrativeFramework || 'Hook, benefits, CTA'}`,
-      `Segment scenes: ${sortedScenes.map((scene) => scene.order).join(', ') || 'single product demo'}`,
-      scenes,
-      'Generate only this scene, but make it visually continuous with the provided input frame when one is present. Keep the product visible, commercially safe, and suitable for e-commerce conversion.',
+      'Create one TikTok Shop video segment.',
+      '',
+      'Task:',
+      'Generate only the current scene. Do not add extra story beats.',
+      '',
+      'Visual action:',
+      visualAction,
+      '',
+      'Product identity:',
+      `Product: ${script.productInfo.name || 'the product'}`,
+      `Category: ${script.productInfo.category || 'e-commerce product'}`,
+      `Selling points: ${(script.productInfo.selling_points ?? []).join(', ') || 'core product benefits'}`,
+      script.productInfo.description ? `Description: ${script.productInfo.description}` : '',
+      '',
+      'Continuity:',
+      continuityInstruction,
+      'Preserve product identity, color, shape, material, lighting, and commercial style.',
+      '',
+      'Scene details:',
+      `Camera: ${scene?.cameraMotion || 'fixed'}`,
+      `Output duration: ${segment.duration} seconds.`,
+      `Voiceover: ${scene?.dialogue || ''}`,
+      `Subtitle: ${scene?.subtitle || ''}`,
+      '',
+      'Constraints:',
+      (scene?.constraints ?? []).join(', ') || 'Keep the product visible and recognizable.',
+      'Keep the product visible, commercially safe, and suitable for e-commerce conversion.',
     ]
       .filter(Boolean)
       .join('\n');
+  }
+
+  private getContinuityInstruction(continuitySource: ContinuitySource) {
+    if (continuitySource === 'previous_last_frame') {
+      return 'Use the provided first frame from the previous segment. Continue from it and only perform the current scene action.';
+    }
+    if (continuitySource === 'product_image') {
+      return 'Use the provided product image as the first-frame visual anchor.';
+    }
+    return 'No image input is available. Generate from the current scene prompt and product identity.';
   }
 
   private async createVideoTaskForSegment(
@@ -442,8 +455,8 @@ export class VideoGenerationProcessor extends WorkerHost {
   }
 
   private toProviderDuration(duration?: number) {
-    const requested = Math.round(Number(duration) || 5);
-    return requested <= 5 ? SUPPORTED_VIDEO_DURATIONS[0] : SUPPORTED_VIDEO_DURATIONS[1];
+    const requested = Math.round(Number(duration) || MIN_PROVIDER_DURATION);
+    return Math.min(Math.max(requested, MIN_PROVIDER_DURATION), MAX_PROVIDER_DURATION);
   }
 
   private toProviderResolution(resolution?: string) {
