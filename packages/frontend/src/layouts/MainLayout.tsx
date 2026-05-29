@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, theme, Dropdown, Button } from 'antd';
+import { Layout, Menu, theme, Dropdown, Button, Drawer } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   HomeOutlined,
@@ -12,10 +12,12 @@ import {
   SunOutlined,
   MoonOutlined,
   DesktopOutlined,
+  MenuOutlined,
 } from '@ant-design/icons';
 import { useUIStore } from '../stores/useAppStore';
 import { ROUTES } from '../constants';
 import { useTheme } from '../hooks/useTheme';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 const { Sider, Content, Header } = Layout;
 
@@ -108,7 +110,10 @@ export default function MainLayout() {
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const setThemeMode = useUIStore((s) => s.setThemeMode);
+  const mobileDrawerOpen = useUIStore((s) => s.mobileDrawerOpen);
+  const setMobileDrawerOpen = useUIStore((s) => s.setMobileDrawerOpen);
 
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const { isDark, themeMode } = useTheme();
 
   const { selectedKey, openKeys } = deriveMenuState(location.pathname);
@@ -121,98 +126,138 @@ export default function MainLayout() {
 
   return (
     <Layout style={{ minHeight: '100vh', background: 'transparent' }}>
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={toggleSidebar}
-        theme={isDark ? 'dark' : 'light'}
-        style={{
-          borderRight: `1px solid ${token.colorBorderSecondary}`,
-          background: isDark ? '#161823' : '#ffffff',
-          position: 'sticky',
-          top: 0,
-          height: '100vh',
-          zIndex: 10,
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div style={{ flex: 1, overflow: 'auto' }}>
-            {/* Logo 区：折叠时显示简短图标文字 */}
-            <div
-              style={{
-                height: 48,
-                margin: '12px 16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: token.colorPrimary,
-                fontWeight: 700,
-                fontSize: collapsed ? 16 : 18,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                letterSpacing: 1,
-              }}
-            >
-              {collapsed ? 'AIGC' : 'AIGC 视频生成'}
-            </div>
-
-            <Menu
-              theme={isDark ? 'dark' : 'light'}
-              mode="inline"
-              selectedKeys={[selectedKey]}
-              defaultOpenKeys={openKeys}
-              items={menuItems}
-              style={{
-                background: 'transparent',
-                borderRight: 'none',
-              }}
-              onClick={({ key }) => {
-                // 跳过父菜单组
-                if (key === 'scripts-group') return;
-                navigate(key);
-              }}
-            />
-          </div>
-
-          <div style={{ padding: collapsed ? '0 0 16px' : '0 16px 16px', marginTop: 'auto' }}>
-            <Dropdown
-              menu={{
-                items: themeMenuItems,
-                selectedKeys: [themeMode],
-                onClick: ({ key }) => setThemeMode(key as 'system' | 'light' | 'dark'),
-              }}
-              placement="topRight"
-            >
-              <Button
-                type="text"
-                icon={
-                  themeMode === 'dark' ? (
-                    <MoonOutlined />
-                  ) : themeMode === 'light' ? (
-                    <SunOutlined />
-                  ) : (
-                    <DesktopOutlined />
-                  )
-                }
-                block
+      {!isMobile && (
+        <Sider
+          collapsible
+          collapsed={collapsed}
+          onCollapse={toggleSidebar}
+          theme={isDark ? 'dark' : 'light'}
+          style={{
+            borderRight: `1px solid ${token.colorBorderSecondary}`,
+            background: isDark ? '#161823' : '#ffffff',
+            position: 'sticky',
+            top: 0,
+            height: '100vh',
+            zIndex: 10,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              {/* Logo 区：折叠时显示简短图标文字 */}
+              <div
                 style={{
-                  color: token.colorText,
+                  height: 48,
+                  margin: '12px 16px',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: collapsed ? 'center' : 'flex-start',
-                  padding: collapsed ? 0 : '4px 15px',
-                  height: 32,
-                  borderRadius: collapsed ? 0 : token.borderRadius,
+                  justifyContent: 'center',
+                  color: token.colorPrimary,
+                  fontWeight: 700,
+                  fontSize: collapsed ? 16 : 18,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  letterSpacing: 1,
                 }}
               >
-                {!collapsed && '主题切换'}
-              </Button>
-            </Dropdown>
+                {collapsed ? 'AIGC' : 'AIGC 视频生成'}
+              </div>
+
+              <Menu
+                theme={isDark ? 'dark' : 'light'}
+                mode="inline"
+                selectedKeys={[selectedKey]}
+                defaultOpenKeys={openKeys}
+                items={menuItems}
+                style={{
+                  background: 'transparent',
+                  borderRight: 'none',
+                }}
+                onClick={({ key }) => {
+                  // 跳过父菜单组
+                  if (key === 'scripts-group') return;
+                  navigate(key);
+                }}
+              />
+            </div>
+
+            <div style={{ padding: collapsed ? '0 0 16px' : '0 16px 16px', marginTop: 'auto' }}>
+              <Dropdown
+                menu={{
+                  items: themeMenuItems,
+                  selectedKeys: [themeMode],
+                  onClick: ({ key }) => setThemeMode(key as 'system' | 'light' | 'dark'),
+                }}
+                placement="topRight"
+              >
+                <Button
+                  type="text"
+                  icon={
+                    themeMode === 'dark' ? (
+                      <MoonOutlined />
+                    ) : themeMode === 'light' ? (
+                      <SunOutlined />
+                    ) : (
+                      <DesktopOutlined />
+                    )
+                  }
+                  block
+                  style={{
+                    color: token.colorText,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: collapsed ? 'center' : 'flex-start',
+                    padding: collapsed ? 0 : '4px 15px',
+                    height: 32,
+                    borderRadius: collapsed ? 0 : token.borderRadius,
+                  }}
+                >
+                  {!collapsed && '主题切换'}
+                </Button>
+              </Dropdown>
+            </div>
           </div>
+        </Sider>
+      )}
+
+      <Drawer
+        placement="left"
+        onClose={() => setMobileDrawerOpen(false)}
+        open={mobileDrawerOpen}
+        styles={{ body: { padding: 0 } }}
+        width={250}
+        closable={false}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: isDark ? '#161823' : '#ffffff' }}>
+          <div
+            style={{
+              height: 48,
+              margin: '12px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              color: token.colorPrimary,
+              fontWeight: 700,
+              fontSize: 18,
+            }}
+          >
+            AIGC 视频生成
+          </div>
+          <Menu
+            theme={isDark ? 'dark' : 'light'}
+            mode="inline"
+            selectedKeys={[selectedKey]}
+            defaultOpenKeys={openKeys}
+            items={menuItems}
+            style={{ borderRight: 'none' }}
+            onClick={({ key }) => {
+              if (key === 'scripts-group') return;
+              navigate(key);
+              setMobileDrawerOpen(false);
+            }}
+          />
         </div>
-      </Sider>
+      </Drawer>
 
       <Layout style={{ background: 'transparent' }}>
         <Header
@@ -223,16 +268,27 @@ export default function MainLayout() {
             borderBottom: `1px solid ${token.colorBorderSecondary}`,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'flex-end',
+            justifyContent: isMobile ? 'space-between' : 'flex-end',
             position: 'sticky',
             top: 0,
             zIndex: 9,
           }}
-        />
+        >
+          {isMobile && (
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => setMobileDrawerOpen(true)}
+              style={{ fontSize: 18 }}
+            />
+          )}
+          {isMobile && <div style={{ fontWeight: 700, color: token.colorPrimary }}>AIGC</div>}
+          <div />
+        </Header>
         <Content
           style={{
-            margin: '24px 24px',
-            padding: 24,
+            margin: isMobile ? '12px 12px' : '24px 24px',
+            padding: isMobile ? 16 : 24,
             background: isDark ? 'transparent' : token.colorBgContainer,
             borderRadius: token.borderRadius,
             minHeight: 280,
