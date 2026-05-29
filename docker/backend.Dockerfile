@@ -23,6 +23,8 @@ RUN pnpm deploy --filter @aigc/backend --prod /app/deploy
 # ===== Production Stage =====
 FROM node:22-alpine
 WORKDIR /app
+RUN apk add --no-cache ffmpeg
+RUN ffmpeg -version
 COPY --from=builder /app/deploy ./
 # In case pnpm deploy misses dist due to missing 'files' in package.json
 COPY --from=builder /app/packages/backend/dist ./dist

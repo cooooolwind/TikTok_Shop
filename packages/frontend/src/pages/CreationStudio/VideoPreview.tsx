@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Button, Card, Descriptions, List, Space, Spin, Tag, Typography,
-} from 'antd';
+import { Button, Card, Descriptions, List, Space, Spin, Tag, Typography } from 'antd';
 import { ArrowLeftOutlined, DownloadOutlined, EditOutlined } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
 import { useCreationStore } from '../../stores/useGenerationStore';
@@ -14,7 +12,7 @@ export default function VideoPreview() {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const { currentTask, fetchTask, exportVideo } = useCreationStore();
-  const [activeSegmentIndex, setActiveSegmentIndex] = useState(0);
+  const [activeSegmentIndex, setActiveSegmentIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (taskId) fetchTask(taskId);
@@ -22,24 +20,51 @@ export default function VideoPreview() {
 
   const t = currentTask;
   const result = t?.result;
-  const segments = useMemo(() => result?.segments?.length ? result.segments : result ? [{
-    index: 0,
-    video_url: result.video_url,
-    thumbnail_url: result.thumbnail_url,
-    duration: result.duration,
-    resolution: result.resolution,
-    aspect_ratio: result.aspect_ratio,
-    scene_orders: [],
-  }] : [], [result]);
-  const activeSegment = segments[activeSegmentIndex] ?? segments[0];
+
+  useEffect(() => {
+    setActiveSegmentIndex(null);
+  }, [result?.video_url]);
+
+  const segments = useMemo(
+    () =>
+      result?.segments?.length
+        ? result.segments
+        : result
+          ? [
+              {
+                index: 0,
+                video_url: result.video_url,
+                thumbnail_url: result.thumbnail_url,
+                duration: result.duration,
+                resolution: result.resolution,
+                aspect_ratio: result.aspect_ratio,
+                scene_orders: [],
+              },
+            ]
+          : [],
+    [result],
+  );
+  const activeSegment = activeSegmentIndex === null ? undefined : segments[activeSegmentIndex] ?? segments[0];
+  const activeVideoUrl = activeSegment?.video_url ?? result?.video_url;
+  const activeAspectRatio = activeSegment?.aspect_ratio ?? result?.aspect_ratio;
+  const activeResolution = activeSegment?.resolution ?? result?.resolution;
 
   if (!t) {
-    return <div style={{ display: 'flex', justifyContent: 'center', padding: 100 }}><Spin size="large" /></div>;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: 100 }}>
+        <Spin size="large" />
+      </div>
+    );
   }
 
   const handleExport = async () => {
     if (!result) return;
-    const exported = await exportVideo(t.id, 'mp4', result.resolution as '1080x1920' | '1920x1080' | '720x1280', 'high');
+    const exported = await exportVideo(
+      t.id,
+      'mp4',
+      result.resolution as '1080x1920' | '1920x1080' | '720x1280',
+      'high',
+    );
     window.open(exported.download_url, '_blank');
   };
 
@@ -61,17 +86,18 @@ export default function VideoPreview() {
               修改剧本
             </Button>
             <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport} disabled={!result?.video_url}>
-              导出当前首段
+              导出完整视频
             </Button>
           </Space>
         }
       />
 
       <Card style={{ marginBottom: 24, textAlign: 'center', background: '#000' }}>
-        {activeSegment?.video_url ? (
+        {activeVideoUrl ? (
           <video
-            key={activeSegment.video_url}
-            src={activeSegment.video_url}
+            aria-label="video preview"
+            key={activeVideoUrl}
+            src={activeVideoUrl}
             controls
             autoPlay
             style={{
@@ -97,9 +123,10 @@ export default function VideoPreview() {
                 <Card
                   size="small"
                   hoverable
+                  aria-label={`preview segment ${segment.index + 1}`}
                   onClick={() => setActiveSegmentIndex(segment.index)}
                   style={{
-                    borderColor: activeSegment?.index === segment.index ? '#1677ff' : undefined,
+                    borderColor: activeSegmentIndex === segment.index ? '#1677ff' : undefined,
                     cursor: 'pointer',
                   }}
                 >
@@ -125,8 +152,8 @@ export default function VideoPreview() {
           <Descriptions column={3} size="small" bordered>
             <Descriptions.Item label="总时长">{formatDuration(result.duration)}</Descriptions.Item>
             <Descriptions.Item label="分段数">{segments.length}</Descriptions.Item>
-            <Descriptions.Item label="当前画幅">{activeSegment?.aspect_ratio ?? result.aspect_ratio}</Descriptions.Item>
-            <Descriptions.Item label="当前分辨率">{activeSegment?.resolution ?? result.resolution}</Descriptions.Item>
+            <Descriptions.Item label="当前画幅">{activeAspectRatio}</Descriptions.Item>
+            <Descriptions.Item label="当前分辨率">{activeResolution}</Descriptions.Item>
             <Descriptions.Item label="文件大小">{formatBytes(result.file_size)}</Descriptions.Item>
             <Descriptions.Item label="任务 ID">{formatGenerationTaskDisplayId(t)}</Descriptions.Item>
           </Descriptions>

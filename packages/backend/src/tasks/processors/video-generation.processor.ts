@@ -16,6 +16,7 @@ import { Script } from '../../modules/scripts/entities/script.entity';
 import { Scene } from '../../modules/scripts/entities/scene.entity';
 import { TasksGateway } from '../../websocket/tasks.gateway';
 import { QUEUES } from '../queues';
+import { VideoStitchingService } from '../services/video-stitching.service';
 
 interface VideoGenerationJob {
   taskId: string;
@@ -54,6 +55,7 @@ export class VideoGenerationProcessor extends WorkerHost {
     private readonly volcanoClient: VolcanoClientProvider,
     private readonly tasksGateway: TasksGateway,
     private readonly configService: ConfigService,
+    private readonly videoStitchingService: VideoStitchingService,
   ) {
     super();
     this.polling = this.getPollingOptions();
@@ -135,7 +137,7 @@ export class VideoGenerationProcessor extends WorkerHost {
         previousLastFrameUrl = segmentResult.thumbnail_url;
       }
 
-      const result = this.toTaskResult(segmentResults, options, continuityWarnings);
+      const result = await this.toTaskResult(task.id, segmentResults, options, continuityWarnings);
 
       await this.updateProgress(job, 5, 5, 'persist_result', 'Saving segmented video results...');
       task.status = 'done';
@@ -343,11 +345,12 @@ export class VideoGenerationProcessor extends WorkerHost {
     };
   }
 
-  private toTaskResult(
+  private async toTaskResult(
+    taskId: string,
     segments: NonNullable<TaskResult['segments']>,
     options: VideoOptions | undefined,
     continuityWarnings: string[] = [],
-  ): TaskResult {
+  ): Promise<TaskResult> {
     const first = segments[0];
     if (!first) throw new Error('Video generation completed without segments');
     const result: TaskResult = {
@@ -362,6 +365,18 @@ export class VideoGenerationProcessor extends WorkerHost {
     if (continuityWarnings.length > 0) {
       result.continuity_warning = continuityWarnings.join('; ');
     }
+
+    if (segments.length > 1) {
+      try {
+        const stitched = await this.videoStitchingService.stitch({ taskId, segments });
+        result.video_url = stitched.video_url;
+        result.file_size = stitched.file_size;
+      } catch (error) {
+        result.stitching_warning = this.toErrorMessage(error);
+        this.logger.warn(`Video stitching failed for task=${taskId}: ${result.stitching_warning}`);
+      }
+    }
+
     return result;
   }
 
@@ -384,6 +399,11 @@ export class VideoGenerationProcessor extends WorkerHost {
       message: maybe.message || 'Video generation failed',
       retryable: true,
     };
+  }
+
+  private toErrorMessage(error: unknown) {
+    const maybe = error as { message?: string };
+    return maybe.message || 'Video stitching failed';
   }
 
   private async updateProgress(

@@ -29,6 +29,7 @@ interface TaskResult {
   aspect_ratio: string;
   file_size: number;
   continuity_warning?: string;
+  stitching_warning?: string;
   segments?: {
     index: number;
     video_url: string;
