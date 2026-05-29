@@ -55,7 +55,7 @@
 |---|------|:----:|------|
 | C1 | 参考视频录入 + 结构化拆解 API | ⬜ | Controller/Service/Entity 存在，全为 stub |
 | C2 | 灵感模板 CRUD | ✅ | 完整 CRUD 及测试用例，包含内置模板 |
-| C3 | 剧本生成核心 Prompt 链 | ✅ | `ScriptsService.generate` 入队，BullMQ Processor 完整调用多模态模型 |
+| C3 | 剧本生成核心 Prompt 链 | ✅ | `ScriptsService.generate` 入队，BullMQ Processor 完整调用多模态模型；Prompt 已强化为电商强转化导向，要求 3 秒 Hook、卖点分配、商品可见、购买理由和 CTA 收尾 |
 | C4 | 分镜脚本结构化输出（JSON Schema） | ✅ | AI 返回 `AiScriptResult` 结构化数据，`persistResult` 持久化入库 |
 | C5 | 爆款仿写模式 | 🔨 | 模式字段存在，前端入口存在，但无参考视频重写 pipeline |
 | C6 | 剧本工作台前端 | ✅ | `ScriptWorkbenchPage` 列表及 `ScriptGenerate` 表单，模板管理器均完整，且**全量完成移动端卡片式重构** |
@@ -67,7 +67,7 @@
 |---|------|:----:|------|
 | D1 | 一键成片 Pipeline | ✅ | `GenerationService.create` 到 `VideoGenerationProcessor` 完整 pipeline，调用火山引擎并持久化结果 |
 | D4 | TTS 配音对接 | ⬜ | TTS module 存在，全为 stub，返回桩数据 |
-| D5 | 视频预览 + 导出 | ✅ | 后端提供导出URL，前端 `VideoPreview` 和 `TaskDetail` 支持分段预览；完整视频仅在点击导出时按需拼接 |
+| D5 | 视频预览 + 导出 | ✅ | 后端提供导出URL，前端 `VideoPreview` 和 `TaskDetail` 支持分段预览；完整视频仅在点击导出时按需拼接，预览页导出完成后会在分段列表末尾新增“完整视频”卡片 |
 
 ### 模块 E：用户体验（P0）
 
@@ -100,7 +100,7 @@
 
 | # | 任务 | 状态 | 说明 |
 |---|------|:----:|------|
-| D6 | 智能剪辑：分镜拼接 + 转场 + 字幕（FFmpeg） | 🔨 | 已接入分镜优先视频 prompt、尾帧续接首帧和按需 FFmpeg 拼接：后端逐分镜生成火山引擎视频片段，生成阶段不自动拼接；点击导出完整视频时输出 MP4 到 `packages/backend/uploads/generated/{taskId}.mp4`；转场、字幕、BGM 混音暂未实现 |
+| D6 | 智能剪辑：分镜拼接 + 转场 + 字幕（FFmpeg） | 🔧 | 已接入分镜优先视频 prompt、尾帧续接首帧和按需 FFmpeg 拼接：后端逐分镜生成火山引擎视频片段，生成阶段不自动拼接；点击导出完整视频时输出 MP4 到 `packages/backend/uploads/generated/{taskId}.mp4`，并在预览页生成可点击的完整视频卡片；转场、字幕、BGM 混音暂未实现 |
 | D7 | BGM 配乐库 + 按风格自动匹配 | ⬜ | BGM module 返回空列表，前端有 UI 但无数据 |
 | D8 | 分镜级编辑器前端（时间轴 + 拖拽） | 🔨 | `ScriptEditor.tsx` 完全实现分镜卡片流、字段编辑等（尚无拖拽功能） |
 | D9 | 分镜干预 API（单分镜重生成/替换/调时长） | ✅ | 提供单分镜的 regenerate 接口（目前为同步模拟，未调度异步任务） |

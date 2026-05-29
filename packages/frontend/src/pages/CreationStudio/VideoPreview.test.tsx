@@ -92,30 +92,36 @@ describe('VideoPreview', () => {
     expect(screen.getByLabelText('video preview').getAttribute('src')).toBe('https://example.com/segment-2.mp4');
   });
 
-  it('opens an export window immediately and redirects it after export finishes', async () => {
-    const popup = {
-      closed: false,
-      close: vi.fn(),
-      document: { title: '', body: { innerHTML: '' } },
-      location: { href: '' },
-    };
-    const openSpy = vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window);
+  it('exports in the background and adds a complete video card without navigating away', async () => {
+    const openSpy = vi.spyOn(window, 'open');
     const exportVideo = vi.fn().mockResolvedValue({
       download_url: '/uploads/generated/task-1.mp4',
       expires_at: '2026-05-26T00:00:00.000Z',
     });
     const fetchTask = vi.fn();
-    useCreationStore.setState({ exportVideo, fetchTask });
+    useCreationStore.setState({
+      currentTask: {
+        ...task,
+        result: task.result ? { ...task.result, video_url: 'https://example.com/segment-1.mp4' } : undefined,
+      },
+      exportVideo,
+      fetchTask,
+    });
 
     renderPreview();
     fireEvent.click(screen.getByLabelText('导出完整视频'));
 
-    expect(openSpy).toHaveBeenCalledWith('', '_blank');
+    expect(openSpy).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(exportVideo).toHaveBeenCalledWith('task-1', 'mp4', '1080x1920', 'high'),
     );
-    expect(popup.location.href).toBe('/uploads/generated/task-1.mp4');
     expect(fetchTask).toHaveBeenCalledWith('task-1');
+
+    fireEvent.click(screen.getByLabelText('preview segment 2'));
+    expect(screen.getByLabelText('video preview').getAttribute('src')).toBe('https://example.com/segment-2.mp4');
+
+    fireEvent.click(screen.getByLabelText('preview complete video'));
+    expect(screen.getByLabelText('video preview').getAttribute('src')).toBe('/uploads/generated/task-1.mp4');
 
     openSpy.mockRestore();
   });

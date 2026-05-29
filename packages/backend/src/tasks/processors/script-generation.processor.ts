@@ -56,21 +56,21 @@ export class ScriptGenerationProcessor extends WorkerHost {
   async process(job: Job<ScriptGenerationJob>): Promise<{ script_id: string; status: 'draft' }> {
     const { taskId, scriptId } = job.data;
     try {
-      await this.updateProgress(job, 1, 4, 'prepare', '正在整理剧本生成上下�?..');
+      await this.updateProgress(job, 1, 4, 'prepare', '姝ｅ湪鏁寸悊鍓ф湰鐢熸垚涓婁笅鏂?..');
       const script = await this.scriptsRepository.findOne({ where: { id: scriptId }, relations: { scenes: true } });
       if (!script) throw new Error(`Script ${scriptId} not found`);
 
-      await this.updateProgress(job, 2, 4, 'ai_generate', '正在调用 AI 生成剧本...');
+      await this.updateProgress(job, 2, 4, 'ai_generate', '姝ｅ湪璋冪敤 AI 鐢熸垚鍓ф湰...');
       const aiResponse = await this.volcanoClient.chatCompletion(this.buildMessages(job.data), {
         temperature: 0.7,
         response_format: { type: 'json_object' },
       });
       const parsed = this.parseAiResponse(aiResponse.content);
 
-      await this.updateProgress(job, 3, 4, 'persist', '正在保存分镜...');
+      await this.updateProgress(job, 3, 4, 'persist', '姝ｅ湪淇濆瓨鍒嗛暅...');
       await this.persistResult(script, parsed);
 
-      await this.updateProgress(job, 4, 4, 'done', '剧本生成完成');
+      await this.updateProgress(job, 4, 4, 'done', '鍓ф湰鐢熸垚瀹屾垚');
       this.tasksGateway.emitScriptGenerated(script.id);
       return { script_id: script.id, status: 'draft' };
     } catch (error) {
@@ -84,12 +84,25 @@ export class ScriptGenerationProcessor extends WorkerHost {
       {
         role: 'system',
         content:
-          'You are a TikTok Shop short-video script director. Return strict JSON with narrative_framework, visual_style, total_duration, and scenes[]. The whole script must be no longer than 12 seconds. Each scene needs description, camera_motion, duration, dialogue, bgm_style, subtitle, visual_prompt, constraints.',
+          [
+            'You are a conversion-focused TikTok Shop ecommerce short-video director and sales copywriter.',
+            'Your only goal is to generate product-selling scripts that make viewers understand why to buy this product now.',
+            'Return strict JSON with narrative_framework, visual_style, total_duration, and scenes[].',
+            'The whole script must be no longer than 12 seconds.',
+            'This is not a generic lifestyle video: every scene must be directly related to ecommerce selling, product benefits, shopping intent, and conversion.',
+            'Required script structure: open with a strong 3-second hook using a pain point, contrast, benefit, or usage scenario; assign at least one concrete selling point or product value to every scene; end the final scene with a clear CTA such as click, order now, claim the offer, or view product details.',
+            'Each scene needs description, camera_motion, duration, dialogue, bgm_style, subtitle, visual_prompt, constraints.',
+            'Field rules: description must state the selling purpose and visible action; dialogue must sound like a creator or livestream host selling the product; subtitle must be short and conversion-oriented; visual_prompt must describe ecommerce footage such as product close-up, try-on or usage result, detail demonstration, before-after comparison, package, price/offer cue, or shopping scenario; constraints must require the product visible, recognizable, on-topic, commercially safe, and not an unrelated story.',
+            'Use the product name in dialogue or subtitle. Distribute product selling_points across scenes. Use target_audience to shape wording and scenario. If price or offer information exists, use it as a benefit or CTA cue without inventing false discounts.',
+            'Do not produce abstract mood shots, generic storytelling, unrelated drama, or scenes without product display.',
+          ].join(' '),
       },
       {
         role: 'user',
         content: this.buildUserContent(
           {
+            commerce_objective:
+              'Generate a TikTok Shop conversion-focused product selling script. The script must make viewers understand why to buy this product now.',
             product_info: data.productInfo,
             mode: data.mode,
             preferences: data.preferences,
