@@ -26,6 +26,21 @@ export interface TaskProgress {
   percentage: number;
   message: string;
   estimated_remaining: number;
+  phase?:
+    | 'queued'
+    | 'prepare'
+    | 'build_segments'
+    | 'submit_segment'
+    | 'generate_segment'
+    | 'retry_segment'
+    | 'persist_result'
+    | 'done'
+    | 'failed';
+  phase_label?: string;
+  segment_index?: number;
+  segment_total?: number;
+  elapsed_seconds?: number;
+  detail?: string;
 }
 
 // ===== 任务结果 =====
@@ -52,6 +67,11 @@ export interface VideoSegmentResult {
   scene_orders: number[];
   input_frame_url?: string;
   continuity_source?: 'product_image' | 'previous_last_frame' | 'text_only';
+  status?: 'pending' | 'submitted' | 'running' | 'succeeded' | 'failed' | 'skipped';
+  provider_task_id?: string;
+  error?: TaskError;
+  started_at?: string;
+  completed_at?: string;
 }
 
 // ===== 任务错误 =====
@@ -60,6 +80,9 @@ export interface TaskError {
   code: string;
   message: string;
   retryable: boolean;
+  category?: 'network' | 'rate_limit' | 'timeout' | 'moderation' | 'provider' | 'export' | 'unknown';
+  segment_index?: number;
+  user_action?: string;
 }
 
 // ===== 生成任务 =====
@@ -105,6 +128,8 @@ export interface ExportRequest {
 export interface ExportResponse {
   download_url: string;
   expires_at: string;
+  source?: 'segment' | 'stitched';
+  segments_count?: number;
 }
 
 export interface GenerationListQuery extends PaginationQuery {

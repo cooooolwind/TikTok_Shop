@@ -2,7 +2,6 @@ import { VideoGenerationProcessor } from './video-generation.processor';
 import { GenerationTask } from '../../modules/generation/entities/generation-task.entity';
 import { Script } from '../../modules/scripts/entities/script.entity';
 import { Scene } from '../../modules/scripts/entities/scene.entity';
-import type { VideoStitchingService } from '../services/video-stitching.service';
 
 const now = new Date('2026-05-25T00:00:00.000Z');
 
@@ -126,7 +125,6 @@ function makeProcessor(
     volcanoClient as never,
     tasksGateway as never,
     configService as never,
-    videoStitchingService as unknown as VideoStitchingService,
   );
   const job = {
     data: { taskId: 'task-1', scriptId: 'script-1', options: { resolution: '1080x1920', aspect_ratio: '9:16' } },
@@ -250,7 +248,7 @@ describe('VideoGenerationProcessor', () => {
     expect(volcanoClient.createVideoTask).toHaveBeenNthCalledWith(2, expect.objectContaining({ duration: 12 }));
   });
 
-  it('stitches multiple generated segments and persists the stitched video as the primary result', async () => {
+  it('keeps multiple generated segments without stitching during generation', async () => {
     const { processor, scriptsRepository, volcanoClient, videosRepository, videoStitchingService, tasksGateway, job } =
       makeProcessor('succeeded');
     scriptsRepository.findOne.mockResolvedValue(
@@ -278,31 +276,25 @@ describe('VideoGenerationProcessor', () => {
 
     const result = await processor.process(job as never);
 
-    expect(videoStitchingService.stitch).toHaveBeenCalledWith({
-      taskId: 'task-1',
-      segments: [
-        expect.objectContaining({ video_url: 'https://example.com/segment-1.mp4' }),
-        expect.objectContaining({ video_url: 'https://example.com/segment-2.mp4' }),
-      ],
-    });
+    expect(videoStitchingService.stitch).not.toHaveBeenCalled();
     expect(result.result).toEqual(
       expect.objectContaining({
-        video_url: '/uploads/generated/task-1.mp4',
-        file_size: 12345,
+        video_url: 'https://example.com/segment-1.mp4',
+        file_size: 0,
         segments: expect.arrayContaining([
-          expect.objectContaining({ video_url: 'https://example.com/segment-1.mp4' }),
-          expect.objectContaining({ video_url: 'https://example.com/segment-2.mp4' }),
+          expect.objectContaining({ video_url: 'https://example.com/segment-1.mp4', status: 'succeeded' }),
+          expect.objectContaining({ video_url: 'https://example.com/segment-2.mp4', status: 'succeeded' }),
         ]),
       }),
     );
-    expect(videosRepository.save).toHaveBeenCalledWith(expect.objectContaining({ url: '/uploads/generated/task-1.mp4' }));
+    expect(videosRepository.save).toHaveBeenCalledWith(expect.objectContaining({ url: 'https://example.com/segment-1.mp4' }));
     expect(tasksGateway.emitTaskCompleted).toHaveBeenCalledWith(
       'task-1',
-      expect.objectContaining({ video_url: '/uploads/generated/task-1.mp4' }),
+      expect.objectContaining({ video_url: 'https://example.com/segment-1.mp4' }),
     );
   });
 
-  it('keeps segmented results when stitching fails and records a stitching warning', async () => {
+  it('does not run stitching or write stitching warnings during generation', async () => {
     const { processor, scriptsRepository, volcanoClient, videoStitchingService, job } = makeProcessor('succeeded');
     scriptsRepository.findOne.mockResolvedValue(
       makeScript({
@@ -333,9 +325,14 @@ describe('VideoGenerationProcessor', () => {
     expect(result.result).toEqual(
       expect.objectContaining({
         video_url: 'https://example.com/segment-1.mp4',
-        stitching_warning: 'ffmpeg exited with code 1: invalid data',
+        segments: expect.arrayContaining([
+          expect.objectContaining({ video_url: 'https://example.com/segment-1.mp4' }),
+          expect.objectContaining({ video_url: 'https://example.com/segment-2.mp4' }),
+        ]),
       }),
     );
+    expect(result.result).not.toHaveProperty('stitching_warning');
+    expect(videoStitchingService.stitch).not.toHaveBeenCalled();
   });
 
   it('chains each segment from the previous segment last frame and records continuity metadata', async () => {

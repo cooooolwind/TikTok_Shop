@@ -2,7 +2,7 @@ import type {
   Material, MaterialDetail, MaterialListQuery, MaterialType,
   Script, Scene, ScriptListQuery, ScriptMode, ScriptStatus,
   CreateScriptRequest, GenerateScriptQueuedResponse, GenerateScriptRequest, ProductInfo,
-  GenerationTask, GenerationStatus, GenerationListQuery,
+  GenerationTask, GenerationStatus, GenerationListQuery, ExportResponse,
   TaskProgress, TaskResult, TaskError, VideoOptions,
   ReferenceVideo, ReferenceListQuery,
   Template, TemplateListQuery,
@@ -145,11 +145,11 @@ export interface CreationState {
   retry: (taskId: string) => Promise<void>;
   cancel: (taskId: string) => Promise<void>;
   remove: (taskId: string) => Promise<void>;
-  exportVideo: (taskId: string, format: string, resolution: string, quality: string) => Promise<{ download_url: string; expires_at: string }>;
+  exportVideo: (taskId: string, format: string, resolution: string, quality: string) => Promise<ExportResponse>;
   regenerateSceneVideo: (taskId: string, sceneId: string, instruction?: string, materialId?: string) => Promise<void>;
 
   // WebSocket 驱动
-  updateTaskProgress: (taskId: string, progress: TaskProgress) => void;
+  updateTaskProgress: (taskId: string, progress: TaskProgress, result?: TaskResult) => void;
   setTaskDone: (taskId: string, result: TaskResult) => void;
   setTaskFailed: (taskId: string, error: TaskError) => void;
 

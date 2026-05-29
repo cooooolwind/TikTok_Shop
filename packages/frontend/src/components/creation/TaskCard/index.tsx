@@ -3,7 +3,7 @@ import { ClockCircleOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { GenerationTask } from '@aigc/shared-types';
 import StatusTag from '../../common/StatusTag';
 import { TASK_STATUS_LABELS } from '../../../constants';
-import { getDisplayProgress } from '../TaskProgressPanel/progress';
+import { getDisplayProgress, getProgressShortText } from '../TaskProgressPanel/progress';
 import { formatBeijingDateTime, formatGenerationTaskDisplayId } from '../../../utils/format';
 
 const { Text } = Typography;
@@ -68,12 +68,12 @@ export default function TaskCard({ task, onClick, onDelete }: TaskCardProps) {
 
         <div style={{ height: 40, minHeight: 40, maxHeight: 40, overflow: 'hidden', display: 'flex', alignItems: 'center' }}>
           {isActive && (
-            <Progress
-              percent={progress.percentage}
-              size="small"
-              style={{ width: '100%' }}
-              format={() => progress.message}
-            />
+            <Space direction="vertical" size={2} style={{ width: '100%' }}>
+              <Progress percent={progress.percentage} size="small" style={{ width: '100%' }} showInfo={false} />
+              <Text type="secondary" style={{ fontSize: 12 }} ellipsis>
+                {getProgressShortText(progress)}
+              </Text>
+            </Space>
           )}
 
           {isDone && task.result && (
@@ -99,7 +99,7 @@ export default function TaskCard({ task, onClick, onDelete }: TaskCardProps) {
                 wordBreak: 'break-word',
               }}
             >
-              {errorMessage}
+              {task.error.segment_index ? `第 ${task.error.segment_index} 个镜头失败：${errorMessage}` : errorMessage}
             </Text>
           )}
         </div>

@@ -104,8 +104,15 @@ export const useCreationStore = create<CreationState>((set, get) => ({
   },
 
   exportVideo: async (taskId, format, resolution, quality) => {
-    const result = unwrapResponse(await generationApi.export(taskId, { format: format as 'mp4' | 'webm', resolution: resolution as '1080x1920' | '1920x1080' | '720x1280', quality: quality as 'high' | 'medium' | 'low' }));
-    return result;
+    try {
+      const result = unwrapResponse(await generationApi.export(taskId, { format: format as 'mp4' | 'webm', resolution: resolution as '1080x1920' | '1920x1080' | '720x1280', quality: quality as 'high' | 'medium' | 'low' }));
+      useUIStore.getState().pushNotification({ type: 'success', title: '完整视频导出完成' });
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '完整视频拼接失败，分段视频仍可预览';
+      useUIStore.getState().pushNotification({ type: 'error', title: '导出失败', message });
+      throw error;
+    }
   },
 
   regenerateSceneVideo: async (taskId, sceneId, instruction, materialId) => {
@@ -124,10 +131,12 @@ export const useCreationStore = create<CreationState>((set, get) => ({
   },
 
   // WebSocket 实时驱动
-  updateTaskProgress: (taskId, progress) => {
+  updateTaskProgress: (taskId, progress, result) => {
     set((s) => ({
-      tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, progress } : t)),
-      currentTask: s.currentTask?.id === taskId ? { ...s.currentTask, progress } : s.currentTask,
+      tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, progress, result: result ?? t.result } : t)),
+      currentTask: s.currentTask?.id === taskId
+        ? { ...s.currentTask, progress, result: result ?? s.currentTask.result }
+        : s.currentTask,
     }));
   },
 

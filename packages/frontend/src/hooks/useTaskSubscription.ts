@@ -42,7 +42,7 @@ export function useTaskSubscription(taskId: string | undefined) {
           setTaskFailed(taskId, task.error ?? { code: 'UNKNOWN', message: '任务失败', retryable: false });
           clearInterval(pollInterval);
         } else {
-          updateProgress(taskId, task.progress);
+          updateProgress(taskId, task.progress, task.result);
         }
       } catch {
         // 轮询失败静默忽略

@@ -5,6 +5,7 @@ import { ArrowLeftOutlined, DownloadOutlined, EditOutlined } from '@ant-design/i
 import PageHeader from '../../components/common/PageHeader';
 import { useCreationStore } from '../../stores/useGenerationStore';
 import { formatBytes, formatDuration, formatGenerationTaskDisplayId } from '../../utils/format';
+import { openExportWindow } from '../../utils/exportWindow';
 
 const { Text } = Typography;
 
@@ -59,13 +60,20 @@ export default function VideoPreview() {
 
   const handleExport = async () => {
     if (!result) return;
-    const exported = await exportVideo(
-      t.id,
-      'mp4',
-      result.resolution as '1080x1920' | '1920x1080' | '720x1280',
-      'high',
-    );
-    window.open(exported.download_url, '_blank');
+    const exportWindow = openExportWindow();
+    try {
+      const exported = await exportVideo(
+        t.id,
+        'mp4',
+        result.resolution as '1080x1920' | '1920x1080' | '720x1280',
+        'high',
+      );
+      exportWindow.redirect(exported.download_url);
+      await fetchTask(t.id);
+    } catch (error) {
+      exportWindow.close();
+      throw error;
+    }
   };
 
   return (
@@ -85,7 +93,13 @@ export default function VideoPreview() {
             <Button icon={<EditOutlined />} onClick={() => navigate(`/scripts/${t.script_id}?returnTask=${t.id}`)}>
               修改剧本
             </Button>
-            <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport} disabled={!result?.video_url}>
+            <Button
+              aria-label="导出完整视频"
+              type="primary"
+              icon={<DownloadOutlined />}
+              onClick={handleExport}
+              disabled={!result?.video_url}
+            >
               导出完整视频
             </Button>
           </Space>

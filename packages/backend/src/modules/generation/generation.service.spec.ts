@@ -167,6 +167,37 @@ describe('GenerationService', () => {
     expect(result).toEqual(expect.objectContaining({ id: 'task-1', status: 'queued', retry_count: 2 }));
   });
 
+  it('preserves succeeded leading segments when retrying a failed segmented task', async () => {
+    const failedTask = makeTask({
+      status: 'failed',
+      retryCount: 1,
+      result: {
+        ...makeSegmentedVideoResult(),
+        segments: [
+          { ...makeSegmentedVideoResult().segments[0], status: 'succeeded' as const },
+          {
+            ...makeSegmentedVideoResult().segments[1],
+            video_url: '',
+            status: 'failed' as const,
+            error: { code: 'BAD_PROMPT', message: 'bad prompt', retryable: true },
+          },
+        ],
+      },
+    });
+    const { service, tasksRepository } = makeService({ task: failedTask });
+
+    await service.retry('task-1');
+
+    expect(tasksRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        result: expect.objectContaining({
+          video_url: 'https://example.com/segment-1.mp4',
+          segments: [expect.objectContaining({ index: 0, status: 'succeeded' })],
+        }),
+      }),
+    );
+  });
+
   it('rejects retry for non-failed tasks', async () => {
     const { service } = makeService({ task: makeTask({ status: 'done' }) });
 
@@ -234,6 +265,20 @@ describe('GenerationService', () => {
       segments: doneTask.result?.segments,
     });
     expect(result.download_url).toBe('/uploads/generated/task-1.mp4');
+  });
+
+  it('returns a clear export error when stitching fails and leaves generated segments untouched', async () => {
+    const doneTask = makeTask({ status: 'done', result: makeSegmentedVideoResult() });
+    const { service, tasksRepository, videoStitchingService } = makeService({ task: doneTask });
+    videoStitchingService.stitch.mockRejectedValueOnce(new Error('ffmpeg exited with code 1'));
+
+    await expect(service.export('task-1')).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(tasksRepository.save).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        result: expect.objectContaining({ stitching_warning: expect.any(String) }),
+      }),
+    );
   });
 
   it('removes a task and its generated video', async () => {
