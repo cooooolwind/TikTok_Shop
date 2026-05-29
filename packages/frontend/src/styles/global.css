@@ -60,16 +60,30 @@ body {
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-/* Card hover micro animations */
-.hover-scale {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+/* Card hover micro animations - only on desktop */
+@media (min-width: 769px) {
+  .hover-scale {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .hover-scale:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  :root[data-theme='dark'] .hover-scale:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
 }
 
-.hover-scale:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-}
-
-:root[data-theme='dark'] .hover-scale:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+/* Mobile responsive fixes */
+@media (max-width: 768px) {
+  .ant-modal {
+    max-width: calc(100vw - 32px) !important;
+    margin: 16px auto !important;
+  }
+  
+  .ant-picker-range-wrapper {
+    flex-direction: column;
+  }
 }

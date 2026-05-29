@@ -29,11 +29,11 @@ export default function HomePage() {
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col span={24}>
           <Card>
-            <Row gutter={16}>
-              <Col span={6}><Statistic title="生成视频数" value={0} /></Col>
-              <Col span={6}><Statistic title="素材总数" value={0} /></Col>
-              <Col span={6}><Statistic title="剧本数量" value={0} /></Col>
-              <Col span={6}><Statistic title="成功率" value={0} suffix="%" /></Col>
+            <Row gutter={[16, 16]}>
+              <Col xs={12} sm={12} md={6}><Statistic title="生成视频数" value={0} /></Col>
+              <Col xs={12} sm={12} md={6}><Statistic title="素材总数" value={0} /></Col>
+              <Col xs={12} sm={12} md={6}><Statistic title="剧本数量" value={0} /></Col>
+              <Col xs={12} sm={12} md={6}><Statistic title="成功率" value={0} suffix="%" /></Col>
             </Row>
           </Card>
         </Col>
