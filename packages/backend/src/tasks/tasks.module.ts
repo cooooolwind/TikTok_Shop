@@ -9,6 +9,7 @@ import { Video } from '../modules/generation/entities/video.entity';
 import { WebsocketModule } from '../websocket/websocket.module';
 import { ScriptGenerationProcessor } from './processors/script-generation.processor';
 import { VideoGenerationProcessor } from './processors/video-generation.processor';
+import { VideoStitchingService } from './services/video-stitching.service';
 import { QUEUES } from './queues';
 
 @Global()
@@ -27,7 +28,7 @@ import { QUEUES } from './queues';
     TypeOrmModule.forFeature([Script, Scene, GenerationTask, Video]),
     WebsocketModule,
   ],
-  providers: [ScriptGenerationProcessor, VideoGenerationProcessor],
-  exports: [BullModule],
+  providers: [ScriptGenerationProcessor, VideoGenerationProcessor, VideoStitchingService],
+  exports: [BullModule, VideoStitchingService],
 })
 export class TasksModule {}

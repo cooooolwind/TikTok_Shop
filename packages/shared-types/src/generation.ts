@@ -39,6 +39,7 @@ export interface TaskResult {
   file_size: number;
   segments?: VideoSegmentResult[];
   continuity_warning?: string;
+  stitching_warning?: string;
 }
 
 export interface VideoSegmentResult {
