@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Row, Col, Button, Input, Select, Space, Modal,
   Upload, Form,
@@ -17,11 +17,13 @@ import { usePagination } from '../../hooks/usePagination';
 import { MATERIAL_CATEGORY_LABELS, MATERIAL_STATUS_LABELS } from '../../constants';
 import { routePath } from '../../constants';
 import { useNavigate } from 'react-router-dom';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const { Dragger } = Upload;
 
 export default function MaterialManagementPage() {
   const navigate = useNavigate();
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const {
     items, total, loading, filters,
     uploadVisible, uploading, uploadProgress,
@@ -33,19 +35,55 @@ export default function MaterialManagementPage() {
   const pagination = usePagination({ defaultPageSize: 20 });
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [mobilePage, setMobilePage] = useState(1);
 
   // 初始加载 + 筛选变化时重新加载
   useEffect(() => {
-    fetchList({
-      ...filters,
-      keyword: debouncedKeyword || undefined,
-      ...pagination.query,
-    });
-  }, [debouncedKeyword, filters.type, filters.category, filters.status, pagination.page, pagination.pageSize]);
+    if (isMobile) {
+      setMobilePage(1);
+      fetchList({
+        ...filters,
+        keyword: debouncedKeyword || undefined,
+        page: 1,
+        pageSize: 20,
+      }, false);
+    } else {
+      fetchList({
+        ...filters,
+        keyword: debouncedKeyword || undefined,
+        ...pagination.query,
+      }, false);
+    }
+  }, [debouncedKeyword, filters.type, filters.category, filters.status, pagination.page, pagination.pageSize, isMobile]);
+
+  // 移动端页码变化触发追加加载
+  useEffect(() => {
+    if (isMobile && mobilePage > 1) {
+      fetchList({
+        ...filters,
+        keyword: debouncedKeyword || undefined,
+        page: mobilePage,
+        pageSize: 20,
+      }, true);
+    }
+  }, [mobilePage, isMobile]);
 
   useEffect(() => {
     pagination.setTotal(total);
   }, [total]);
+
+  // 无限滚动 Observer
+  const observer = useRef<IntersectionObserver>();
+  const lastElementRef = useCallback((node: HTMLDivElement) => {
+    if (loading) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && items.length < total) {
+        setMobilePage((prev) => prev + 1);
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [loading, items.length, total]);
 
   // 类型筛选
   const handleTypeChange = useCallback((val: string | undefined) => {
@@ -147,55 +185,62 @@ export default function MaterialManagementPage() {
       ) : (
         <>
           <Row gutter={[16, 16]}>
-            {items.map((m) => (
-              <Col xs={24} sm={12} md={8} lg={6} key={m.id}>
-                <MaterialCard
-                  material={m}
-                  selected={selectedIds.includes(m.id)}
-                  onClick={() => {
-                    if (selectedIds.length > 0) {
-                      // 多选模式
-                      setSelectedIds((prev) =>
-                        prev.includes(m.id)
-                          ? prev.filter((id) => id !== m.id)
-                          : [...prev, m.id],
-                      );
-                    } else {
-                      navigate(routePath.materialDetail(m.id));
-                    }
-                  }}
-                  onDelete={() => {
-                    Modal.confirm({
-                      title: '确认删除',
-                      content: `确定要删除素材 "${m.name}" 吗？`,
-                      okType: 'danger',
-                      onOk: () => remove(m.id),
-                    });
-                  }}
-                />
+            {items.map((m, index) => (
+              <Col xs={12} sm={12} md={8} lg={6} key={m.id}>
+                <div ref={isMobile && index === items.length - 1 ? lastElementRef : undefined}>
+                  <MaterialCard
+                    material={m}
+                    selected={selectedIds.includes(m.id)}
+                    onClick={() => {
+                      if (selectedIds.length > 0) {
+                        // 多选模式
+                        setSelectedIds((prev) =>
+                          prev.includes(m.id)
+                            ? prev.filter((id) => id !== m.id)
+                            : [...prev, m.id],
+                        );
+                      } else {
+                        navigate(routePath.materialDetail(m.id));
+                      }
+                    }}
+                    onDelete={() => {
+                      Modal.confirm({
+                        title: '确认删除',
+                        content: `确定要删除素材 "${m.name}" 吗？`,
+                        okType: 'danger',
+                        onOk: () => remove(m.id),
+                      });
+                    }}
+                  />
+                </div>
               </Col>
             ))}
           </Row>
 
           {/* 分页 */}
-          <div style={{ textAlign: 'right', marginTop: 24 }}>
-            <Button
-              disabled={pagination.page <= 1}
-              onClick={() => pagination.onChange(pagination.page - 1, pagination.pageSize)}
-              style={{ marginRight: 8 }}
-            >
-              上一页
-            </Button>
-            <span style={{ margin: '0 12px' }}>
-              第 {pagination.page} / {Math.ceil(pagination.total / pagination.pageSize) || 1} 页 (共 {pagination.total} 项)
-            </span>
-            <Button
-              disabled={pagination.page * pagination.pageSize >= pagination.total}
-              onClick={() => pagination.onChange(pagination.page + 1, pagination.pageSize)}
-            >
-              下一页
-            </Button>
-          </div>
+          {!isMobile && (
+            <div style={{ textAlign: 'right', marginTop: 24 }}>
+              <Button
+                disabled={pagination.page <= 1}
+                onClick={() => pagination.onChange(pagination.page - 1, pagination.pageSize)}
+                style={{ marginRight: 8 }}
+              >
+                上一页
+              </Button>
+              <span style={{ margin: '0 12px' }}>
+                第 {pagination.page} / {Math.ceil(pagination.total / pagination.pageSize) || 1} 页 (共 {pagination.total} 项)
+              </span>
+              <Button
+                disabled={pagination.page * pagination.pageSize >= pagination.total}
+                onClick={() => pagination.onChange(pagination.page + 1, pagination.pageSize)}
+              >
+                下一页
+              </Button>
+            </div>
+          )}
+          {isMobile && loading && (
+            <div style={{ textAlign: 'center', padding: '16px 0' }}>加载中...</div>
+          )}
         </>
       )}
 
