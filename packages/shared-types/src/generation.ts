@@ -37,6 +37,20 @@ export interface TaskResult {
   resolution: string;
   aspect_ratio: string;
   file_size: number;
+  segments?: VideoSegmentResult[];
+  continuity_warning?: string;
+}
+
+export interface VideoSegmentResult {
+  index: number;
+  video_url: string;
+  thumbnail_url: string;
+  duration: number;
+  resolution: string;
+  aspect_ratio: string;
+  scene_orders: number[];
+  input_frame_url?: string;
+  continuity_source?: 'product_image' | 'previous_last_frame' | 'text_only';
 }
 
 // ===== 任务错误 =====
@@ -51,7 +65,9 @@ export interface TaskError {
 
 export interface GenerationTask {
   id: string;
+  display_id?: string;
   script_id: string;
+  script_display_id?: string;
   status: GenerationStatus;
   progress: TaskProgress;
   result?: TaskResult;

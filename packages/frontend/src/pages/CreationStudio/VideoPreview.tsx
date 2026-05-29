@@ -1,12 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Card, Button, Space, Spin, Descriptions, Typography,
+  Button, Card, Descriptions, List, Space, Spin, Tag, Typography,
 } from 'antd';
-import { ArrowLeftOutlined, DownloadOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, DownloadOutlined, EditOutlined } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
 import { useCreationStore } from '../../stores/useGenerationStore';
-import { formatBytes, formatDuration } from '../../utils/format';
+import { formatBytes, formatDuration, formatGenerationTaskDisplayId } from '../../utils/format';
 
 const { Text } = Typography;
 
@@ -14,17 +14,28 @@ export default function VideoPreview() {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const { currentTask, fetchTask, exportVideo } = useCreationStore();
+  const [activeSegmentIndex, setActiveSegmentIndex] = useState(0);
 
   useEffect(() => {
     if (taskId) fetchTask(taskId);
   }, [taskId]);
 
-  if (!currentTask) {
+  const t = currentTask;
+  const result = t?.result;
+  const segments = useMemo(() => result?.segments?.length ? result.segments : result ? [{
+    index: 0,
+    video_url: result.video_url,
+    thumbnail_url: result.thumbnail_url,
+    duration: result.duration,
+    resolution: result.resolution,
+    aspect_ratio: result.aspect_ratio,
+    scene_orders: [],
+  }] : [], [result]);
+  const activeSegment = segments[activeSegmentIndex] ?? segments[0];
+
+  if (!t) {
     return <div style={{ display: 'flex', justifyContent: 'center', padding: 100 }}><Spin size="large" /></div>;
   }
-
-  const t = currentTask;
-  const result = t.result;
 
   const handleExport = async () => {
     if (!result) return;
@@ -46,18 +57,21 @@ export default function VideoPreview() {
             <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/creation/tasks/${t.id}`)}>
               返回任务
             </Button>
-            <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport}>
-              导出视频
+            <Button icon={<EditOutlined />} onClick={() => navigate(`/scripts/${t.script_id}?returnTask=${t.id}`)}>
+              修改剧本
+            </Button>
+            <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport} disabled={!result?.video_url}>
+              导出当前首段
             </Button>
           </Space>
         }
       />
 
-      {/* 视频播放器 */}
       <Card style={{ marginBottom: 24, textAlign: 'center', background: '#000' }}>
-        {result?.video_url ? (
+        {activeSegment?.video_url ? (
           <video
-            src={result.video_url}
+            key={activeSegment.video_url}
+            src={activeSegment.video_url}
             controls
             autoPlay
             style={{
@@ -73,15 +87,48 @@ export default function VideoPreview() {
         )}
       </Card>
 
-      {/* 视频详情 */}
+      {segments.length > 1 && (
+        <Card title="分段视频" style={{ marginBottom: 24 }}>
+          <List
+            grid={{ gutter: 12, xs: 1, sm: 2, md: 3, lg: 4 }}
+            dataSource={segments}
+            renderItem={(segment) => (
+              <List.Item>
+                <Card
+                  size="small"
+                  hoverable
+                  onClick={() => setActiveSegmentIndex(segment.index)}
+                  style={{
+                    borderColor: activeSegment?.index === segment.index ? '#1677ff' : undefined,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Space direction="vertical" size={6}>
+                    <Text strong>第 {segment.index + 1} 段</Text>
+                    <Space wrap>
+                      <Tag>{formatDuration(segment.duration)}</Tag>
+                      <Tag>{segment.resolution}</Tag>
+                    </Space>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      分镜 {segment.scene_orders.length ? segment.scene_orders.join(', ') : '-'}
+                    </Text>
+                  </Space>
+                </Card>
+              </List.Item>
+            )}
+          />
+        </Card>
+      )}
+
       {result && (
         <Card title="视频信息">
           <Descriptions column={3} size="small" bordered>
-            <Descriptions.Item label="时长">{formatDuration(result.duration)}</Descriptions.Item>
-            <Descriptions.Item label="分辨率">{result.resolution}</Descriptions.Item>
-            <Descriptions.Item label="画幅比例">{result.aspect_ratio}</Descriptions.Item>
+            <Descriptions.Item label="总时长">{formatDuration(result.duration)}</Descriptions.Item>
+            <Descriptions.Item label="分段数">{segments.length}</Descriptions.Item>
+            <Descriptions.Item label="当前画幅">{activeSegment?.aspect_ratio ?? result.aspect_ratio}</Descriptions.Item>
+            <Descriptions.Item label="当前分辨率">{activeSegment?.resolution ?? result.resolution}</Descriptions.Item>
             <Descriptions.Item label="文件大小">{formatBytes(result.file_size)}</Descriptions.Item>
-            <Descriptions.Item label="任务 ID">{t.id}</Descriptions.Item>
+            <Descriptions.Item label="任务 ID">{formatGenerationTaskDisplayId(t)}</Descriptions.Item>
           </Descriptions>
         </Card>
       )}

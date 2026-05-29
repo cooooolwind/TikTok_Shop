@@ -22,7 +22,7 @@ import {
   MATERIAL_STATUS_LABELS,
   SOURCE_DECLARATION_LABELS,
 } from '../../constants';
-import { formatBytes, formatDuration } from '../../utils/format';
+import { formatBeijingDateTime, formatBytes, formatDuration } from '../../utils/format';
 
 const { Text, Paragraph } = Typography;
 
@@ -140,7 +140,7 @@ export default function MaterialDetail() {
                 </Descriptions.Item>
               )}
               <Descriptions.Item label="上传时间">
-                {new Date(material.created_at).toLocaleString()}
+                {formatBeijingDateTime(material.created_at)}
               </Descriptions.Item>
             </Descriptions>
           </Card>

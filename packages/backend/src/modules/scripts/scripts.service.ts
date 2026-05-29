@@ -22,6 +22,8 @@ import type {
 import { QUEUES } from '../../tasks/queues';
 import { Material } from '../materials/entities/material.entity';
 import { TemplatesService } from '../templates/templates.service';
+import { GenerationTask } from '../generation/entities/generation-task.entity';
+import { Video } from '../generation/entities/video.entity';
 import { Scene } from './entities/scene.entity';
 import { Script } from './entities/script.entity';
 
@@ -38,6 +40,8 @@ export class ScriptsService {
     @InjectRepository(Script) private readonly scriptsRepository: Repository<Script>,
     @InjectRepository(Scene) private readonly scenesRepository: Repository<Scene>,
     @InjectRepository(Material) private readonly materialsRepository: Repository<Material>,
+    @InjectRepository(GenerationTask) private readonly generationTasksRepository: Repository<GenerationTask>,
+    @InjectRepository(Video) private readonly videosRepository: Repository<Video>,
     private readonly templatesService: TemplatesService,
     private readonly configService: ConfigService,
     @InjectQueue(QUEUES.SCRIPT_GENERATION) private readonly scriptQueue: Queue,
@@ -270,6 +274,8 @@ export class ScriptsService {
 
   async remove(id: string) {
     const script = await this.findRawScript(id);
+    await this.videosRepository.delete({ scriptId: id });
+    await this.generationTasksRepository.delete({ scriptId: id });
     await this.scriptsRepository.remove(script);
     return { message: 'deleted' };
   }

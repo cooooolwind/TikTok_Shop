@@ -77,6 +77,7 @@ function makeService(options?: { script?: Script | null; task?: GenerationTask |
   const video = options && 'video' in options ? options.video : makeVideo();
   const scriptsRepository = {
     findOne: jest.fn(async () => script),
+    find: jest.fn(async () => (script ? [script] : [])),
     save: jest.fn(async (data) => data),
   };
   const tasksRepository = {
@@ -87,6 +88,7 @@ function makeService(options?: { script?: Script | null; task?: GenerationTask |
     createQueryBuilder: jest.fn(() => ({
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
       skip: jest.fn().mockReturnThis(),
       take: jest.fn().mockReturnThis(),
@@ -95,7 +97,11 @@ function makeService(options?: { script?: Script | null; task?: GenerationTask |
   };
   const videosRepository = {
     findOne: jest.fn(async () => video),
+<<<<<<< HEAD
     delete: jest.fn(async () => ({ affected: video ? 1 : 0 })),
+=======
+    delete: jest.fn(async () => ({ affected: 1 })),
+>>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
   };
   const videoQueue = {
     add: jest.fn(async () => ({ id: 'queue-job-1' })),
@@ -169,6 +175,7 @@ describe('GenerationService', () => {
     expect(new Date(result.expires_at).getTime()).toBeGreaterThan(now.getTime());
   });
 
+<<<<<<< HEAD
   it('removes a completed generation task and its video record', async () => {
     const doneTask = makeTask({ status: 'done', result: makeVideoResult() });
     const { service, tasksRepository, videosRepository } = makeService({ task: doneTask });
@@ -186,6 +193,15 @@ describe('GenerationService', () => {
     await expect(service.remove('task-1')).rejects.toBeInstanceOf(BadRequestException);
     expect(videosRepository.delete).not.toHaveBeenCalled();
     expect(tasksRepository.remove).not.toHaveBeenCalled();
+=======
+  it('removes a task and its generated video', async () => {
+    const { service, tasksRepository, videosRepository } = makeService();
+
+    await service.remove('task-1');
+
+    expect(videosRepository.delete).toHaveBeenCalledWith({ taskId: 'task-1' });
+    expect(tasksRepository.remove).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-1' }));
+>>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
   });
 });
 
