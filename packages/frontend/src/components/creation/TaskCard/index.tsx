@@ -32,12 +32,14 @@ export default function TaskCard({ task, onClick, onDelete }: TaskCardProps) {
     <Card
       hoverable
       onClick={onClick}
-      bodyStyle={{
-        height: 136,
-        padding: 20,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
+      styles={{
+        body: {
+          height: 136,
+          padding: 20,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        },
       }}
       style={{ cursor: 'pointer', height: '100%', width: '100%', overflow: 'hidden' }}
     >
@@ -53,6 +55,7 @@ export default function TaskCard({ task, onClick, onDelete }: TaskCardProps) {
                 danger
                 type="text"
                 size="small"
+                aria-label="delete task"
                 icon={<DeleteOutlined />}
                 onClick={(event) => {
                   event.stopPropagation();

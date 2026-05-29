@@ -44,7 +44,7 @@ export function buildManualDraftPayload(values: ScriptGenerateFormValues): Creat
     product_info: buildProductInfo(values),
     mode: 'free',
     visual_style: values.style,
-    total_duration: Math.min(values.duration ?? MAX_SCRIPT_DURATION, MAX_SCRIPT_DURATION),
+    total_duration: values.duration ?? 15,
     scenes: [],
   };
 }
