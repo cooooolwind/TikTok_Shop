@@ -19,7 +19,9 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
     try {
       const merged = { ...get().filters, ...params };
       const res = await materialsApi.list(merged);
-      set({ items: res.data.items, total: res.data.total, loading: false });
+      // res 已经是解包后的数据对象 { items, total, ... }
+      const data = 'items' in res ? res : (res as any).data;
+      set({ items: data.items, total: data.total, loading: false });
     } catch {
       set({ loading: false });
       useUIStore.getState().pushNotification({ type: 'error', title: '加载素材列表失败' });

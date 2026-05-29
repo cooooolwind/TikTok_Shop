@@ -1,5 +1,6 @@
 import client from './client';
 import type {
+  ApiResponse,
   PaginatedResponse,
   Material,
   MaterialDetail,
@@ -8,19 +9,37 @@ import type {
   SimilarSearchRequest,
   SimilarSearchResult,
 } from '@aigc/shared-types';
+import { unwrapResponse } from './response';
 
 const BASE = '/materials';
 
 export const materialsApi = {
-  upload: (formData: FormData) =>
-    client.post<unknown, MaterialUploadResponse>(`${BASE}/upload`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
-  list: (params?: MaterialListQuery) => client.get<unknown, PaginatedResponse<Material>>(BASE, { params }),
-  detail: (id: string) => client.get<unknown, MaterialDetail>(`${BASE}/${id}`),
+  upload: async (formData: FormData) =>
+    unwrapResponse<MaterialUploadResponse>(
+      await client.post<unknown, MaterialUploadResponse | ApiResponse<MaterialUploadResponse>>(`${BASE}/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }),
+    ),
+  list: async (params?: MaterialListQuery) =>
+    unwrapResponse<PaginatedResponse<Material>['data'] | PaginatedResponse<Material>>(
+      await client.get<unknown, PaginatedResponse<Material> | ApiResponse<PaginatedResponse<Material>['data']>>(BASE, {
+        params,
+      }),
+    ),
+  detail: async (id: string) =>
+    unwrapResponse<MaterialDetail>(await client.get<unknown, MaterialDetail | ApiResponse<MaterialDetail>>(`${BASE}/${id}`)),
   remove: (id: string) => client.delete<unknown, { message: string }>(`${BASE}/${id}`),
   batchRemove: (ids: string[]) => client.delete<unknown, { message: string }>(`${BASE}/batch`, { data: { ids } }),
-  analyze: (id: string) => client.post<unknown, { task_id: string; status: string }>(`${BASE}/${id}/analyze`),
-  slices: (id: string) => client.get<unknown, unknown[]>(`${BASE}/${id}/slices`),
-  searchSimilar: (data: SimilarSearchRequest) => client.post<unknown, SimilarSearchResult[]>(`${BASE}/search/similar`, data),
+  analyze: async (id: string) =>
+    unwrapResponse<{ task_id: string; status: string }>(
+      await client.post<unknown, { task_id: string; status: string } | ApiResponse<{ task_id: string; status: string }>>(
+        `${BASE}/${id}/analyze`,
+      ),
+    ),
+  slices: async (id: string) =>
+    unwrapResponse<unknown[]>(await client.get<unknown, unknown[] | ApiResponse<unknown[]>>(`${BASE}/${id}/slices`)),
+  searchSimilar: async (data: SimilarSearchRequest) =>
+    unwrapResponse<SimilarSearchResult[]>(
+      await client.post<unknown, SimilarSearchResult[] | ApiResponse<SimilarSearchResult[]>>(`${BASE}/search/similar`, data),
+    ),
 };
