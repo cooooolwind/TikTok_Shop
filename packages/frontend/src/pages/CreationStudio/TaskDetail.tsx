@@ -1,11 +1,12 @@
-import { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Alert, Button, Card, Col, Descriptions, Row, Space, Spin, Tag } from 'antd';
 import {
-  Card, Button, Space, Spin, Descriptions, Row, Col,
-} from 'antd';
-import {
-  PlayCircleOutlined, ReloadOutlined, StopOutlined,
-  DownloadOutlined, EditOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  PlayCircleOutlined,
+  ReloadOutlined,
+  StopOutlined,
 } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
 import TaskProgressPanel from '../../components/creation/TaskProgressPanel';
@@ -14,39 +15,61 @@ import { useCreationStore } from '../../stores/useGenerationStore';
 import { useTaskSubscription } from '../../hooks/useTaskSubscription';
 import { TASK_STATUS_LABELS } from '../../constants';
 import { formatBeijingDateTime, formatBytes, formatDuration, formatGenerationTaskDisplayId } from '../../utils/format';
+import { openExportWindow } from '../../utils/exportWindow';
 
 export default function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const {
-    currentTask, loading, creating,
-    fetchTask, retry, cancel, exportVideo, createVideo,
+    currentTask,
+    loading,
+    creating,
+    fetchTask,
+    retry,
+    cancel,
+    exportVideo,
+    createVideo,
   } = useCreationStore();
+  const [exporting, setExporting] = useState(false);
 
-  // 实时进度订阅（WebSocket + 轮询降级）
   useTaskSubscription(taskId);
 
   useEffect(() => {
     if (taskId) fetchTask(taskId);
-  }, [taskId]);
+  }, [taskId, fetchTask]);
 
   if (loading || !currentTask) {
-    return <div style={{ display: 'flex', justifyContent: 'center', padding: 100 }}><Spin size="large" /></div>;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: 100 }}>
+        <Spin size="large" />
+      </div>
+    );
   }
 
-  const t = currentTask;
-  const isActive = t.status === 'queued' || t.status === 'processing';
+  const task = currentTask;
+  const isActive = task.status === 'queued' || task.status === 'processing';
+  const segments = task.result?.segments ?? [];
 
-  const handleRetry = () => retry(t.id);
-  const handleCancel = () => cancel(t.id);
-  const handleEditScript = () => navigate(`/scripts/${t.script_id}?returnTask=${t.id}`);
+  const handleRetry = () => retry(task.id);
+  const handleCancel = () => cancel(task.id);
+  const handleEditScript = () => navigate(`/scripts/${task.script_id}?returnTask=${task.id}`);
   const handleCreateAgain = async () => {
-    const nextTask = await createVideo({ script_id: t.script_id });
+    const nextTask = await createVideo({ script_id: task.script_id });
     navigate(`/creation/tasks/${nextTask.id}`);
   };
   const handleExport = async () => {
-    const result = await exportVideo(t.id, 'mp4', '1080x1920', 'high');
-    window.open(result.download_url, '_blank');
+    setExporting(true);
+    const exportWindow = openExportWindow();
+    try {
+      const result = await exportVideo(task.id, 'mp4', '1080x1920', 'high');
+      exportWindow.redirect(result.download_url);
+      await fetchTask(task.id);
+    } catch (error) {
+      exportWindow.close();
+      throw error;
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -55,17 +78,21 @@ export default function TaskDetail() {
         title="任务详情"
         breadcrumbs={[
           { title: '创作工作室', path: '/creation' },
-          { title: `任务 ${formatGenerationTaskDisplayId(t)}` },
+          { title: `任务 ${formatGenerationTaskDisplayId(task)}` },
         ]}
         extra={
           <Space>
-            {t.status === 'failed' && t.error?.retryable && (
-              <Button icon={<ReloadOutlined />} onClick={handleRetry}>重试</Button>
+            {task.status === 'failed' && task.error?.retryable && (
+              <Button icon={<ReloadOutlined />} onClick={handleRetry}>
+                从失败镜头继续
+              </Button>
             )}
             {isActive && (
-              <Button icon={<StopOutlined />} danger onClick={handleCancel}>取消</Button>
+              <Button icon={<StopOutlined />} danger onClick={handleCancel}>
+                取消
+              </Button>
             )}
-            {t.status === 'done' && (
+            {task.status === 'done' && (
               <>
                 <Button icon={<EditOutlined />} onClick={handleEditScript}>
                   修改剧本
@@ -76,14 +103,21 @@ export default function TaskDetail() {
                 <Button
                   type="primary"
                   icon={<PlayCircleOutlined />}
-                  onClick={() => navigate(`/creation/tasks/${t.id}/preview`)}
+                  onClick={() => navigate(`/creation/tasks/${task.id}/preview`)}
                 >
                   预览
                 </Button>
-                <Button icon={<DownloadOutlined />} onClick={handleExport}>导出</Button>
+                <Button
+                  aria-label="导出完整视频"
+                  icon={<DownloadOutlined />}
+                  loading={exporting}
+                  onClick={handleExport}
+                >
+                  导出完整视频
+                </Button>
               </>
             )}
-            {t.status !== 'done' && (
+            {task.status !== 'done' && (
               <Button icon={<EditOutlined />} onClick={handleEditScript}>
                 修改剧本
               </Button>
@@ -94,22 +128,30 @@ export default function TaskDetail() {
 
       <Row gutter={24}>
         <Col xs={24} md={16}>
-          <TaskProgressPanel task={t} />
+          <TaskProgressPanel task={task} />
 
-          {/* 生成结果详情 */}
-          {t.status === 'done' && t.result && (
+          {task.status === 'done' && task.result && (
             <Card title="视频信息" style={{ marginTop: 16 }}>
+              {segments.length > 1 && (
+                <Alert
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                  message={`已生成 ${segments.length} 个分镜片段`}
+                  description="完整视频会在点击“导出完整视频”时按需拼接；拼接前可先预览每个分镜片段。"
+                />
+              )}
               <Descriptions column={2} size="small" bordered>
-                <Descriptions.Item label="时长">{formatDuration(t.result.duration)}</Descriptions.Item>
-                <Descriptions.Item label="分辨率">{t.result.resolution}</Descriptions.Item>
-                <Descriptions.Item label="画幅">{t.result.aspect_ratio}</Descriptions.Item>
-                <Descriptions.Item label="文件大小">{formatBytes(t.result.file_size)}</Descriptions.Item>
+                <Descriptions.Item label="时长">{formatDuration(task.result.duration)}</Descriptions.Item>
+                <Descriptions.Item label="分辨率">{task.result.resolution}</Descriptions.Item>
+                <Descriptions.Item label="画幅">{task.result.aspect_ratio}</Descriptions.Item>
+                <Descriptions.Item label="文件大小">{formatBytes(task.result.file_size)}</Descriptions.Item>
+                {segments.length > 0 && <Descriptions.Item label="分镜片段">{segments.length}</Descriptions.Item>}
               </Descriptions>
-              {/* 缩略图预览 */}
-              {t.result.thumbnail_url && (
+              {task.result.thumbnail_url && (
                 <div style={{ marginTop: 16, textAlign: 'center' }}>
                   <img
-                    src={t.result.thumbnail_url}
+                    src={task.result.thumbnail_url}
                     alt="视频缩略图"
                     style={{ maxWidth: '100%', borderRadius: 8, maxHeight: 280 }}
                   />
@@ -118,13 +160,25 @@ export default function TaskDetail() {
             </Card>
           )}
 
-          {/* 错误信息 */}
-          {t.status === 'failed' && t.error && (
+          {task.status === 'failed' && task.error && (
             <Card title="错误详情" style={{ marginTop: 16, borderColor: '#ff4d4f' }}>
               <Descriptions column={1} size="small" bordered>
-                <Descriptions.Item label="错误码">{t.error.code}</Descriptions.Item>
-                <Descriptions.Item label="错误信息">{t.error.message}</Descriptions.Item>
-                <Descriptions.Item label="可重试">{t.error.retryable ? '是' : '否'}</Descriptions.Item>
+                <Descriptions.Item label="错误码">{task.error.code}</Descriptions.Item>
+                <Descriptions.Item label="错误信息">{task.error.message}</Descriptions.Item>
+                {task.error.segment_index && (
+                  <Descriptions.Item label="失败镜头">第 {task.error.segment_index} 个镜头</Descriptions.Item>
+                )}
+                {task.error.category && (
+                  <Descriptions.Item label="错误类型">
+                    <Tag color={task.error.category === 'moderation' ? 'red' : 'orange'}>
+                      {task.error.category}
+                    </Tag>
+                  </Descriptions.Item>
+                )}
+                {task.error.user_action && (
+                  <Descriptions.Item label="建议操作">{task.error.user_action}</Descriptions.Item>
+                )}
+                <Descriptions.Item label="可重试">{task.error.retryable ? '是' : '否'}</Descriptions.Item>
               </Descriptions>
             </Card>
           )}
@@ -134,20 +188,18 @@ export default function TaskDetail() {
           <Card title="任务信息" style={{ marginBottom: 16 }}>
             <Descriptions column={1} size="small" bordered>
               <Descriptions.Item label="任务 ID">
-                <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{formatGenerationTaskDisplayId(t)}</span>
+                <span style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                  {formatGenerationTaskDisplayId(task)}
+                </span>
               </Descriptions.Item>
-              <Descriptions.Item label="关联剧本">{t.script_display_id ?? t.script_id}</Descriptions.Item>
+              <Descriptions.Item label="关联剧本">{task.script_display_id ?? task.script_id}</Descriptions.Item>
               <Descriptions.Item label="状态">
-                <StatusTag status={t.status} labels={TASK_STATUS_LABELS} />
+                <StatusTag status={task.status} labels={TASK_STATUS_LABELS} />
               </Descriptions.Item>
-              <Descriptions.Item label="重试次数">{t.retry_count}</Descriptions.Item>
-              <Descriptions.Item label="创建时间">
-                {formatBeijingDateTime(t.created_at)}
-              </Descriptions.Item>
-              {t.completed_at && (
-                <Descriptions.Item label="完成时间">
-                  {formatBeijingDateTime(t.completed_at)}
-                </Descriptions.Item>
+              <Descriptions.Item label="重试次数">{task.retry_count}</Descriptions.Item>
+              <Descriptions.Item label="创建时间">{formatBeijingDateTime(task.created_at)}</Descriptions.Item>
+              {task.completed_at && (
+                <Descriptions.Item label="完成时间">{formatBeijingDateTime(task.completed_at)}</Descriptions.Item>
               )}
             </Descriptions>
           </Card>

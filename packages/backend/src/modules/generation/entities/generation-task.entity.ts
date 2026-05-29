@@ -12,6 +12,26 @@ import { Video } from './video.entity';
 
 export type GenerationStatus = 'queued' | 'processing' | 'done' | 'failed';
 
+type TaskProgressPhase =
+  | 'queued'
+  | 'prepare'
+  | 'build_segments'
+  | 'submit_segment'
+  | 'generate_segment'
+  | 'retry_segment'
+  | 'persist_result'
+  | 'done'
+  | 'failed';
+
+type TaskErrorCategory =
+  | 'network'
+  | 'rate_limit'
+  | 'timeout'
+  | 'moderation'
+  | 'provider'
+  | 'export'
+  | 'unknown';
+
 interface TaskProgress {
   current_step: number;
   total_steps: number;
@@ -19,6 +39,12 @@ interface TaskProgress {
   percentage: number;
   message: string;
   estimated_remaining: number;
+  phase?: TaskProgressPhase;
+  phase_label?: string;
+  segment_index?: number;
+  segment_total?: number;
+  elapsed_seconds?: number;
+  detail?: string;
 }
 
 interface TaskResult {
@@ -29,6 +55,7 @@ interface TaskResult {
   aspect_ratio: string;
   file_size: number;
   continuity_warning?: string;
+  stitching_warning?: string;
   segments?: {
     index: number;
     video_url: string;
@@ -39,6 +66,11 @@ interface TaskResult {
     scene_orders: number[];
     input_frame_url?: string;
     continuity_source?: 'product_image' | 'previous_last_frame' | 'text_only';
+    status?: 'pending' | 'submitted' | 'running' | 'succeeded' | 'failed' | 'skipped';
+    provider_task_id?: string;
+    error?: TaskError;
+    started_at?: string;
+    completed_at?: string;
   }[];
 }
 
@@ -46,6 +78,9 @@ interface TaskError {
   code: string;
   message: string;
   retryable: boolean;
+  category?: TaskErrorCategory;
+  segment_index?: number;
+  user_action?: string;
 }
 
 @Entity('generation_tasks')

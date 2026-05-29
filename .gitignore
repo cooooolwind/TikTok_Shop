@@ -34,6 +34,8 @@ pnpm-debug.log*
 # Testing
 coverage/
 .nyc_output/
+test/prompt-ab/output/
+test/vedio/
 
 # Uploads
 packages/backend/uploads/
@@ -42,6 +44,8 @@ packages/backend/uploads/
 tmp/
 temp/
 *.tmp
+tools/ffmpeg/
+tools/ffmpeg-release-essentials.zip
 
 # Docker
 .docker/

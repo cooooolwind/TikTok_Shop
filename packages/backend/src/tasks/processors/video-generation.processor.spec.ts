@@ -112,6 +112,12 @@ function makeProcessor(
   const configService = {
     get: jest.fn((key: string) => configValues[key]),
   };
+  const videoStitchingService = {
+    stitch: jest.fn(async () => ({
+      video_url: '/uploads/generated/task-1.mp4',
+      file_size: 12345,
+    })),
+  };
   const processor = new VideoGenerationProcessor(
     tasksRepository as never,
     scriptsRepository as never,
@@ -124,17 +130,29 @@ function makeProcessor(
     data: { taskId: 'task-1', scriptId: 'script-1', options: { resolution: '1080x1920', aspect_ratio: '9:16' } },
     updateProgress: jest.fn(),
   };
-  return { processor, tasksRepository, scriptsRepository, videosRepository, volcanoClient, tasksGateway, configService, job, task };
+  return {
+    processor,
+    tasksRepository,
+    scriptsRepository,
+    videosRepository,
+    volcanoClient,
+    tasksGateway,
+    configService,
+    videoStitchingService,
+    job,
+    task,
+  };
 }
 
 describe('VideoGenerationProcessor', () => {
   it('persists task result, creates video, and emits completion when video succeeds', async () => {
-    const { processor, tasksRepository, videosRepository, volcanoClient, tasksGateway, job } = makeProcessor('succeeded');
+    const { processor, tasksRepository, videosRepository, volcanoClient, tasksGateway, videoStitchingService, job } =
+      makeProcessor('succeeded');
 
     const result = await processor.process(job as never);
 
     expect(volcanoClient.createVideoTask).toHaveBeenCalledWith(
-      expect.objectContaining({ prompt: expect.stringContaining('Dress'), ratio: '9:16', duration: 5 }),
+      expect.objectContaining({ prompt: expect.stringContaining('Dress'), ratio: '9:16', duration: 4 }),
     );
     expect(tasksRepository.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'done' }));
     expect(videosRepository.save).toHaveBeenCalledWith(expect.objectContaining({ taskId: 'task-1', scriptId: 'script-1' }));
@@ -142,6 +160,7 @@ describe('VideoGenerationProcessor', () => {
       'task-1',
       expect.objectContaining({ video_url: 'https://example.com/video.mp4' }),
     );
+    expect(videoStitchingService.stitch).not.toHaveBeenCalled();
     expect(result).toEqual(expect.objectContaining({ status: 'done', taskId: 'task-1' }));
   });
 
@@ -164,17 +183,23 @@ describe('VideoGenerationProcessor', () => {
     expect(volcanoClient.createVideoTask).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        duration: 5,
-        prompt: expect.stringContaining('Segment scenes: 1'),
+        duration: 4,
+        prompt: expect.stringContaining('Visual action:'),
         imageUrls: ['https://example.com/product.png'],
         firstFrameUrl: undefined,
       }),
     );
     expect(volcanoClient.createVideoTask).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        prompt: expect.stringContaining('Close-up dress fabric'),
+      }),
+    );
+    expect(volcanoClient.createVideoTask).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
-        duration: 10,
-        prompt: expect.stringContaining('Segment scenes: 2'),
+        duration: 7,
+        prompt: expect.stringContaining('Visual action:'),
         imageUrls: [],
         firstFrameUrl: 'https://example.com/thumb.png',
       }),
@@ -182,12 +207,132 @@ describe('VideoGenerationProcessor', () => {
     expect(volcanoClient.createVideoTask).toHaveBeenNthCalledWith(
       3,
       expect.objectContaining({
-        duration: 5,
-        prompt: expect.stringContaining('Segment scenes: 3'),
+        duration: 4,
+        prompt: expect.stringContaining('Visual action:'),
         imageUrls: [],
         firstFrameUrl: 'https://example.com/thumb.png',
       }),
     );
+  });
+
+  it('uses scene-first prompts without narrative wrappers or legacy duration fields', async () => {
+    const { processor, volcanoClient, job } = makeProcessor('succeeded');
+
+    await processor.process(job as never);
+
+    expect(volcanoClient.createVideoTask).toHaveBeenCalled();
+    const firstCreateCall = volcanoClient.createVideoTask.mock.calls[0] as unknown as [{ prompt: string }];
+    const prompt = firstCreateCall[0].prompt;
+    expect(prompt).toContain('Visual action:');
+    expect(prompt).toContain('Close-up dress fabric');
+    expect(prompt).toContain('Output duration: 4 seconds.');
+    expect(prompt).not.toContain('Narrative:');
+    expect(prompt).not.toContain('Segment scenes:');
+    expect(prompt).not.toContain('duration=4s');
+  });
+
+  it('clamps provider durations to the Seedance 1.5 pro 4-12 second range', async () => {
+    const { processor, volcanoClient, scriptsRepository, job } = makeProcessor('succeeded');
+    scriptsRepository.findOne.mockResolvedValue(
+      makeScript({
+        scenes: [
+          makeScene({ id: 'scene-1', order: 1, duration: 2 }),
+          makeScene({ id: 'scene-2', order: 2, duration: 13 }),
+        ],
+      }),
+    );
+
+    await processor.process(job as never);
+
+    expect(volcanoClient.createVideoTask).toHaveBeenNthCalledWith(1, expect.objectContaining({ duration: 4 }));
+    expect(volcanoClient.createVideoTask).toHaveBeenNthCalledWith(2, expect.objectContaining({ duration: 12 }));
+  });
+
+  it('keeps multiple generated segments without stitching during generation', async () => {
+    const { processor, scriptsRepository, volcanoClient, videosRepository, videoStitchingService, tasksGateway, job } =
+      makeProcessor('succeeded');
+    scriptsRepository.findOne.mockResolvedValue(
+      makeScript({
+        scenes: [makeScene({ id: 'scene-1', order: 1 }), makeScene({ id: 'scene-2', order: 2 })],
+      }),
+    );
+    volcanoClient.getVideoTask
+      .mockResolvedValueOnce({
+        id: 'volcano-task-1',
+        status: 'succeeded',
+        content: { video_url: 'https://example.com/segment-1.mp4', last_frame_url: 'https://example.com/frame-1.png' },
+        duration: 4,
+        resolution: '1080p',
+        ratio: '9:16',
+      })
+      .mockResolvedValueOnce({
+        id: 'volcano-task-2',
+        status: 'succeeded',
+        content: { video_url: 'https://example.com/segment-2.mp4', last_frame_url: 'https://example.com/frame-2.png' },
+        duration: 4,
+        resolution: '1080p',
+        ratio: '9:16',
+      });
+
+    const result = await processor.process(job as never);
+
+    expect(videoStitchingService.stitch).not.toHaveBeenCalled();
+    expect(result.result).toEqual(
+      expect.objectContaining({
+        video_url: 'https://example.com/segment-1.mp4',
+        file_size: 0,
+        segments: expect.arrayContaining([
+          expect.objectContaining({ video_url: 'https://example.com/segment-1.mp4', status: 'succeeded' }),
+          expect.objectContaining({ video_url: 'https://example.com/segment-2.mp4', status: 'succeeded' }),
+        ]),
+      }),
+    );
+    expect(videosRepository.save).toHaveBeenCalledWith(expect.objectContaining({ url: 'https://example.com/segment-1.mp4' }));
+    expect(tasksGateway.emitTaskCompleted).toHaveBeenCalledWith(
+      'task-1',
+      expect.objectContaining({ video_url: 'https://example.com/segment-1.mp4' }),
+    );
+  });
+
+  it('does not run stitching or write stitching warnings during generation', async () => {
+    const { processor, scriptsRepository, volcanoClient, videoStitchingService, job } = makeProcessor('succeeded');
+    scriptsRepository.findOne.mockResolvedValue(
+      makeScript({
+        scenes: [makeScene({ id: 'scene-1', order: 1 }), makeScene({ id: 'scene-2', order: 2 })],
+      }),
+    );
+    videoStitchingService.stitch.mockRejectedValueOnce(new Error('ffmpeg exited with code 1: invalid data'));
+    volcanoClient.getVideoTask
+      .mockResolvedValueOnce({
+        id: 'volcano-task-1',
+        status: 'succeeded',
+        content: { video_url: 'https://example.com/segment-1.mp4', last_frame_url: 'https://example.com/frame-1.png' },
+        duration: 5,
+        resolution: '1080p',
+        ratio: '9:16',
+      })
+      .mockResolvedValueOnce({
+        id: 'volcano-task-2',
+        status: 'succeeded',
+        content: { video_url: 'https://example.com/segment-2.mp4', last_frame_url: 'https://example.com/frame-2.png' },
+        duration: 5,
+        resolution: '1080p',
+        ratio: '9:16',
+      });
+
+    const result = await processor.process(job as never);
+
+    expect(result.result).toEqual(
+      expect.objectContaining({
+        video_url: 'https://example.com/segment-1.mp4',
+        segments: expect.arrayContaining([
+          expect.objectContaining({ video_url: 'https://example.com/segment-1.mp4' }),
+          expect.objectContaining({ video_url: 'https://example.com/segment-2.mp4' }),
+        ]),
+      }),
+    );
+    expect(result.result).not.toHaveProperty('stitching_warning');
+    expect(videoStitchingService.stitch).not.toHaveBeenCalled();
   });
 
   it('chains each segment from the previous segment last frame and records continuity metadata', async () => {

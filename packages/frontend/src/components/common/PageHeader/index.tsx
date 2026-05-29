@@ -1,17 +1,18 @@
+import type { ReactNode } from 'react';
 import { Typography, Breadcrumb } from 'antd';
 import { useNavigate } from 'react-router-dom';
 
 const { Title } = Typography;
 
 interface BreadcrumbItem {
-  title: string;
+  title: ReactNode;
   path?: string; // 无 path 则为纯文本，不可点击
 }
 
 interface PageHeaderProps {
   title: React.ReactNode;
   breadcrumbs?: BreadcrumbItem[];
-  extra?: React.ReactNode; // 右侧操作区插槽
+  extra?: ReactNode; // 右侧操作区插槽
 }
 
 export default function PageHeader({ title, breadcrumbs, extra }: PageHeaderProps) {
