@@ -27,7 +27,7 @@ export interface MaterialState {
   uploading: boolean;
   uploadProgress: number;
 
-  fetchList: (params?: MaterialListQuery) => Promise<void>;
+  fetchList: (params?: MaterialListQuery, append?: boolean) => Promise<void>;
   fetchDetail: (id: string) => Promise<void>;
   updateMaterial: (id: string, data: Partial<Material>) => Promise<void>;
   upload: (file: File, category: string, sourceDeclaration: string, tags?: string[], name?: string) => Promise<void>;
@@ -227,10 +227,12 @@ export interface UIState {
   globalLoading: boolean;
   notifications: NotificationItem[];
   themeMode: ThemeMode;
+  mobileDrawerOpen: boolean;
 
   toggleSidebar: () => void;
   setGlobalLoading: (loading: boolean) => void;
   pushNotification: (notif: Omit<NotificationItem, 'id' | 'timestamp'>) => void;
   dismissNotification: (id: string) => void;
   setThemeMode: (mode: ThemeMode) => void;
+  setMobileDrawerOpen: (open: boolean) => void;
 }

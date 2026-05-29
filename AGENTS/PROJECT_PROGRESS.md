@@ -58,7 +58,7 @@
 | C3 | 剧本生成核心 Prompt 链 | ✅ | `ScriptsService.generate` 入队，BullMQ Processor 完整调用多模态模型 |
 | C4 | 分镜脚本结构化输出（JSON Schema） | ✅ | AI 返回 `AiScriptResult` 结构化数据，`persistResult` 持久化入库 |
 | C5 | 爆款仿写模式 | 🔨 | 模式字段存在，前端入口存在，但无参考视频重写 pipeline |
-| C6 | 剧本工作台前端 | ✅ | `ScriptWorkbenchPage` 列表及 `ScriptGenerate` 表单（含4种模式），模板管理器均完整 |
+| C6 | 剧本工作台前端 | ✅ | `ScriptWorkbenchPage` 列表及 `ScriptGenerate` 表单，模板管理器均完整，且**全量完成移动端卡片式重构** |
 | C7 | 剧本干预（分镜增删、台词改写、重生成） | ✅ | 后端接口完整，前端 `ScriptEditor` 提供编辑、单分镜重生成及WebSocket进度订阅（无拖拽排序） |
 
 ### 模块 D（Phase 2 部分）：成片 + 配音 + 预览

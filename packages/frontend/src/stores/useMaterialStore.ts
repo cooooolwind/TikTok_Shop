@@ -14,14 +14,18 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
   uploading: false,
   uploadProgress: 0,
 
-  fetchList: async (params) => {
+  fetchList: async (params, append = false) => {
     set({ loading: true });
     try {
       const merged = { ...get().filters, ...params };
       const res = await materialsApi.list(merged);
       // res 已经是解包后的数据对象 { items, total, ... }
       const data = 'items' in res ? res : (res as any).data;
-      set({ items: data.items, total: data.total, loading: false });
+      set((s) => ({
+        items: append ? [...s.items, ...data.items] : data.items,
+        total: data.total,
+        loading: false,
+      }));
     } catch {
       set({ loading: false });
       useUIStore.getState().pushNotification({ type: 'error', title: '加载素材列表失败' });
