@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, theme, Dropdown, Button, Drawer } from 'antd';
+import { Layout, Menu, theme, Dropdown, Button, Row, Col } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   HomeOutlined,
@@ -13,11 +13,13 @@ import {
   MoonOutlined,
   DesktopOutlined,
   MenuOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 import { useUIStore } from '../stores/useAppStore';
 import { ROUTES } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { useEffect } from 'react';
 
 const { Sider, Content, Header } = Layout;
 
@@ -115,6 +117,17 @@ export default function MainLayout() {
 
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { isDark, themeMode } = useTheme();
+
+  useEffect(() => {
+    if (isMobile && mobileDrawerOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobile, mobileDrawerOpen]);
 
   const { selectedKey, openKeys } = deriveMenuState(location.pathname);
 
@@ -221,43 +234,54 @@ export default function MainLayout() {
         </Sider>
       )}
 
-      <Drawer
-        placement="left"
-        onClose={() => setMobileDrawerOpen(false)}
-        open={mobileDrawerOpen}
-        styles={{ body: { padding: 0 } }}
-        width={250}
-        closable={false}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: isDark ? '#161823' : '#ffffff' }}>
-          <div
-            style={{
-              height: 48,
-              margin: '12px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              color: token.colorPrimary,
-              fontWeight: 700,
-              fontSize: 18,
-            }}
-          >
-            AIGC 视频生成
-          </div>
-          <Menu
-            theme={isDark ? 'dark' : 'light'}
-            mode="inline"
-            selectedKeys={[selectedKey]}
-            defaultOpenKeys={openKeys}
-            items={menuItems}
-            style={{ borderRight: 'none' }}
-            onClick={({ key }) => {
-              if (key === 'scripts-group') return;
-              navigate(key);
-              setMobileDrawerOpen(false);
-            }}
-          />
+      {/* Mobile Grid Menu Overlay */}
+      <div id="mobile-grid-menu" className={mobileDrawerOpen ? 'show' : ''}>
+        <div className="mobile-grid-menu-inner">
+          <Row justify="center" style={{ width: '100%', maxWidth: '400px', margin: '0 auto', padding: '0 16px' }}>
+            {/* 提取有效导航项并展平显示 */}
+            {[
+              { key: ROUTES.HOME, icon: <HomeOutlined />, label: '首页' },
+              { key: ROUTES.MATERIALS, icon: <PictureOutlined />, label: '素材管理' },
+              { key: ROUTES.SCRIPTS, icon: <FileTextOutlined />, label: '剧本列表' },
+              { key: ROUTES.REFERENCES, icon: <BookOutlined />, label: '参考视频' },
+              { key: ROUTES.TEMPLATES, icon: <BulbOutlined />, label: '灵感模板' },
+              { key: ROUTES.CREATION, icon: <VideoCameraOutlined />, label: '创作工作室' },
+              { key: ROUTES.ANALYTICS, icon: <BarChartOutlined />, label: '数据看板' },
+            ].map((item, index) => (
+              <Col span={8} className="mobile-grid-cell" key={item.key} style={{ animationDelay: `${index * 20}ms` }}>
+                <div
+                  className="mobile-grid-item"
+                  onClick={() => {
+                    navigate(item.key);
+                    setMobileDrawerOpen(false);
+                  }}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </div>
+              </Col>
+            ))}
+            
+            <Col span={24}>
+              <div className="mobile-grid-group-header" style={{ marginTop: '1rem', borderTop: '1px solid rgba(128,128,128,0.2)', paddingTop: '1rem', paddingBottom: '0.5rem', opacity: 0.6, fontSize: '0.8rem', textAlign: 'center' }}>
+                主题设置
+              </div>
+            </Col>
+            <Col span={8} className="mobile-grid-cell" style={{ animationDelay: `${7 * 20}ms` }}>
+                <div
+                  className="mobile-grid-item"
+                  onClick={() => {
+                    setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
+                    setMobileDrawerOpen(false);
+                  }}
+                >
+                  {themeMode === 'dark' ? <SunOutlined /> : <MoonOutlined />}
+                  <span>{themeMode === 'dark' ? '开灯' : '关灯'}</span>
+                </div>
+              </Col>
+          </Row>
         </div>
-      </Drawer>
+      </div>
 
       <Layout style={{ background: 'transparent' }}>
         <Header
@@ -277,9 +301,9 @@ export default function MainLayout() {
           {isMobile && (
             <Button
               type="text"
-              icon={<MenuOutlined />}
-              onClick={() => setMobileDrawerOpen(true)}
-              style={{ fontSize: 18 }}
+              icon={mobileDrawerOpen ? <CloseOutlined /> : <MenuOutlined />}
+              onClick={() => setMobileDrawerOpen(!mobileDrawerOpen)}
+              style={{ fontSize: 18, zIndex: 1030 }} // Ensure it stays on top of the overlay
             />
           )}
         </Header>
