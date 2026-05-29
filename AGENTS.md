@@ -4,11 +4,11 @@
 
 AIGC video-generation platform for TikTok Shop. pnpm monorepo with Turborepo, three packages:
 
-| Package | Path | Name | Runtime |
-|---------|------|------|---------|
-| Backend | `packages/backend` | `@aigc/backend` | NestJS (CommonJS, node moduleResolution) |
-| Frontend | `packages/frontend` | `@aigc/frontend` | React 18 + Vite (ESM, bundler moduleResolution) |
-| Shared types | `packages/shared-types` | `@aigc/shared-types` | Type-only (source-level resolution) |
+| Package      | Path                      | Name                   | Runtime                                         |
+| ------------ | ------------------------- | ---------------------- | ----------------------------------------------- |
+| Backend      | `packages/backend`      | `@aigc/backend`      | NestJS (CommonJS, node moduleResolution)        |
+| Frontend     | `packages/frontend`     | `@aigc/frontend`     | React 18 + Vite (ESM, bundler moduleResolution) |
+| Shared types | `packages/shared-types` | `@aigc/shared-types` | Type-only (source-level resolution)             |
 
 ## Commands
 
@@ -73,6 +73,16 @@ API responses use **snake_case** field names per the shared-types contract.
 - **Frontend uses Vitest** (configured inline in `vite.config.ts`). Environment `jsdom`, `globals: true`. Uses `@testing-library/react`.
 - **CI runs backend tests with real Postgres (pgvector) + Redis** — locally, tests that hit the DB need `docker compose -f docker-compose.dev.yml up -d` first.
 
+## Continuous Mobile Adaptation
+
+ Agents MUST ensure all new features and UI changes are fully adapted for mobile devices.
+
+- Follow the **Responsive (Strategy B)** approach: one codebase for all screens.
+- Maintain the **Grid Overlay Menu** for mobile navigation.
+- Apply **Table-to-Card transformation** for complex data lists on small screens to avoid horizontal overflow.
+- Use **Infinite Scroll (IntersectionObserver)** for mobile lists instead of traditional pagination where appropriate.
+- Always verify UI changes at the `768px` (Ant Design `md`) breakpoint using the `useMediaQuery` hook.
+
 ## Style & conventions
 
 - **Prettier:** single quotes, trailing commas, 100 char width, LF line endings
@@ -100,6 +110,7 @@ Copy `.env.example` to `.env` before first run. Key variables:
 ## Reference docs
 
 The `AGENTS/` directory contains detailed design docs:
+
 - `ARCHITECTURE.md` — system architecture
 - `API_SPEC.md` — full API contract
 - `PROJECT_DOC.md` /  — project requirements, roadmap
@@ -107,8 +118,9 @@ The `AGENTS/` directory contains detailed design docs:
 
 ## ⚠️ Documentation Updates (CRITICAL)
 
-**Agents must keep documentation in sync.** 
+**Agents must keep documentation in sync.**
 Whenever you make a difference to the project state, complete a feature, fix a bug, or achieve a goal:
+
 1. You MUST evaluate whether `AGENTS/PROJECT_PROGRESS.md` or any other documentation (like `README.md`, `API_SPEC.md`, `AGENTS.md`) needs an update.
 2. If so, proactively modify those files to reflect the real current state of the codebase.
 3. Treat documentation updates as an inseparable part of delivering code.
@@ -122,6 +134,7 @@ Whenever you make a difference to the project state, complete a feature, fix a b
 - use chinese to write README.md , no emojis
 
 **Project Outcomes Content Standards and Requirements (must include at least the following):**
+
 - Project Name
 - Competition Topic
 - Team Members and Roles
@@ -132,12 +145,14 @@ Whenever you make a difference to the project state, complete a feature, fix a b
 - README / Running Instructions
 
 **Principles:**
+
 - **Accessible**: Judges should see the project's value via the shortest path; external links should avoid login barriers, permission requests, or paywalls.
 - **Understandable**: Beyond code, include the project story, business value, architecture description, and key design explanations.
 - **Verifiable**: Repositories, READMEs, deployment docs, and experience paths must be provided to support review and replication.
 - **Demonstrate Full-Stack Capability**: In addition to model effects, showcase frontend interactions, backend services, data flows, deployment, and integration capabilities.
 
 **[Mandatory] Competition Submission Fields:**
+
 - **Basic Info**: Efficiency improvement format, Project Name / Topic, Team Name and Member List, Role Distribution (specify module owners).
 - **Feature Description**: Core Feature List (3-6 recommended), End-to-End User Flow (5-8 sentences + demo video).
 - **Delivery Materials**: Online Demo Link, Demo Video Link (3-8 minutes), Source Code Repository Link, README / Running Instructions (must include intro, env dependencies, start steps, directory structure, config details).
@@ -145,4 +160,5 @@ Whenever you make a difference to the project state, complete a feature, fix a b
 - **Result Description**: Project Completion Level (MVP/Demo/Production-ready), Project Highlights / Innovations (up to 3).
 
 **[Optional] Recommended Supplemental Fields:**
+
 - Document Materials/Project Walkthrough, Product Screenshots/UI Gallery, Database Design/ER Diagrams, API Docs/Lists, Performance Metrics/Stress Test Results, Prompt Strategies/Agent Flowcharts, Evaluation Plans and Sample Results, Commercialization/Scenario Landing Ideas, User Feedback/Beta Testing Logs, Development Milestones/Version Iteration Records.
