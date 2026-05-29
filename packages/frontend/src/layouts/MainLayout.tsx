@@ -306,6 +306,18 @@ export default function MainLayout() {
               style={{ fontSize: 18, zIndex: 1030 }} // Ensure it stays on top of the overlay
             />
           )}
+          {isMobile && (
+            <div style={{ 
+              fontWeight: 700, 
+              color: token.colorPrimary, 
+              marginLeft: 12, 
+              fontSize: 16,
+              opacity: mobileDrawerOpen ? 0 : 1, // Hide when menu is open for cleaner look
+              transition: 'opacity 0.2s ease'
+            }}>
+              AIGC 视频生成
+            </div>
+          )}
         </Header>
         <Content
           style={{
