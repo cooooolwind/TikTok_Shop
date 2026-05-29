@@ -160,4 +160,51 @@ describe('ScriptGenerationProcessor', () => {
       expect.anything(),
     );
   });
+
+  it('uses a conversion-focused ecommerce prompt and commerce objective payload', async () => {
+    const { processor, volcanoClient, job } = makeProcessor(
+      JSON.stringify({
+        narrative_framework: 'Hook - proof - CTA',
+        visual_style: 'shopping livestream',
+        total_duration: 6,
+        scenes: [{ description: 'Scene', duration: 3 }],
+      }),
+    );
+    job.data.productInfo = {
+      name: 'Cooling Cardigan',
+      description: 'Soft summer cardigan',
+      category: 'fashion',
+      selling_points: ['cool touch fabric', 'slimming fit'],
+      target_audience: 'office commuters',
+      price: '$29.99',
+    };
+
+    await processor.process(job as never);
+
+    expect(volcanoClient.chatCompletion).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'system',
+          content: expect.stringContaining('conversion-focused TikTok Shop ecommerce'),
+        }),
+        expect.objectContaining({
+          role: 'system',
+          content: expect.stringContaining('CTA'),
+        }),
+        expect.objectContaining({
+          role: 'system',
+          content: expect.stringContaining('product visible'),
+        }),
+        expect.objectContaining({
+          role: 'user',
+          content: expect.stringContaining('commerce_objective'),
+        }),
+        expect.objectContaining({
+          role: 'user',
+          content: expect.stringContaining('why to buy this product now'),
+        }),
+      ]),
+      expect.objectContaining({ response_format: { type: 'json_object' } }),
+    );
+  });
 });
