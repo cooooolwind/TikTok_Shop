@@ -268,7 +268,7 @@ export default function MainLayout() {
             borderBottom: `1px solid ${token.colorBorderSecondary}`,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: isMobile ? 'space-between' : 'flex-end',
+            justifyContent: isMobile ? 'flex-start' : 'flex-end',
             position: 'sticky',
             top: 0,
             zIndex: 9,
@@ -282,8 +282,6 @@ export default function MainLayout() {
               style={{ fontSize: 18 }}
             />
           )}
-          {isMobile && <div style={{ fontWeight: 700, color: token.colorPrimary }}>AIGC</div>}
-          <div />
         </Header>
         <Content
           style={{
