@@ -12,6 +12,7 @@ function makeMaterial(overrides: Partial<Material> = {}): Material {
     type: 'image',
     url: '/uploads/materials/file.jpg',
     thumbnailUrl: '/uploads/materials/file.jpg',
+    name: 'product.jpg',
     filename: 'product.jpg',
     size: 123,
     mimeType: 'image/jpeg',

@@ -37,6 +37,8 @@ interface VolcanoErrorBody {
 }
 
 const DEFAULT_VIDEO_FETCH_TIMEOUT_MS = 60000;
+const MIN_VIDEO_DURATION_SECONDS = 4;
+const MAX_VIDEO_DURATION_SECONDS = 12;
 
 @Injectable()
 export class VolcanoClientProvider {
@@ -289,8 +291,8 @@ export class VolcanoClientProvider {
   }
 
   private normalizeVideoDuration(duration?: number) {
-    const requested = Math.round(Number(duration) || 5);
-    return requested <= 5 ? 5 : 10;
+    const requested = Math.round(Number(duration) || MIN_VIDEO_DURATION_SECONDS);
+    return Math.min(Math.max(requested, MIN_VIDEO_DURATION_SECONDS), MAX_VIDEO_DURATION_SECONDS);
   }
 
   private buildVideoContent(input: CreateVideoTaskInput, duration: number) {
