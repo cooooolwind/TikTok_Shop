@@ -1,4 +1,4 @@
-import type { CreateScriptRequest, GenerateScriptRequest, ScriptStatus } from '@aigc/shared-types';
+﻿import type { CreateScriptRequest, GenerateScriptRequest, ScriptStatus } from '@aigc/shared-types';
 
 export type ScriptEntryMode = 'material' | 'template' | 'manual_text' | 'manual_structured';
 
@@ -20,6 +20,8 @@ export interface ScriptGenerateFormValues {
   language?: string;
 }
 
+const MAX_SCRIPT_DURATION = 12;
+
 export function buildScriptGeneratePayload(values: ScriptGenerateFormValues): GenerateScriptRequest {
   const entry = values.entry ?? 'material';
   return {
@@ -29,7 +31,7 @@ export function buildScriptGeneratePayload(values: ScriptGenerateFormValues): Ge
     material_ids: entry === 'material' ? values.material_ids ?? [] : undefined,
     manual_text: entry === 'manual_text' ? values.manual_text : undefined,
     preferences: {
-      duration: values.duration ?? 15,
+      duration: Math.min(values.duration ?? MAX_SCRIPT_DURATION, MAX_SCRIPT_DURATION),
       style: values.style,
       tone: values.tone,
       language: values.language ?? 'zh',
@@ -42,7 +44,7 @@ export function buildManualDraftPayload(values: ScriptGenerateFormValues): Creat
     product_info: buildProductInfo(values),
     mode: 'free',
     visual_style: values.style,
-    total_duration: values.duration ?? 15,
+    total_duration: Math.min(values.duration ?? MAX_SCRIPT_DURATION, MAX_SCRIPT_DURATION),
     scenes: [],
   };
 }

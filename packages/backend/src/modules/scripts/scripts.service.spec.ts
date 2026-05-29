@@ -84,6 +84,12 @@ function makeService(options?: { script?: Script | null; scripts?: Script[] }) {
   const materialsRepository = {
     findBy: jest.fn(async () => []),
   };
+  const generationTasksRepository = {
+    delete: jest.fn(async () => ({ affected: 0 })),
+  };
+  const videosRepository = {
+    delete: jest.fn(async () => ({ affected: 0 })),
+  };
   const templatesService = {
     findRawById: jest.fn(async () => null),
   };
@@ -101,12 +107,24 @@ function makeService(options?: { script?: Script | null; scripts?: Script[] }) {
     scriptsRepository as never,
     scenesRepository as never,
     materialsRepository as never,
+    generationTasksRepository as never,
+    videosRepository as never,
     templatesService as never,
     configService as never,
     scriptQueue as never,
   );
 
-  return { service, scriptsRepository, scenesRepository, materialsRepository, templatesService, scriptQueue, queryBuilder };
+  return {
+    service,
+    scriptsRepository,
+    scenesRepository,
+    materialsRepository,
+    generationTasksRepository,
+    videosRepository,
+    templatesService,
+    scriptQueue,
+    queryBuilder,
+  };
 }
 
 describe('ScriptsService', () => {
@@ -252,5 +270,15 @@ describe('ScriptsService', () => {
     const { service } = makeService({ script: null });
 
     await expect(service.findOne('missing')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('removes related videos and generation tasks before deleting a script', async () => {
+    const { service, generationTasksRepository, videosRepository, scriptsRepository } = makeService();
+
+    await service.remove('script-1');
+
+    expect(videosRepository.delete).toHaveBeenCalledWith({ scriptId: 'script-1' });
+    expect(generationTasksRepository.delete).toHaveBeenCalledWith({ scriptId: 'script-1' });
+    expect(scriptsRepository.remove).toHaveBeenCalled();
   });
 });

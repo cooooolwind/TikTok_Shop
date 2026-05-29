@@ -10,6 +10,7 @@ import PageHeader from '../../components/common/PageHeader';
 import EmptyState from '../../components/common/EmptyState';
 import { useTemplateStore } from '../../stores/useTemplateStore';
 import { usePagination } from '../../hooks/usePagination';
+import { formatBeijingDateTime } from '../../utils/format';
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -27,7 +28,7 @@ const columns: ColumnsType<Template> = [
   },
   {
     title: '更新时间', dataIndex: 'updated_at', width: 180,
-    render: (t: string) => new Date(t).toLocaleString(),
+    render: (t: string) => formatBeijingDateTime(t),
   },
 ];
 

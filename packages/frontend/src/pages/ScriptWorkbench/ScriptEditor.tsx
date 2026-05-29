@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -19,7 +19,7 @@ import {
   Tag,
   Typography,
 } from 'antd';
-import { ArrowLeftOutlined, CheckOutlined, DeleteOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, CheckOutlined, DeleteOutlined, PlusOutlined, ReloadOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import type { Scene, TaskProgress } from '@aigc/shared-types';
 import EmptyState from '../../components/common/EmptyState';
 import PageHeader from '../../components/common/PageHeader';
@@ -35,6 +35,8 @@ const { Text, Title } = Typography;
 export default function ScriptEditor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTaskId = searchParams.get('returnTask');
   const {
     currentScript,
     loading,
@@ -148,6 +150,11 @@ export default function ScriptEditor() {
             <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/scripts')}>
               返回列表
             </Button>
+            {returnTaskId && (
+              <Button icon={<VideoCameraOutlined />} onClick={() => navigate(`/creation/tasks/${returnTaskId}`)}>
+                返回生成任务
+              </Button>
+            )}
             {script.status === 'failed' && (
               <Button icon={<ReloadOutlined />} onClick={() => retry(script.id)}>
                 重新生成
@@ -278,7 +285,7 @@ export default function ScriptEditor() {
             </Col>
             <Col span={12}>
               <Form.Item name="duration" label="时长（秒）">
-                <InputNumber min={1} max={15} step={0.5} style={{ width: '100%' }} />
+                <InputNumber min={1} max={12} step={0.5} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
           </Row>

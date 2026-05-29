@@ -5,7 +5,7 @@ import {
 } from 'antd';
 import {
   PlayCircleOutlined, ReloadOutlined, StopOutlined,
-  DownloadOutlined,
+  DownloadOutlined, EditOutlined,
 } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
 import TaskProgressPanel from '../../components/creation/TaskProgressPanel';
@@ -13,14 +13,14 @@ import StatusTag from '../../components/common/StatusTag';
 import { useCreationStore } from '../../stores/useGenerationStore';
 import { useTaskSubscription } from '../../hooks/useTaskSubscription';
 import { TASK_STATUS_LABELS } from '../../constants';
-import { formatBytes, formatDuration } from '../../utils/format';
+import { formatBeijingDateTime, formatBytes, formatDuration, formatGenerationTaskDisplayId } from '../../utils/format';
 
 export default function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const {
-    currentTask, loading,
-    fetchTask, retry, cancel, exportVideo,
+    currentTask, loading, creating,
+    fetchTask, retry, cancel, exportVideo, createVideo,
   } = useCreationStore();
 
   // 实时进度订阅（WebSocket + 轮询降级）
@@ -39,6 +39,11 @@ export default function TaskDetail() {
 
   const handleRetry = () => retry(t.id);
   const handleCancel = () => cancel(t.id);
+  const handleEditScript = () => navigate(`/scripts/${t.script_id}?returnTask=${t.id}`);
+  const handleCreateAgain = async () => {
+    const nextTask = await createVideo({ script_id: t.script_id });
+    navigate(`/creation/tasks/${nextTask.id}`);
+  };
   const handleExport = async () => {
     const result = await exportVideo(t.id, 'mp4', '1080x1920', 'high');
     window.open(result.download_url, '_blank');
@@ -50,7 +55,7 @@ export default function TaskDetail() {
         title="任务详情"
         breadcrumbs={[
           { title: '创作工作室', path: '/creation' },
-          { title: `任务 ${t.id.slice(0, 8)}...` },
+          { title: `任务 ${formatGenerationTaskDisplayId(t)}` },
         ]}
         extra={
           <Space>
@@ -62,6 +67,12 @@ export default function TaskDetail() {
             )}
             {t.status === 'done' && (
               <>
+                <Button icon={<EditOutlined />} onClick={handleEditScript}>
+                  修改剧本
+                </Button>
+                <Button icon={<ReloadOutlined />} loading={creating} onClick={handleCreateAgain}>
+                  重新生成
+                </Button>
                 <Button
                   type="primary"
                   icon={<PlayCircleOutlined />}
@@ -71,6 +82,11 @@ export default function TaskDetail() {
                 </Button>
                 <Button icon={<DownloadOutlined />} onClick={handleExport}>导出</Button>
               </>
+            )}
+            {t.status !== 'done' && (
+              <Button icon={<EditOutlined />} onClick={handleEditScript}>
+                修改剧本
+              </Button>
             )}
           </Space>
         }
@@ -118,19 +134,19 @@ export default function TaskDetail() {
           <Card title="任务信息" style={{ marginBottom: 16 }}>
             <Descriptions column={1} size="small" bordered>
               <Descriptions.Item label="任务 ID">
-                <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{t.id}</span>
+                <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{formatGenerationTaskDisplayId(t)}</span>
               </Descriptions.Item>
-              <Descriptions.Item label="关联剧本">{t.script_id}</Descriptions.Item>
+              <Descriptions.Item label="关联剧本">{t.script_display_id ?? t.script_id}</Descriptions.Item>
               <Descriptions.Item label="状态">
                 <StatusTag status={t.status} labels={TASK_STATUS_LABELS} />
               </Descriptions.Item>
               <Descriptions.Item label="重试次数">{t.retry_count}</Descriptions.Item>
               <Descriptions.Item label="创建时间">
-                {new Date(t.created_at).toLocaleString()}
+                {formatBeijingDateTime(t.created_at)}
               </Descriptions.Item>
               {t.completed_at && (
                 <Descriptions.Item label="完成时间">
-                  {new Date(t.completed_at).toLocaleString()}
+                  {formatBeijingDateTime(t.completed_at)}
                 </Descriptions.Item>
               )}
             </Descriptions>
