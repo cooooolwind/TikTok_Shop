@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import type { VideoOptions, TaskError, TaskProgress, TaskResult } from '@aigc/shared-types';
 import {
@@ -42,7 +41,6 @@ const DEFAULT_POLLING: PollingOptions = {
   maxAttempts: 180,
   intervalMs: 5000,
 };
-const MAX_TARGET_DURATION_SECONDS = 15;
 
 @Processor(QUEUES.VIDEO_GENERATION)
 export class VideoGenerationProcessor extends WorkerHost {
@@ -58,24 +56,11 @@ export class VideoGenerationProcessor extends WorkerHost {
     private readonly configService: ConfigService,
   ) {
     super();
-<<<<<<< HEAD
-    this.polling = this.resolvePollingOptions();
-=======
     this.polling = this.getPollingOptions();
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
   }
 
   configurePollingForTest(options: PollingOptions) {
     this.polling = options;
-  }
-
-  private resolvePollingOptions(): PollingOptions {
-    const maxAttempts = this.configService.get<number>('volcano.videoPollingMaxAttempts') ?? DEFAULT_POLLING.maxAttempts;
-    const intervalMs = this.configService.get<number>('volcano.videoPollingIntervalMs') ?? DEFAULT_POLLING.intervalMs;
-    return {
-      maxAttempts: Number.isFinite(maxAttempts) && maxAttempts > 0 ? Math.floor(maxAttempts) : DEFAULT_POLLING.maxAttempts,
-      intervalMs: Number.isFinite(intervalMs) && intervalMs >= 0 ? Math.floor(intervalMs) : DEFAULT_POLLING.intervalMs,
-    };
   }
 
   async process(job: Job<VideoGenerationJob>): Promise<Record<string, unknown>> {
@@ -90,10 +75,6 @@ export class VideoGenerationProcessor extends WorkerHost {
 
       await this.updateProgress(job, 1, 5, 'prepare', 'Reading script and scenes...');
       const script = await this.findScript(scriptId);
-<<<<<<< HEAD
-      const duration = this.resolveDuration(script);
-=======
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
 
       await this.updateProgress(job, 2, 5, 'build_segments', 'Building one video generation segment per scene...');
       const segments = this.buildSegments(script);
@@ -244,9 +225,6 @@ export class VideoGenerationProcessor extends WorkerHost {
       .join('\n');
 
     return [
-<<<<<<< HEAD
-      `Create a polished TikTok Shop product video around ${this.resolveDuration(script)} seconds.`,
-=======
       `Create a standalone TikTok Shop product video for scene ${sortedScenes[0]?.order ?? segment.index + 1}.`,
       `This video must be no longer than ${segment.duration} seconds.`,
       continuitySource === 'previous_last_frame'
@@ -254,7 +232,6 @@ export class VideoGenerationProcessor extends WorkerHost {
         : continuitySource === 'product_image'
           ? 'Use the provided product image as the visual anchor. Keep the product identity, color, shape, and key details consistent.'
           : 'No image input is available. Keep the product identity and visual style consistent with the script description.',
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
       `Product: ${script.productInfo.name}`,
       `Category: ${script.productInfo.category}`,
       `Selling points: ${(script.productInfo.selling_points ?? []).join(', ')}`,
@@ -436,10 +413,6 @@ export class VideoGenerationProcessor extends WorkerHost {
       message,
       estimated_remaining: (totalSteps - currentStep) * 15,
     };
-  }
-
-  private resolveDuration(script: Script) {
-    return Math.min(Math.max(Math.round(Number(script.totalDuration) || 5), 1), MAX_TARGET_DURATION_SECONDS);
   }
 
   private inferAspectRatio(resolution?: string) {

@@ -97,15 +97,9 @@ export const useCreationStore = create<CreationState>((set, get) => ({
         total: Math.max(s.total - 1, 0),
         currentTask: s.currentTask?.id === taskId ? null : s.currentTask,
       }));
-<<<<<<< HEAD
-      useUIStore.getState().pushNotification({ type: 'success', title: '任务已删除' });
-    } catch {
-      useUIStore.getState().pushNotification({ type: 'error', title: '删除任务失败' });
-=======
       useUIStore.getState().pushNotification({ type: 'success', title: '创作任务已删除' });
     } catch {
       useUIStore.getState().pushNotification({ type: 'error', title: '删除创作任务失败' });
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
     }
   },
 

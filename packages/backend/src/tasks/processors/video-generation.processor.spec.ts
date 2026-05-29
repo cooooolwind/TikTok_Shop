@@ -72,11 +72,7 @@ function makeTask(overrides: Partial<GenerationTask> = {}): GenerationTask {
 
 function makeProcessor(
   videoStatus: 'succeeded' | 'failed' | 'running' = 'succeeded',
-<<<<<<< HEAD
-  options: { videoStatuses?: ('succeeded' | 'failed' | 'running')[]; pollingMaxAttempts?: number; pollingIntervalMs?: number } = {},
-=======
   configValues: Record<string, string | undefined> = {},
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
 ) {
   const task = makeTask();
   const script = makeScript();
@@ -94,11 +90,10 @@ function makeProcessor(
   const volcanoClient = {
     createVideoTask: jest.fn(async () => ({ id: 'volcano-task-1' })),
     getVideoTask: jest.fn(async () => {
-      const currentStatus = options.videoStatuses?.shift() ?? videoStatus;
-      if (currentStatus === 'failed') {
+      if (videoStatus === 'failed') {
         return { id: 'volcano-task-1', status: 'failed', error: { code: 'BAD_PROMPT', message: 'bad prompt' } };
       }
-      if (currentStatus === 'running') return { id: 'volcano-task-1', status: 'running' };
+      if (videoStatus === 'running') return { id: 'volcano-task-1', status: 'running' };
       return {
         id: 'volcano-task-1',
         status: 'succeeded',
@@ -115,15 +110,7 @@ function makeProcessor(
     emitTaskFailed: jest.fn(),
   };
   const configService = {
-<<<<<<< HEAD
-    get: jest.fn((key: string) => {
-      if (key === 'volcano.videoPollingMaxAttempts') return options.pollingMaxAttempts;
-      if (key === 'volcano.videoPollingIntervalMs') return options.pollingIntervalMs;
-      return undefined;
-    }),
-=======
     get: jest.fn((key: string) => configValues[key]),
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
   };
   const processor = new VideoGenerationProcessor(
     tasksRepository as never,
@@ -158,16 +145,6 @@ describe('VideoGenerationProcessor', () => {
     expect(result).toEqual(expect.objectContaining({ status: 'done', taskId: 'task-1' }));
   });
 
-<<<<<<< HEAD
-  it('clamps the target script duration to the 15 second product limit before video generation', async () => {
-    const { processor, volcanoClient, job } = makeProcessor('succeeded');
-    const longScript = makeScript({ totalDuration: 18 });
-    (processor as unknown as { scriptsRepository: { findOne: jest.Mock } }).scriptsRepository.findOne.mockResolvedValueOnce(longScript);
-
-    await processor.process(job as never);
-
-    expect(volcanoClient.createVideoTask).toHaveBeenCalledWith(expect.objectContaining({ duration: 15 }));
-=======
   it('creates one provider request per scene', async () => {
     const { processor, volcanoClient, scriptsRepository, job } = makeProcessor('succeeded');
     scriptsRepository.findOne.mockResolvedValue(
@@ -413,7 +390,6 @@ describe('VideoGenerationProcessor', () => {
         ]),
       }),
     );
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
   });
 
   it('marks task failed and emits failure when provider returns failed', async () => {
@@ -451,35 +427,14 @@ describe('VideoGenerationProcessor', () => {
     );
   });
 
-<<<<<<< HEAD
-  it('uses configured polling attempts when waiting for provider results', async () => {
-    const { processor, tasksRepository, tasksGateway, job } = makeProcessor('succeeded', {
-      videoStatuses: ['running', 'running', 'succeeded'],
-      pollingMaxAttempts: 2,
-      pollingIntervalMs: 0,
-=======
   it('uses configured polling values for long-running provider tasks', async () => {
     const { processor, volcanoClient, job } = makeProcessor('running', {
       VOLCANO_VIDEO_POLL_ATTEMPTS: '3',
       VOLCANO_VIDEO_POLL_INTERVAL_MS: '1',
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
     });
 
     await expect(processor.process(job as never)).rejects.toThrow('Video generation timed out');
 
-<<<<<<< HEAD
-    expect(tasksRepository.save).toHaveBeenCalledWith(
-      expect.objectContaining({
-        status: 'failed',
-        error: expect.objectContaining({ code: 'VIDEO_GENERATION_TIMEOUT' }),
-      }),
-    );
-    expect(tasksGateway.emitTaskFailed).toHaveBeenCalledWith(
-      'task-1',
-      expect.objectContaining({ code: 'VIDEO_GENERATION_TIMEOUT' }),
-    );
-=======
     expect(volcanoClient.getVideoTask).toHaveBeenCalledTimes(3);
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
   });
 });

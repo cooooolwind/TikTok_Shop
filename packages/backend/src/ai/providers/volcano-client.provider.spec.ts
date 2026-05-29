@@ -92,11 +92,7 @@ describe('VolcanoClientProvider video generation', () => {
       content: [
         {
           type: 'text',
-<<<<<<< HEAD
-          text: 'product demo --duration 8 --camerafixed false --watermark true',
-=======
           text: 'product demo --duration 10 --ratio 9:16 --camerafixed false --watermark false',
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
         },
         {
           type: 'image_url',
@@ -114,34 +110,14 @@ describe('VolcanoClientProvider video generation', () => {
     );
   });
 
-<<<<<<< HEAD
-  it('keeps durations up to the configured maximum and caps longer requests', async () => {
-    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({ id: 'cgt-1' }), { status: 200 }));
-=======
   it('serializes first-frame and reference images for image-to-video continuity', async () => {
     const fetchMock = jest
       .spyOn(global, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'cgt-first-frame' }), { status: 200 }));
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
     const { provider } = makeProvider({
       'volcano.mockMode': false,
       'volcano.videoApiKey': 'key',
       'volcano.videoBaseUrl': 'https://ark.cn-beijing.volces.com/api/v3',
-<<<<<<< HEAD
-      'volcano.videoEndpoint': 'ep-20260514120705-pqv86',
-      'volcano.videoMaxDuration': 12,
-    });
-
-    await provider.createVideoTask({
-      prompt: 'product demo',
-      ratio: '9:16',
-      resolution: '1080p',
-      duration: 18,
-    });
-
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
-    expect(body.content[0].text).toBe('product demo --duration 12 --camerafixed false --watermark true');
-=======
       'volcano.videoEndpoint': 'ep-video',
     });
 
@@ -263,6 +239,5 @@ describe('VolcanoClientProvider video generation', () => {
     await expect(
       provider.createVideoTask({ prompt: 'product demo', ratio: '9:16', resolution: '1080p', duration: 5 }),
     ).rejects.toThrow('Volcano video task creation network failed: fetch failed; cause=Connect Timeout Error; code=UND_ERR_CONNECT_TIMEOUT');
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
   });
 });

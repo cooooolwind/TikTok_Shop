@@ -1,10 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-<<<<<<< HEAD
-import { Row, Col, Button, Modal, Space, Select } from 'antd';
-=======
 import { Button, Col, Modal, Row, Select, Space } from 'antd';
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
 import { PlusOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
 import TaskCard from '../../components/creation/TaskCard';
@@ -19,11 +15,7 @@ export default function CreationStudioPage() {
   const navigate = useNavigate();
   const {
     tasks, total, loading, filters,
-<<<<<<< HEAD
-    fetchTasks, remove, setFilters,
-=======
     fetchTasks, setFilters, remove,
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
   } = useCreationStore();
   const pagination = usePagination({ defaultPageSize: 12 });
 
@@ -35,16 +27,6 @@ export default function CreationStudioPage() {
     pagination.setTotal(total);
   }, [total]);
 
-<<<<<<< HEAD
-  const handleDeleteTask = (taskId: string) => {
-    Modal.confirm({
-      title: '删除创作任务',
-      content: '删除后任务记录和已生成的视频记录会一起移除，确认删除？',
-      okText: '删除',
-      okButtonProps: { danger: true },
-      cancelText: '取消',
-      onOk: () => remove(taskId),
-=======
   const deleteTask = (task: GenerationTask) => {
     Modal.confirm({
       title: '删除创作任务',
@@ -56,7 +38,6 @@ export default function CreationStudioPage() {
         await remove(task.id);
         fetchTasks({ ...filters, ...pagination.query });
       },
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
     });
   };
 
@@ -102,11 +83,7 @@ export default function CreationStudioPage() {
                 <TaskCard
                   task={task}
                   onClick={() => navigate(`/creation/tasks/${task.id}`)}
-<<<<<<< HEAD
-                  onDelete={() => handleDeleteTask(task.id)}
-=======
                   onDelete={() => deleteTask(task)}
->>>>>>> 3e1695cd564c5204c16ded6213fd5889a8cae315
                 />
               </Col>
             ))}
