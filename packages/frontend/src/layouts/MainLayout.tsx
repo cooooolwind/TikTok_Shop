@@ -9,7 +9,9 @@ import {
   BarChartOutlined,
   BookOutlined,
   BulbOutlined,
-  SkinOutlined,
+  SunOutlined,
+  MoonOutlined,
+  DesktopOutlined,
 } from '@ant-design/icons';
 import { useUIStore } from '../stores/useAppStore';
 import { ROUTES } from '../constants';
@@ -112,9 +114,9 @@ export default function MainLayout() {
   const { selectedKey, openKeys } = deriveMenuState(location.pathname);
 
   const themeMenuItems: MenuProps['items'] = [
-    { key: 'system', label: '跟随系统' },
-    { key: 'light', label: '浅色模式' },
-    { key: 'dark', label: '深色模式' },
+    { key: 'system', label: collapsed ? <DesktopOutlined /> : '跟随系统' },
+    { key: 'light', label: collapsed ? <SunOutlined /> : '浅色模式' },
+    { key: 'dark', label: collapsed ? <MoonOutlined /> : '深色模式' },
   ];
 
   return (
@@ -130,45 +132,86 @@ export default function MainLayout() {
           position: 'sticky',
           top: 0,
           height: '100vh',
-          overflow: 'auto',
           zIndex: 10,
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
-        {/* Logo 区：折叠时显示简短图标文字 */}
-        <div
-          style={{
-            height: 48,
-            margin: '12px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: token.colorPrimary,
-            fontWeight: 700,
-            fontSize: collapsed ? 16 : 18,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            letterSpacing: 1,
-          }}
-        >
-          {collapsed ? 'AIGC' : 'AIGC 视频生成'}
-        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ flex: 1, overflow: 'auto' }}>
+            {/* Logo 区：折叠时显示简短图标文字 */}
+            <div
+              style={{
+                height: 48,
+                margin: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: token.colorPrimary,
+                fontWeight: 700,
+                fontSize: collapsed ? 16 : 18,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                letterSpacing: 1,
+              }}
+            >
+              {collapsed ? 'AIGC' : 'AIGC 视频生成'}
+            </div>
 
-        <Menu
-          theme={isDark ? 'dark' : 'light'}
-          mode="inline"
-          selectedKeys={[selectedKey]}
-          defaultOpenKeys={openKeys}
-          items={menuItems}
-          style={{
-            background: 'transparent',
-            borderRight: 'none',
-          }}
-          onClick={({ key }) => {
-            // 跳过父菜单组
-            if (key === 'scripts-group') return;
-            navigate(key);
-          }}
-        />
+            <Menu
+              theme={isDark ? 'dark' : 'light'}
+              mode="inline"
+              selectedKeys={[selectedKey]}
+              defaultOpenKeys={openKeys}
+              items={menuItems}
+              style={{
+                background: 'transparent',
+                borderRight: 'none',
+              }}
+              onClick={({ key }) => {
+                // 跳过父菜单组
+                if (key === 'scripts-group') return;
+                navigate(key);
+              }}
+            />
+          </div>
+
+          <div style={{ padding: collapsed ? '0 0 16px' : '0 16px 16px', marginTop: 'auto' }}>
+            <Dropdown
+              menu={{
+                items: themeMenuItems,
+                selectedKeys: [themeMode],
+                onClick: ({ key }) => setThemeMode(key as 'system' | 'light' | 'dark'),
+              }}
+              placement="topRight"
+            >
+              <Button
+                type="text"
+                icon={
+                  themeMode === 'dark' ? (
+                    <MoonOutlined />
+                  ) : themeMode === 'light' ? (
+                    <SunOutlined />
+                  ) : (
+                    <DesktopOutlined />
+                  )
+                }
+                block
+                style={{
+                  color: token.colorText,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  padding: collapsed ? 0 : '4px 15px',
+                  height: 32,
+                  borderRadius: collapsed ? 0 : token.borderRadius,
+                }}
+              >
+                {!collapsed && '主题切换'}
+              </Button>
+            </Dropdown>
+          </div>
+        </div>
       </Sider>
 
       <Layout style={{ background: 'transparent' }}>
@@ -185,20 +228,7 @@ export default function MainLayout() {
             top: 0,
             zIndex: 9,
           }}
-        >
-          <Dropdown
-            menu={{
-              items: themeMenuItems,
-              selectedKeys: [themeMode],
-              onClick: ({ key }) => setThemeMode(key as 'system' | 'light' | 'dark'),
-            }}
-            placement="bottomRight"
-          >
-            <Button type="text" icon={<SkinOutlined />} style={{ color: token.colorText }}>
-              主题切换
-            </Button>
-          </Dropdown>
-        </Header>
+        />
         <Content
           style={{
             margin: '24px 24px',
