@@ -25,6 +25,7 @@ export interface Material {
   type: MaterialType;
   url: string;
   thumbnail_url: string;
+  name: string;
   filename: string;
   size: number;
   category: MaterialCategory;
@@ -55,6 +56,7 @@ export interface MaterialDetail extends Material {
 
 export interface MaterialUploadResponse {
   id: string;
+  name: string;
   filename: string;
   type: MaterialType;
   url: string;

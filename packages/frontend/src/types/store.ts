@@ -29,7 +29,8 @@ export interface MaterialState {
 
   fetchList: (params?: MaterialListQuery) => Promise<void>;
   fetchDetail: (id: string) => Promise<void>;
-  upload: (file: File, category: string, sourceDeclaration: string, tags?: string[]) => Promise<void>;
+  updateMaterial: (id: string, data: Partial<Material>) => Promise<void>;
+  upload: (file: File, category: string, sourceDeclaration: string, tags?: string[], name?: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
   batchRemove: (ids: string[]) => Promise<void>;
   triggerAnalysis: (id: string) => Promise<void>;

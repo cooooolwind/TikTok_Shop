@@ -47,7 +47,7 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
             <>
               <Image
                 src={material.thumbnail_url}
-                alt={material.filename}
+                alt={material.name}
                 preview={false}
                 onClick={(event) => event.stopPropagation()}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -72,7 +72,7 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
                   />
                   <Modal
                     open={previewOpen}
-                    title={material.filename}
+                    title={material.name}
                     footer={null}
                     centered
                     width="min(92vw, 960px)"
@@ -86,7 +86,7 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
                   >
                     <img
                       src={previewSrc}
-                      alt={material.filename}
+                      alt={material.name}
                       onClick={(event) => event.stopPropagation()}
                       style={{
                         display: 'block',
@@ -132,8 +132,8 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
     >
       <Card.Meta
         title={
-          <Text ellipsis style={{ maxWidth: '100%' }} title={material.filename}>
-            {material.filename}
+          <Text ellipsis style={{ maxWidth: '100%' }} title={material.name}>
+            {material.name}
           </Text>
         }
         description={

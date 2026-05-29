@@ -29,6 +29,9 @@ export class Material {
   @Column({ name: 'thumbnail_url', length: 1024, nullable: true })
   thumbnailUrl: string;
 
+  @Column({ length: 512, default: '' })
+  name: string;
+
   @Column({ length: 512 })
   filename: string;
 

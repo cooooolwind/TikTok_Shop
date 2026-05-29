@@ -132,9 +132,10 @@ export default function ScriptGenerate() {
                       placeholder="可选择 uploaded 或 ready 素材"
                       optionFilterProp="label"
                       options={materials.map((material) => ({
-                        label: `${material.filename} · ${material.status}`,
-                        value: material.id,
+                       label: `${material.name} · ${material.status}`,
+                       value: material.id,
                       }))}
+
                     />
                   </Form.Item>
                 </>
