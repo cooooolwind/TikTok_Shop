@@ -14,6 +14,7 @@ import { QUEUES } from '../../tasks/queues';
 import { Script } from '../scripts/entities/script.entity';
 import { GenerationTask } from './entities/generation-task.entity';
 import { Video } from './entities/video.entity';
+import { VideoStitchingService } from '../../tasks/services/video-stitching.service';
 
 const DEFAULT_PROGRESS = {
   current_step: 0,
@@ -61,6 +62,7 @@ export class GenerationService {
     @InjectRepository(GenerationTask) private readonly tasksRepository: Repository<GenerationTask>,
     @InjectRepository(Script) private readonly scriptsRepository: Repository<Script>,
     @InjectRepository(Video) private readonly videosRepository: Repository<Video>,
+    private readonly videoStitchingService: VideoStitchingService,
   ) {}
 
   async create(data: CreateVideoRequest): Promise<GenerationTaskResponse> {
@@ -166,12 +168,57 @@ export class GenerationService {
     if (task.status !== 'done' || !task.result?.video_url) {
       throw new BadRequestException('Only completed tasks can be exported');
     }
-    const video = await this.videosRepository.findOne({ where: { taskId } });
+    let video = await this.videosRepository.findOne({ where: { taskId } });
+    let downloadUrl = video?.url ?? task.result.video_url;
+
+    if (await this.needsExportStitching(task)) {
+      try {
+        const stitched = await this.videoStitchingService.stitch({
+          taskId,
+          segments: task.result.segments ?? [],
+        });
+
+        task.result = {
+          ...task.result,
+          video_url: stitched.video_url,
+          file_size: stitched.file_size,
+          stitching_warning: undefined,
+        };
+        await this.tasksRepository.save(task);
+
+        if (video) {
+          video.url = stitched.video_url;
+          video.fileSize = stitched.file_size;
+          video = await this.videosRepository.save(video);
+        }
+
+        downloadUrl = stitched.video_url;
+      } catch (error) {
+        task.result = {
+          ...task.result,
+          stitching_warning: this.toErrorMessage(error),
+        };
+        await this.tasksRepository.save(task);
+      }
+    }
+
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     return {
-      download_url: video?.url ?? task.result.video_url,
+      download_url: downloadUrl,
       expires_at: expiresAt.toISOString(),
     };
+  }
+
+  private async needsExportStitching(task: GenerationTask) {
+    const result = task.result;
+    if (!result?.segments || result.segments.length < 2) return false;
+    if (!result.video_url.startsWith('/uploads/generated/')) return true;
+    return !(await this.videoStitchingService.hasGeneratedVideo(task.id));
+  }
+
+  private toErrorMessage(error: unknown) {
+    if (error instanceof Error) return error.message;
+    return String(error);
   }
 
   private async enqueue(taskId: string, scriptId: string, options?: CreateVideoRequest['options']) {

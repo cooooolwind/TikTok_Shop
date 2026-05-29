@@ -64,6 +64,7 @@ export type {
   VideoOptions,
   TaskProgress,
   TaskResult,
+  VideoSegmentResult,
   TaskError,
   GenerationTask,
   CreateVideoRequest,

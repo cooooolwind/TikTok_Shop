@@ -2,6 +2,7 @@ import { VideoGenerationProcessor } from './video-generation.processor';
 import { GenerationTask } from '../../modules/generation/entities/generation-task.entity';
 import { Script } from '../../modules/scripts/entities/script.entity';
 import { Scene } from '../../modules/scripts/entities/scene.entity';
+import type { VideoStitchingService } from '../services/video-stitching.service';
 
 const now = new Date('2026-05-25T00:00:00.000Z');
 
@@ -112,6 +113,12 @@ function makeProcessor(
   const configService = {
     get: jest.fn((key: string) => configValues[key]),
   };
+  const videoStitchingService = {
+    stitch: jest.fn(async () => ({
+      video_url: '/uploads/generated/task-1.mp4',
+      file_size: 12345,
+    })),
+  };
   const processor = new VideoGenerationProcessor(
     tasksRepository as never,
     scriptsRepository as never,
@@ -119,17 +126,30 @@ function makeProcessor(
     volcanoClient as never,
     tasksGateway as never,
     configService as never,
+    videoStitchingService as unknown as VideoStitchingService,
   );
   const job = {
     data: { taskId: 'task-1', scriptId: 'script-1', options: { resolution: '1080x1920', aspect_ratio: '9:16' } },
     updateProgress: jest.fn(),
   };
-  return { processor, tasksRepository, scriptsRepository, videosRepository, volcanoClient, tasksGateway, configService, job, task };
+  return {
+    processor,
+    tasksRepository,
+    scriptsRepository,
+    videosRepository,
+    volcanoClient,
+    tasksGateway,
+    configService,
+    videoStitchingService,
+    job,
+    task,
+  };
 }
 
 describe('VideoGenerationProcessor', () => {
   it('persists task result, creates video, and emits completion when video succeeds', async () => {
-    const { processor, tasksRepository, videosRepository, volcanoClient, tasksGateway, job } = makeProcessor('succeeded');
+    const { processor, tasksRepository, videosRepository, volcanoClient, tasksGateway, videoStitchingService, job } =
+      makeProcessor('succeeded');
 
     const result = await processor.process(job as never);
 
@@ -142,6 +162,7 @@ describe('VideoGenerationProcessor', () => {
       'task-1',
       expect.objectContaining({ video_url: 'https://example.com/video.mp4' }),
     );
+    expect(videoStitchingService.stitch).not.toHaveBeenCalled();
     expect(result).toEqual(expect.objectContaining({ status: 'done', taskId: 'task-1' }));
   });
 
@@ -186,6 +207,94 @@ describe('VideoGenerationProcessor', () => {
         prompt: expect.stringContaining('Segment scenes: 3'),
         imageUrls: [],
         firstFrameUrl: 'https://example.com/thumb.png',
+      }),
+    );
+  });
+
+  it('stitches multiple generated segments and persists the stitched video as the primary result', async () => {
+    const { processor, scriptsRepository, volcanoClient, videosRepository, videoStitchingService, tasksGateway, job } =
+      makeProcessor('succeeded');
+    scriptsRepository.findOne.mockResolvedValue(
+      makeScript({
+        scenes: [makeScene({ id: 'scene-1', order: 1 }), makeScene({ id: 'scene-2', order: 2 })],
+      }),
+    );
+    volcanoClient.getVideoTask
+      .mockResolvedValueOnce({
+        id: 'volcano-task-1',
+        status: 'succeeded',
+        content: { video_url: 'https://example.com/segment-1.mp4', last_frame_url: 'https://example.com/frame-1.png' },
+        duration: 5,
+        resolution: '1080p',
+        ratio: '9:16',
+      })
+      .mockResolvedValueOnce({
+        id: 'volcano-task-2',
+        status: 'succeeded',
+        content: { video_url: 'https://example.com/segment-2.mp4', last_frame_url: 'https://example.com/frame-2.png' },
+        duration: 5,
+        resolution: '1080p',
+        ratio: '9:16',
+      });
+
+    const result = await processor.process(job as never);
+
+    expect(videoStitchingService.stitch).toHaveBeenCalledWith({
+      taskId: 'task-1',
+      segments: [
+        expect.objectContaining({ video_url: 'https://example.com/segment-1.mp4' }),
+        expect.objectContaining({ video_url: 'https://example.com/segment-2.mp4' }),
+      ],
+    });
+    expect(result.result).toEqual(
+      expect.objectContaining({
+        video_url: '/uploads/generated/task-1.mp4',
+        file_size: 12345,
+        segments: expect.arrayContaining([
+          expect.objectContaining({ video_url: 'https://example.com/segment-1.mp4' }),
+          expect.objectContaining({ video_url: 'https://example.com/segment-2.mp4' }),
+        ]),
+      }),
+    );
+    expect(videosRepository.save).toHaveBeenCalledWith(expect.objectContaining({ url: '/uploads/generated/task-1.mp4' }));
+    expect(tasksGateway.emitTaskCompleted).toHaveBeenCalledWith(
+      'task-1',
+      expect.objectContaining({ video_url: '/uploads/generated/task-1.mp4' }),
+    );
+  });
+
+  it('keeps segmented results when stitching fails and records a stitching warning', async () => {
+    const { processor, scriptsRepository, volcanoClient, videoStitchingService, job } = makeProcessor('succeeded');
+    scriptsRepository.findOne.mockResolvedValue(
+      makeScript({
+        scenes: [makeScene({ id: 'scene-1', order: 1 }), makeScene({ id: 'scene-2', order: 2 })],
+      }),
+    );
+    videoStitchingService.stitch.mockRejectedValueOnce(new Error('ffmpeg exited with code 1: invalid data'));
+    volcanoClient.getVideoTask
+      .mockResolvedValueOnce({
+        id: 'volcano-task-1',
+        status: 'succeeded',
+        content: { video_url: 'https://example.com/segment-1.mp4', last_frame_url: 'https://example.com/frame-1.png' },
+        duration: 5,
+        resolution: '1080p',
+        ratio: '9:16',
+      })
+      .mockResolvedValueOnce({
+        id: 'volcano-task-2',
+        status: 'succeeded',
+        content: { video_url: 'https://example.com/segment-2.mp4', last_frame_url: 'https://example.com/frame-2.png' },
+        duration: 5,
+        resolution: '1080p',
+        ratio: '9:16',
+      });
+
+    const result = await processor.process(job as never);
+
+    expect(result.result).toEqual(
+      expect.objectContaining({
+        video_url: 'https://example.com/segment-1.mp4',
+        stitching_warning: 'ffmpeg exited with code 1: invalid data',
       }),
     );
   });
