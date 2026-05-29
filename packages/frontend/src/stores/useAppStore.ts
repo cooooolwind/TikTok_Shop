@@ -8,6 +8,7 @@ export const useUIStore = create<UIState>((set) => ({
   globalLoading: false,
   notifications: [],
   themeMode: 'system',
+  mobileDrawerOpen: false,
 
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
 
@@ -30,4 +31,5 @@ export const useUIStore = create<UIState>((set) => ({
   },
 
   setThemeMode: (mode) => set({ themeMode: mode }),
+  setMobileDrawerOpen: (open) => set({ mobileDrawerOpen: open }),
 }));

@@ -9,7 +9,7 @@ interface BreadcrumbItem {
 }
 
 interface PageHeaderProps {
-  title: string;
+  title: React.ReactNode;
   breadcrumbs?: BreadcrumbItem[];
   extra?: React.ReactNode; // 右侧操作区插槽
 }
