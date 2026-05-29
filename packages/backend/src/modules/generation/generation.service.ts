@@ -9,19 +9,24 @@ import type {
   GenerationTask as GenerationTaskResponse,
   QuickGenerateRequest,
   RegenerateSceneVideoRequest,
+  TaskProgress,
+  TaskResult,
 } from '@aigc/shared-types';
 import { QUEUES } from '../../tasks/queues';
 import { Script } from '../scripts/entities/script.entity';
 import { GenerationTask } from './entities/generation-task.entity';
 import { Video } from './entities/video.entity';
+import { VideoStitchingService } from '../../tasks/services/video-stitching.service';
 
-const DEFAULT_PROGRESS = {
+const DEFAULT_PROGRESS: TaskProgress = {
   current_step: 0,
   total_steps: 5,
   step_name: 'queued',
   percentage: 0,
   message: '任务已排队，等待开始生成',
   estimated_remaining: 75,
+  phase: 'queued',
+  phase_label: '排队中',
 };
 
 const BEIJING_DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
@@ -61,6 +66,7 @@ export class GenerationService {
     @InjectRepository(GenerationTask) private readonly tasksRepository: Repository<GenerationTask>,
     @InjectRepository(Script) private readonly scriptsRepository: Repository<Script>,
     @InjectRepository(Video) private readonly videosRepository: Repository<Video>,
+    private readonly videoStitchingService: VideoStitchingService,
   ) {}
 
   async create(data: CreateVideoRequest): Promise<GenerationTaskResponse> {
@@ -129,7 +135,7 @@ export class GenerationService {
     task.status = 'queued';
     task.progress = DEFAULT_PROGRESS;
     task.error = null;
-    task.result = null;
+    task.result = this.prepareResultForRetry(task.result);
     task.completedAt = null;
     task.retryCount += 1;
     const saved = await this.tasksRepository.save(task);
@@ -143,7 +149,13 @@ export class GenerationService {
       throw new BadRequestException('Only queued or processing tasks can be cancelled');
     }
     task.status = 'failed';
-    task.error = { code: 'TASK_CANCELLED', message: 'Task cancelled by user', retryable: true };
+    task.error = {
+      code: 'TASK_CANCELLED',
+      message: 'Task cancelled by user',
+      retryable: true,
+      category: 'unknown',
+      user_action: '可以重新重试任务，已生成的分镜片段会尽量保留。',
+    };
     task.completedAt = new Date();
     return this.toTaskResponse(await this.tasksRepository.save(task));
   }
@@ -166,12 +178,89 @@ export class GenerationService {
     if (task.status !== 'done' || !task.result?.video_url) {
       throw new BadRequestException('Only completed tasks can be exported');
     }
-    const video = await this.videosRepository.findOne({ where: { taskId } });
+    let video = await this.videosRepository.findOne({ where: { taskId } });
+    let downloadUrl = task.result.video_url || video?.url;
+    let source: 'segment' | 'stitched' = this.isGeneratedVideoUrl(downloadUrl) ? 'stitched' : 'segment';
+
+    if (await this.needsExportStitching(task)) {
+      try {
+        const stitched = await this.videoStitchingService.stitch({
+          taskId,
+          segments: (task.result.segments ?? []).filter((segment) => segment.status !== 'failed'),
+        });
+
+        task.result = {
+          ...task.result,
+          video_url: stitched.video_url,
+          file_size: stitched.file_size,
+          stitching_warning: undefined,
+        };
+        await this.tasksRepository.save(task);
+
+        if (video) {
+          video.url = stitched.video_url;
+          video.fileSize = stitched.file_size;
+          video = await this.videosRepository.save(video);
+        }
+
+        downloadUrl = stitched.video_url;
+        source = 'stitched';
+      } catch (error) {
+        throw new BadRequestException({
+          code: 'VIDEO_EXPORT_STITCHING_FAILED',
+          message: `完整视频拼接失败，分段视频仍可预览：${this.toErrorMessage(error)}`,
+          retryable: true,
+          category: 'export',
+          user_action: '请稍后重试导出，或先使用分段视频预览。',
+        });
+      }
+    }
+
+    if (!downloadUrl) throw new BadRequestException('No generated video is available for export');
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     return {
-      download_url: video?.url ?? task.result.video_url,
+      download_url: downloadUrl,
       expires_at: expiresAt.toISOString(),
+      source,
+      segments_count: task.result.segments?.length ?? 1,
     };
+  }
+
+  private async needsExportStitching(task: GenerationTask) {
+    const result = task.result;
+    if (!result?.segments || result.segments.length < 2) return false;
+    if (!this.isGeneratedVideoUrl(result.video_url)) return true;
+    return !(await this.videoStitchingService.hasGeneratedVideo(task.id));
+  }
+
+  private isGeneratedVideoUrl(url?: string) {
+    return Boolean(url?.startsWith('/uploads/generated/'));
+  }
+
+  private prepareResultForRetry(result: TaskResult | null): TaskResult | null {
+    if (!result?.segments?.length) return null;
+    const preservedSegments = [];
+    for (const segment of result.segments) {
+      if (segment.status !== 'succeeded' || !segment.video_url) break;
+      preservedSegments.push(segment);
+    }
+    if (preservedSegments.length === 0) return null;
+    const first = preservedSegments[0];
+    return {
+      video_url: first.video_url,
+      thumbnail_url: first.thumbnail_url,
+      duration: preservedSegments.reduce((sum, segment) => sum + segment.duration, 0),
+      resolution: first.resolution,
+      aspect_ratio: first.aspect_ratio,
+      file_size: 0,
+      continuity_warning: result.continuity_warning,
+      segments: preservedSegments,
+    };
+  }
+
+  private toErrorMessage(error: unknown) {
+    if (error instanceof Error) return error.message;
+    return String(error);
   }
 
   private async enqueue(taskId: string, scriptId: string, options?: CreateVideoRequest['options']) {

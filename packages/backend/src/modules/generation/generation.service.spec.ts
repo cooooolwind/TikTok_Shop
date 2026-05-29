@@ -71,10 +71,16 @@ function makeVideo(overrides: Partial<Video> = {}): Video {
   };
 }
 
-function makeService(options?: { script?: Script | null; task?: GenerationTask | null; video?: Video | null }) {
+function makeService(options?: {
+  script?: Script | null;
+  task?: GenerationTask | null;
+  video?: Video | null;
+  stitched?: { video_url: string; file_size: number };
+}) {
   const script = options && 'script' in options ? options.script : makeScript();
   const task = options && 'task' in options ? options.task : makeTask();
   const video = options && 'video' in options ? options.video : makeVideo();
+  const stitched = options?.stitched ?? { video_url: '/uploads/generated/task-1.mp4', file_size: 9876 };
   const scriptsRepository = {
     findOne: jest.fn(async () => script),
     find: jest.fn(async () => (script ? [script] : [])),
@@ -97,18 +103,24 @@ function makeService(options?: { script?: Script | null; task?: GenerationTask |
   };
   const videosRepository = {
     findOne: jest.fn(async () => video),
+    save: jest.fn(async (data) => data),
     delete: jest.fn(async () => ({ affected: 1 })),
   };
   const videoQueue = {
     add: jest.fn(async () => ({ id: 'queue-job-1' })),
+  };
+  const videoStitchingService = {
+    stitch: jest.fn(async () => stitched),
+    hasGeneratedVideo: jest.fn(async () => true),
   };
   const service = new GenerationService(
     videoQueue as never,
     tasksRepository as never,
     scriptsRepository as never,
     videosRepository as never,
+    videoStitchingService as never,
   );
-  return { service, videoQueue, scriptsRepository, tasksRepository, videosRepository };
+  return { service, videoQueue, scriptsRepository, tasksRepository, videosRepository, videoStitchingService };
 }
 
 describe('GenerationService', () => {
@@ -155,6 +167,37 @@ describe('GenerationService', () => {
     expect(result).toEqual(expect.objectContaining({ id: 'task-1', status: 'queued', retry_count: 2 }));
   });
 
+  it('preserves succeeded leading segments when retrying a failed segmented task', async () => {
+    const failedTask = makeTask({
+      status: 'failed',
+      retryCount: 1,
+      result: {
+        ...makeSegmentedVideoResult(),
+        segments: [
+          { ...makeSegmentedVideoResult().segments[0], status: 'succeeded' as const },
+          {
+            ...makeSegmentedVideoResult().segments[1],
+            video_url: '',
+            status: 'failed' as const,
+            error: { code: 'BAD_PROMPT', message: 'bad prompt', retryable: true },
+          },
+        ],
+      },
+    });
+    const { service, tasksRepository } = makeService({ task: failedTask });
+
+    await service.retry('task-1');
+
+    expect(tasksRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        result: expect.objectContaining({
+          video_url: 'https://example.com/segment-1.mp4',
+          segments: [expect.objectContaining({ index: 0, status: 'succeeded' })],
+        }),
+      }),
+    );
+  });
+
   it('rejects retry for non-failed tasks', async () => {
     const { service } = makeService({ task: makeTask({ status: 'done' }) });
 
@@ -169,6 +212,73 @@ describe('GenerationService', () => {
 
     expect(result.download_url).toBe('https://example.com/video.mp4');
     expect(new Date(result.expires_at).getTime()).toBeGreaterThan(now.getTime());
+  });
+
+  it('stitches segmented legacy tasks during export and returns the generated video url', async () => {
+    const doneTask = makeTask({ status: 'done', result: makeSegmentedVideoResult() });
+    const existingVideo = makeVideo({ url: 'https://example.com/segment-1.mp4', fileSize: 0 });
+    const { service, tasksRepository, videosRepository, videoStitchingService } = makeService({
+      task: doneTask,
+      video: existingVideo,
+    });
+
+    const result = await service.export('task-1');
+
+    expect(videoStitchingService.stitch).toHaveBeenCalledWith({
+      taskId: 'task-1',
+      segments: doneTask.result?.segments,
+    });
+    expect(tasksRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        result: expect.objectContaining({
+          video_url: '/uploads/generated/task-1.mp4',
+          file_size: 9876,
+        }),
+      }),
+    );
+    expect(videosRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ url: '/uploads/generated/task-1.mp4', fileSize: 9876 }),
+    );
+    expect(result.download_url).toBe('/uploads/generated/task-1.mp4');
+  });
+
+  it('restitches segmented tasks when the generated video url points to a missing local file', async () => {
+    const doneTask = makeTask({
+      status: 'done',
+      result: {
+        ...makeSegmentedVideoResult(),
+        video_url: '/uploads/generated/task-1.mp4',
+      },
+    });
+    const existingVideo = makeVideo({ url: '/uploads/generated/task-1.mp4', fileSize: 0 });
+    const { service, videoStitchingService } = makeService({
+      task: doneTask,
+      video: existingVideo,
+    });
+    videoStitchingService.hasGeneratedVideo.mockResolvedValueOnce(false);
+
+    const result = await service.export('task-1');
+
+    expect(videoStitchingService.hasGeneratedVideo).toHaveBeenCalledWith('task-1');
+    expect(videoStitchingService.stitch).toHaveBeenCalledWith({
+      taskId: 'task-1',
+      segments: doneTask.result?.segments,
+    });
+    expect(result.download_url).toBe('/uploads/generated/task-1.mp4');
+  });
+
+  it('returns a clear export error when stitching fails and leaves generated segments untouched', async () => {
+    const doneTask = makeTask({ status: 'done', result: makeSegmentedVideoResult() });
+    const { service, tasksRepository, videoStitchingService } = makeService({ task: doneTask });
+    videoStitchingService.stitch.mockRejectedValueOnce(new Error('ffmpeg exited with code 1'));
+
+    await expect(service.export('task-1')).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(tasksRepository.save).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        result: expect.objectContaining({ stitching_warning: expect.any(String) }),
+      }),
+    );
   });
 
   it('removes a task and its generated video', async () => {
@@ -189,5 +299,32 @@ function makeVideoResult() {
     resolution: '1080x1920',
     aspect_ratio: '9:16',
     file_size: 123456,
+  };
+}
+
+function makeSegmentedVideoResult() {
+  return {
+    ...makeVideoResult(),
+    video_url: 'https://example.com/segment-1.mp4',
+    segments: [
+      {
+        index: 0,
+        video_url: 'https://example.com/segment-1.mp4',
+        duration: 6,
+        resolution: '1080x1920',
+        aspect_ratio: '9:16',
+        thumbnail_url: '',
+        scene_orders: [1],
+      },
+      {
+        index: 1,
+        video_url: 'https://example.com/segment-2.mp4',
+        duration: 6,
+        resolution: '1080x1920',
+        aspect_ratio: '9:16',
+        thumbnail_url: '',
+        scene_orders: [2],
+      },
+    ],
   };
 }
