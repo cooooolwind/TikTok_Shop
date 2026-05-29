@@ -287,15 +287,19 @@ export default function MainLayout() {
         <Header
           style={{
             padding: '0 24px',
-            background: isDark ? 'rgba(22, 24, 35, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-            backdropFilter: 'blur(10px)',
-            borderBottom: `1px solid ${token.colorBorderSecondary}`,
+            background: (isMobile && mobileDrawerOpen) 
+              ? 'transparent' 
+              : (isDark ? 'rgba(22, 24, 35, 0.8)' : 'rgba(255, 255, 255, 0.8)'),
+            backdropFilter: (isMobile && mobileDrawerOpen) ? 'none' : 'blur(10px)',
+            borderBottom: (isMobile && mobileDrawerOpen) 
+              ? 'none' 
+              : `1px solid ${token.colorBorderSecondary}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: isMobile ? 'flex-start' : 'flex-end',
             position: 'sticky',
             top: 0,
-            zIndex: 9,
+            zIndex: (isMobile && mobileDrawerOpen) ? 1030 : 9,
           }}
         >
           {isMobile && (
