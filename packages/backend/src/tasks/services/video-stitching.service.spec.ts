@@ -62,7 +62,7 @@ describe('VideoStitchingService', () => {
       'utf8',
     );
     expect(mockedSpawn).toHaveBeenCalledWith(
-      process.env.FFMPEG_PATH || 'ffmpeg',
+      expect.stringMatching(/ffmpeg(\.exe)?$/),
       expect.arrayContaining(['-f', 'concat', '-safe', '0', '-c', 'copy']),
       expect.objectContaining({ windowsHide: true }),
     );

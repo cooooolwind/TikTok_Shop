@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { spawn } from 'child_process';
 import { mkdir, rm, stat, writeFile } from 'fs/promises';
 import { join } from 'path';
+import { homedir } from 'os';
 import { randomUUID } from 'crypto';
 import type { VideoSegmentResult } from '@aigc/shared-types';
 
@@ -95,7 +96,7 @@ export class VideoStitchingService {
   private runFfmpeg(concatPath: string, outputPath: string) {
     return new Promise<void>((resolve, reject) => {
       const child = spawn(
-        process.env.FFMPEG_PATH || 'ffmpeg',
+        this.resolveFfmpegPath(),
         ['-y', '-f', 'concat', '-safe', '0', '-i', concatPath, '-c', 'copy', '-movflags', '+faststart', outputPath],
         { windowsHide: true },
       );
@@ -113,5 +114,26 @@ export class VideoStitchingService {
         reject(new Error(`ffmpeg exited with code ${code}${detail ? `: ${detail}` : ''}`));
       });
     });
+  }
+
+  private resolveFfmpegPath() {
+    if (process.env.FFMPEG_PATH) return process.env.FFMPEG_PATH;
+
+    if (process.platform === 'win32') {
+      return join(
+        homedir(),
+        'AppData',
+        'Local',
+        'Microsoft',
+        'WinGet',
+        'Packages',
+        'Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe',
+        'ffmpeg-8.1.1-full_build',
+        'bin',
+        'ffmpeg.exe',
+      );
+    }
+
+    return 'ffmpeg';
   }
 }

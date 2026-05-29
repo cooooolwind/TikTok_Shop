@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { GenerationTask } from '@aigc/shared-types';
@@ -90,5 +90,33 @@ describe('VideoPreview', () => {
     fireEvent.click(screen.getByLabelText('preview segment 2'));
 
     expect(screen.getByLabelText('video preview').getAttribute('src')).toBe('https://example.com/segment-2.mp4');
+  });
+
+  it('opens an export window immediately and redirects it after export finishes', async () => {
+    const popup = {
+      closed: false,
+      close: vi.fn(),
+      document: { title: '', body: { innerHTML: '' } },
+      location: { href: '' },
+    };
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window);
+    const exportVideo = vi.fn().mockResolvedValue({
+      download_url: '/uploads/generated/task-1.mp4',
+      expires_at: '2026-05-26T00:00:00.000Z',
+    });
+    const fetchTask = vi.fn();
+    useCreationStore.setState({ exportVideo, fetchTask });
+
+    renderPreview();
+    fireEvent.click(screen.getByLabelText('导出完整视频'));
+
+    expect(openSpy).toHaveBeenCalledWith('', '_blank');
+    await waitFor(() =>
+      expect(exportVideo).toHaveBeenCalledWith('task-1', 'mp4', '1080x1920', 'high'),
+    );
+    expect(popup.location.href).toBe('/uploads/generated/task-1.mp4');
+    expect(fetchTask).toHaveBeenCalledWith('task-1');
+
+    openSpy.mockRestore();
   });
 });
