@@ -15,6 +15,10 @@ function toTags(value: unknown): string[] | undefined {
 
 export class UploadMaterialDto {
   @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
   @IsIn(MATERIAL_CATEGORIES)
   category?: 'product' | 'scene' | 'model' | 'other' = 'other';
 

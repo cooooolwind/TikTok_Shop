@@ -6,6 +6,7 @@ import {
   Col,
   Descriptions,
   Image,
+  Input,
   List,
   Modal,
   Row,
@@ -14,7 +15,7 @@ import {
   Tag,
   Typography,
 } from 'antd';
-import { DeleteOutlined, ReloadOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, ReloadOutlined } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
 import StatusTag from '../../components/common/StatusTag';
 import { useMaterialStore } from '../../stores/useMaterialStore';
@@ -44,6 +45,7 @@ export default function MaterialDetail() {
     selectedMaterial,
     loading,
     fetchDetail,
+    updateMaterial,
     remove,
     triggerAnalysis,
     clearSelection,
@@ -67,10 +69,30 @@ export default function MaterialDetail() {
   const { aiTags, slices } = getMaterialDetailCollections(material);
   const metadata = material.metadata;
 
+  const handleRename = () => {
+    let newName = material.name;
+    Modal.confirm({
+      title: '重命名素材',
+      content: (
+        <div style={{ marginTop: 16 }}>
+          <Input
+            defaultValue={material.name}
+            onChange={(e) => (newName = e.target.value)}
+            placeholder="请输入新的素材名称"
+          />
+        </div>
+      ),
+      onOk: () => {
+        if (!newName.trim()) return;
+        updateMaterial(material.id, { name: newName.trim() });
+      },
+    });
+  };
+
   const handleDelete = () => {
     Modal.confirm({
       title: '确认删除',
-      content: `确定要删除素材 "${material.filename}" 吗？`,
+      content: `确定要删除素材 "${material.name}" 吗？`,
       okType: 'danger',
       onOk: async () => {
         await remove(material.id);
@@ -82,10 +104,15 @@ export default function MaterialDetail() {
   return (
     <div>
       <PageHeader
-        title={material.filename}
+        title={
+          <Space>
+            {material.name}
+            <Button type="text" icon={<EditOutlined />} onClick={handleRename} />
+          </Space>
+        }
         breadcrumbs={[
           { title: '素材管理', path: '/materials' },
-          { title: material.filename },
+          { title: material.name },
         ]}
         extra={
           <Space>
@@ -111,7 +138,7 @@ export default function MaterialDetail() {
             ) : (
               <Image
                 src={material.url}
-                alt={material.filename}
+                alt={material.name}
                 style={{ width: '100%', borderRadius: 8 }}
                 fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
               />
@@ -122,6 +149,7 @@ export default function MaterialDetail() {
         <Col xs={24} md={12}>
           <Card title="基本信息" style={{ marginBottom: 24 }}>
             <Descriptions column={1} size="small" bordered>
+              <Descriptions.Item label="素材名称">{material.name}</Descriptions.Item>
               <Descriptions.Item label="文件名">{material.filename}</Descriptions.Item>
               <Descriptions.Item label="类型">
                 <Tag color={isVideo ? 'blue' : 'green'}>{isVideo ? '视频' : '图片'}</Tag>

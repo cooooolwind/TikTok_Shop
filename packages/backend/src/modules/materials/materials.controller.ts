@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Put,
   Query,
   UploadedFile,
   UseInterceptors,
@@ -15,6 +16,7 @@ import { BatchDeleteDto } from '../../common/dto/batch-delete.dto';
 import { MaterialListQueryDto } from './dto/material-list-query.dto';
 import { SimilarSearchDto } from './dto/similar-search.dto';
 import { UploadMaterialDto } from './dto/upload-material.dto';
+import { UpdateMaterialDto } from './dto/update-material.dto';
 import { MaterialsService } from './materials.service';
 
 @ApiTags('素材管理 /materials')
@@ -52,6 +54,12 @@ export class MaterialsController {
   @ApiOperation({ summary: '素材详情' })
   findOne(@Param('id') id: string) {
     return this.materialsService.findOne(id);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: '更新素材信息' })
+  update(@Param('id') id: string, @Body() body: UpdateMaterialDto) {
+    return this.materialsService.update(id, body);
   }
 
   @Post(':id/analyze')

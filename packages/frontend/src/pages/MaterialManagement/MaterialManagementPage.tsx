@@ -91,7 +91,7 @@ export default function MaterialManagementPage() {
       <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={8} md={6}>
           <Input
-            placeholder="搜索文件名 / 描述 / 标签..."
+            placeholder="搜索素材名称 / 描述 / 标签..."
             prefix={<SearchOutlined />}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
@@ -167,7 +167,7 @@ export default function MaterialManagementPage() {
                   onDelete={() => {
                     Modal.confirm({
                       title: '确认删除',
-                      content: `确定要删除素材 "${m.filename}" 吗？`,
+                      content: `确定要删除素材 "${m.name}" 吗？`,
                       okType: 'danger',
                       onOk: () => remove(m.id),
                     });
@@ -210,9 +210,9 @@ export default function MaterialManagementPage() {
         <UploadForm
           uploading={uploading}
           uploadProgress={uploadProgress}
-          onUpload={(values: { file: UploadFile | File; category: string; source_declaration: string; tags: string[] }) => {
+          onUpload={(values: { file: UploadFile | File; name?: string; category: string; source_declaration: string; tags: string[] }) => {
             const file = ('originFileObj' in values.file ? values.file.originFileObj : values.file) as File;
-            upload(file, values.category, values.source_declaration, values.tags);
+            upload(file, values.category, values.source_declaration, values.tags, values.name);
           }}
           onCancel={() => setUploadVisible(false)}
         />
@@ -227,7 +227,7 @@ function UploadForm({
 }: {
   uploading: boolean;
   uploadProgress: number;
-  onUpload: (values: { file: File; category: string; source_declaration: string; tags: string[] }) => void;
+  onUpload: (values: { file: File; name?: string; category: string; source_declaration: string; tags: string[] }) => void;
   onCancel: () => void;
 }) {
   const [form] = Form.useForm();
@@ -239,6 +239,7 @@ function UploadForm({
       const originFile = fileList[0].originFileObj || fileList[0];
       onUpload({
         file: originFile as unknown as File,
+        name: values.name,
         category: values.category,
         source_declaration: values.source_declaration,
         tags: values.tags || [],
@@ -248,6 +249,10 @@ function UploadForm({
 
   return (
     <Form form={form} layout="vertical" initialValues={{ category: 'product', source_declaration: 'owned' }}>
+      <Form.Item name="name" label="素材名称">
+        <Input placeholder="如果不填写，将默认使用原始文件名" />
+      </Form.Item>
+
       <Form.Item label="选择文件" required>
         <Dragger
           fileList={fileList}

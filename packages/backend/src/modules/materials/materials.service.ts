@@ -16,12 +16,14 @@ import { VideoSlice } from './entities/video-slice.entity';
 import { MaterialListQueryDto } from './dto/material-list-query.dto';
 import { SimilarSearchDto } from './dto/similar-search.dto';
 import { UploadMaterialDto } from './dto/upload-material.dto';
+import { UpdateMaterialDto } from './dto/update-material.dto';
 
 type MaterialResponse = {
   id: string;
   type: 'image' | 'video';
   url: string;
   thumbnail_url: string;
+  name: string;
   filename: string;
   size: number;
   category: string;
@@ -82,12 +84,14 @@ export class MaterialsService {
     await fs.writeFile(storedPath, file.buffer);
 
     const url = `/uploads/materials/${storedFilename}`;
+    const originalFilename = this.normalizeFilename(file.originalname);
     const material = this.materialsRepository.create({
       merchantId: DEFAULT_MERCHANT_ID,
       type,
       url,
       thumbnailUrl: type === 'image' ? url : '',
-      filename: this.normalizeFilename(file.originalname),
+      name: dto.name || originalFilename,
+      filename: originalFilename,
       size: file.size,
       mimeType: file.mimetype,
       category: dto.category ?? 'other',
@@ -103,10 +107,11 @@ export class MaterialsService {
     });
 
     const saved = await this.materialsRepository.save(material);
-    this.logger.log(`Uploaded material ${saved.id}: ${saved.filename}`);
+    this.logger.log(`Uploaded material ${saved.id}: ${saved.filename} (name: ${saved.name})`);
 
     return {
       id: saved.id,
+      name: saved.name,
       filename: saved.filename,
       type: saved.type,
       url: saved.url,
@@ -171,6 +176,22 @@ export class MaterialsService {
       throw new NotFoundException('material not found');
     }
     return this.toMaterialDetailResponse(material);
+  }
+
+  async update(id: string, dto: UpdateMaterialDto) {
+    const material = await this.materialsRepository.findOne({
+      where: { id, merchantId: DEFAULT_MERCHANT_ID },
+    });
+    if (!material) {
+      throw new NotFoundException('material not found');
+    }
+
+    if (dto.name !== undefined) material.name = dto.name;
+    if (dto.category !== undefined) material.category = dto.category;
+    if (dto.tags !== undefined) material.tags = dto.tags;
+
+    const saved = await this.materialsRepository.save(material);
+    return this.toMaterialResponse(saved);
   }
 
   async remove(id: string) {
@@ -359,6 +380,7 @@ export class MaterialsService {
       type: material.type,
       url: material.url,
       thumbnail_url: material.thumbnailUrl ?? '',
+      name: material.name || this.normalizeFilename(material.filename),
       filename: this.normalizeFilename(material.filename),
       size: Number(material.size),
       category: material.category,

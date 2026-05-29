@@ -28,6 +28,8 @@ export const materialsApi = {
     ),
   detail: async (id: string) =>
     unwrapResponse<MaterialDetail>(await client.get<unknown, MaterialDetail | ApiResponse<MaterialDetail>>(`${BASE}/${id}`)),
+  update: async (id: string, data: Partial<Material>) =>
+    unwrapResponse<Material>(await client.put<unknown, Material | ApiResponse<Material>>(`${BASE}/${id}`, data)),
   remove: (id: string) => client.delete<unknown, { message: string }>(`${BASE}/${id}`),
   batchRemove: (ids: string[]) => client.delete<unknown, { message: string }>(`${BASE}/batch`, { data: { ids } }),
   analyze: async (id: string) =>

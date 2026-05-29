@@ -37,11 +37,25 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
     }
   },
 
-  upload: async (file, category, sourceDeclaration, tags) => {
+  updateMaterial: async (id, data) => {
+    try {
+      const updated = await materialsApi.update(id, data);
+      set((s) => ({
+        selectedMaterial: s.selectedMaterial?.id === id ? { ...s.selectedMaterial, ...updated } : s.selectedMaterial,
+        items: s.items.map((m) => (m.id === id ? { ...m, ...updated } : m)),
+      }));
+      useUIStore.getState().pushNotification({ type: 'success', title: '更新素材成功' });
+    } catch {
+      useUIStore.getState().pushNotification({ type: 'error', title: '更新素材失败' });
+    }
+  },
+
+  upload: async (file, category, sourceDeclaration, tags, name) => {
     set({ uploading: true, uploadProgress: 0 });
     try {
       const formData = new FormData();
       formData.append('file', file);
+      if (name) formData.append('name', name);
       formData.append('category', category);
       formData.append('source_declaration', sourceDeclaration);
       if (tags?.length) formData.append('tags', tags.join(','));
