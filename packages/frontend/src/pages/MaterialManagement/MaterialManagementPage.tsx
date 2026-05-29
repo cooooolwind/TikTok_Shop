@@ -164,7 +164,14 @@ export default function MaterialManagementPage() {
                       navigate(routePath.materialDetail(m.id));
                     }
                   }}
-                  onDelete={() => remove(m.id)}
+                  onDelete={() => {
+                    Modal.confirm({
+                      title: '确认删除',
+                      content: `确定要删除素材 "${m.filename}" 吗？`,
+                      okType: 'danger',
+                      onOk: () => remove(m.id),
+                    });
+                  }}
                 />
               </Col>
             ))}

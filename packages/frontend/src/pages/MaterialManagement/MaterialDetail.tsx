@@ -7,6 +7,7 @@ import {
   Descriptions,
   Image,
   List,
+  Modal,
   Row,
   Space,
   Spin,
@@ -66,9 +67,16 @@ export default function MaterialDetail() {
   const { aiTags, slices } = getMaterialDetailCollections(material);
   const metadata = material.metadata;
 
-  const handleDelete = async () => {
-    await remove(material.id);
-    navigate('/materials');
+  const handleDelete = () => {
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定要删除素材 "${material.filename}" 吗？`,
+      okType: 'danger',
+      onOk: async () => {
+        await remove(material.id);
+        navigate('/materials');
+      },
+    });
   };
 
   return (
