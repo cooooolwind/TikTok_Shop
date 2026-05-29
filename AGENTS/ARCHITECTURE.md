@@ -203,7 +203,7 @@ packages/frontend/
 
 ### 关键依赖
 
-| 包名 | 用途 |
+| 关键依赖 | 用途 |
 |------|------|
 | `react` + `react-dom` | UI 框架 |
 | `react-router-dom` | 前端路由（懒加载） |
@@ -213,6 +213,20 @@ packages/frontend/
 | `echarts` + `echarts-for-react` | 数据可视化图表 |
 | `socket.io-client` | WebSocket 客户端（任务进度推送） |
 | `vite` | 构建工具 |
+
+### 响应式设计策略 (Mobile First & Adaptive)
+
+系统采用 **Responsive (方案 B)** 策略，确保在不同终端下均有优秀体验：
+
+1. **导航模式切换**：
+   - **桌面端**：左侧常驻 `Sider` 菜单。
+   - **移动端**：全屏网格菜单 (`Grid Overlay Menu`)，带模糊背景与入场动画，点击汉堡按钮触发。
+2. **列表重构 (Table-to-Card)**：
+   - 剧本列表、参考库等在 PC 端使用 `Table`，在移动端自动转换为 `Card List` 布局，彻底消除横向溢出。
+3. **流式体验**：
+   - 移动端列表启用 **无限滚动 (Infinite Scroll)** 加载，由 `IntersectionObserver` 驱动。
+4. **适配断点**：
+   - 统一使用 `768px` 作为主断点，配合 `useMediaQuery` Hook 进行逻辑与样式的动态切换。
 
 ---
 

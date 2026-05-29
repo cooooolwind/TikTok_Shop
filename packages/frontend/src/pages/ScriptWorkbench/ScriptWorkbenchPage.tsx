@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Input, Modal, Select, Space, Table, Tag } from 'antd';
+import { Button, Input, Modal, Select, Space, Table, Tag, List, Card, Row, Col } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Script } from '@aigc/shared-types';
@@ -10,9 +10,11 @@ import { usePagination } from '../../hooks/usePagination';
 import { SCRIPT_MODE_LABELS, SCRIPT_STATUS_LABELS } from '../../constants';
 import { useScriptStore } from '../../stores/useScriptStore';
 import { formatBeijingDateTime, formatScriptDisplayId } from '../../utils/format';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 export default function ScriptWorkbenchPage() {
   const navigate = useNavigate();
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const { items, total, loading, filters, fetchList, setFilters, remove } = useScriptStore();
   const pagination = usePagination({ defaultPageSize: 20 });
 
@@ -100,57 +102,115 @@ export default function ScriptWorkbenchPage() {
     },
   ];
 
+  const renderMobileList = () => (
+    <List
+      loading={loading}
+      dataSource={items}
+      renderItem={(item) => (
+        <Card
+          key={item.id}
+          style={{ marginBottom: 12 }}
+          onClick={() => navigate(`/scripts/${item.id}`)}
+          hoverable
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, alignItems: 'flex-start' }}>
+            <div style={{ fontWeight: 600, fontSize: 15, flex: 1, marginRight: 8 }}>
+              {item.product_info.name || `剧本 ${formatScriptDisplayId(item.created_at)}`}
+            </div>
+            <StatusTag status={item.status} labels={SCRIPT_STATUS_LABELS} />
+          </div>
+          <Row gutter={[16, 8]} style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 12 }}>
+            <Col span={12}>模式: {SCRIPT_MODE_LABELS[item.mode] ?? item.mode}</Col>
+            <Col span={12}>时长: {item.total_duration ?? 0}s</Col>
+            <Col span={12}>分镜: {item.scenes?.length ?? 0}</Col>
+            <Col span={12}>ID: {formatScriptDisplayId(item.created_at)}</Col>
+          </Row>
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 12, textAlign: 'right' }}>
+            <Button
+              danger
+              size="small"
+              icon={<DeleteOutlined />}
+              onClick={(event) => {
+                event.stopPropagation();
+                deleteScript(item);
+              }}
+            >
+              删除
+            </Button>
+          </div>
+        </Card>
+      )}
+    />
+  );
+
   return (
     <div>
       <PageHeader
         title="剧本工作台"
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/scripts/generate')}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/scripts/generate')} block={isMobile}>
             新建剧本
           </Button>
         }
       />
 
-      <Space style={{ marginBottom: 16 }} wrap>
+      <Space style={{ marginBottom: 16, width: '100%' }} direction={isMobile ? 'vertical' : 'horizontal'} wrap>
         <Input.Search
           placeholder="搜索商品名称"
           allowClear
-          style={{ width: 220 }}
+          style={{ width: isMobile ? '100%' : 220 }}
           onSearch={(keyword) => setFilters({ keyword, page: 1 })}
         />
-        <Select
-          placeholder="状态"
-          allowClear
-          style={{ width: 140 }}
-          onChange={(status) => setFilters({ status, page: 1 })}
-          options={Object.entries(SCRIPT_STATUS_LABELS).map(([value, label]) => ({ label, value }))}
-        />
-        <Select
-          placeholder="模式"
-          allowClear
-          style={{ width: 140 }}
-          onChange={(mode) => setFilters({ mode, page: 1 })}
-          options={Object.entries(SCRIPT_MODE_LABELS).map(([value, label]) => ({ label, value }))}
-        />
+        <Space wrap>
+          <Select
+            placeholder="状态"
+            allowClear
+            style={{ width: 140 }}
+            onChange={(status) => setFilters({ status, page: 1 })}
+            options={Object.entries(SCRIPT_STATUS_LABELS).map(([value, label]) => ({ label, value }))}
+          />
+          <Select
+            placeholder="模式"
+            allowClear
+            style={{ width: 140 }}
+            onChange={(mode) => setFilters({ mode, page: 1 })}
+            options={Object.entries(SCRIPT_MODE_LABELS).map(([value, label]) => ({ label, value }))}
+          />
+        </Space>
       </Space>
 
-      <Table
-        columns={columns}
-        dataSource={items}
-        rowKey="id"
-        loading={loading}
-        pagination={{
-          current: pagination.page,
-          pageSize: pagination.pageSize,
-          total: pagination.total,
-          onChange: pagination.onChange,
-          showSizeChanger: false,
-        }}
-        onRow={(record) => ({
-          onClick: () => navigate(`/scripts/${record.id}`),
-          style: { cursor: 'pointer' },
-        })}
-      />
+      {isMobile ? (
+        renderMobileList()
+      ) : (
+        <Table
+          columns={columns}
+          dataSource={items}
+          rowKey="id"
+          loading={loading}
+          pagination={{
+            current: pagination.page,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
+            onChange: pagination.onChange,
+            showSizeChanger: false,
+          }}
+          onRow={(record) => ({
+            onClick: () => navigate(`/scripts/${record.id}`),
+            style: { cursor: 'pointer' },
+          })}
+        />
+      )}
+      {isMobile && total > 0 && (
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <Button
+            type="link"
+            disabled={pagination.page * pagination.pageSize >= total}
+            onClick={() => pagination.onChange(pagination.page + 1, pagination.pageSize)}
+          >
+            {pagination.page * pagination.pageSize >= total ? '没有更多了' : '加载更多'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

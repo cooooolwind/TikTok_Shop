@@ -7,10 +7,12 @@ import type { AttributionData, DurationDistribution, TrendData } from '@aigc/sha
 import PageHeader from '../../components/common/PageHeader';
 import StatCard from '../../components/analytics/StatCard';
 import { useAnalyticsStore } from '../../stores/useAnalyticsStore';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const { RangePicker } = DatePicker;
 
 export default function AnalyticsDashboardPage() {
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const {
     overview,
     trends,
@@ -62,7 +64,7 @@ export default function AnalyticsDashboardPage() {
       <PageHeader
         title="数据看板"
         extra={
-          <Space>
+          <Space direction={isMobile ? 'vertical' : 'horizontal'} style={{ width: isMobile ? '100%' : 'auto', alignItems: isMobile ? 'flex-start' : 'center' }}>
             <Select
               value={granularity}
               onChange={setGranularity}
@@ -73,7 +75,7 @@ export default function AnalyticsDashboardPage() {
                 { label: '按月', value: 'month' },
               ]}
             />
-            <RangePicker value={dates} onChange={handleDateChange} />
+            <RangePicker value={dates} onChange={handleDateChange} style={{ width: isMobile ? '100%' : 'auto' }} />
           </Space>
         }
       />
