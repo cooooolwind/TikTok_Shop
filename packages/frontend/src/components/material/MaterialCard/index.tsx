@@ -22,6 +22,7 @@ interface MaterialCardProps {
 
 export default function MaterialCard({ material, onClick, onDelete, selected }: MaterialCardProps) {
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const isVideo = material.type === 'video';
   const previewSrc = material.url || material.thumbnail_url;
 
@@ -42,15 +43,19 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
         borderWidth: selected ? 2 : 1,
       }}
       cover={
-        <div style={{ position: 'relative', height: 160, overflow: 'hidden', background: '#f5f5f5' }}>
+        <div
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          style={{ position: 'relative', height: 160, overflow: 'hidden', background: '#f5f5f5' }}
+        >
           {material.thumbnail_url ? (
             <>
               <Image
                 src={material.thumbnail_url}
                 alt={material.name}
                 preview={false}
-                onClick={(event) => event.stopPropagation()}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onClick={handlePreview}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
                 fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
               />
               {!isVideo && previewSrc && (
@@ -66,8 +71,14 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
                       width: '100%',
                       height: '100%',
                       color: '#fff',
-                      fontSize: 20,
-                      background: 'rgba(0, 0, 0, 0)',
+                      fontSize: 24, // Increased size for better visibility
+                      background: isHovered ? 'rgba(0, 0, 0, 0.45)' : 'rgba(0, 0, 0, 0)',
+                      opacity: isHovered ? 1 : 0,
+                      transition: 'all 0.3s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: 'none',
                     }}
                   />
                   <Modal
@@ -81,13 +92,13 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
                       setPreviewOpen(false);
                     }}
                     modalRender={(node) => (
-                      <div onClick={(event) => event.stopPropagation()}>{node}</div>
+                      <div onClick={handlePreview}>{node}</div>
                     )}
                   >
                     <img
                       src={previewSrc}
                       alt={material.name}
-                      onClick={(event) => event.stopPropagation()}
+                      onClick={handlePreview}
                       style={{
                         display: 'block',
                         maxWidth: '100%',
