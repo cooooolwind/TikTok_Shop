@@ -15,7 +15,7 @@ on:
         value: ${{ jobs.detect-affected.outputs.frontend }}
       shared-types:
         description: "Shared types affected status"
-        value: ${{ jobs.detect-affected.outputs.shared-types }}
+        value: ${{ jobs.detect-affected.outputs['shared-types'] }}
       any_affected:
         description: "Any package affected status"
         value: ${{ jobs.detect-affected.outputs.any_affected }}
@@ -36,7 +36,7 @@ jobs:
     outputs:
       backend: ${{ steps.affected.outputs.backend }}
       frontend: ${{ steps.affected.outputs.frontend }}
-      shared-types: ${{ steps.affected.outputs.shared-types }}
+      shared-types: ${{ steps.affected.outputs['shared-types'] }}
       any_affected: ${{ steps.affected.outputs.any_affected }}
     steps:
       - uses: actions/checkout@v4
@@ -115,7 +115,7 @@ jobs:
     needs: [detect-affected]
     if: >-
       needs.detect-affected.outputs.backend == 'true' ||
-      needs.detect-affected.outputs.shared-types == 'true'
+      needs.detect-affected.outputs['shared-types'] == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -168,7 +168,7 @@ jobs:
     needs: [detect-affected]
     if: >-
       needs.detect-affected.outputs.frontend == 'true' ||
-      needs.detect-affected.outputs.shared-types == 'true'
+      needs.detect-affected.outputs['shared-types'] == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

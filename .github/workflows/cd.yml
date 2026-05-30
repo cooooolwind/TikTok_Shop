@@ -19,19 +19,23 @@ env:
   ACR_NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
   BACKEND_IMAGE: ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/aigc-backend
   FRONTEND_IMAGE: ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/aigc-frontend
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   ci:
-    if: ${{ !inputs.skip_ci }}
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.skip_ci != true }}
     uses: ./.github/workflows/ci.yml
+    secrets: inherit
 
   build-and-push-backend:
     needs: [ci]
     if: >-
       !cancelled() && 
       (needs.ci.result == 'success' || needs.ci.result == 'skipped') &&
-      (inputs.skip_ci || needs.ci.outputs.backend == 'true' || needs.ci.outputs.shared-types == 'true')
+      (
+        (github.event_name == 'workflow_dispatch' && inputs.skip_ci == true) ||
+        needs.ci.outputs.backend == 'true' ||
+        needs.ci.outputs['shared-types'] == 'true'
+      )
     runs-on: ubuntu-latest
     environment: production
 
@@ -85,7 +89,11 @@ jobs:
     if: >-
       !cancelled() && 
       (needs.ci.result == 'success' || needs.ci.result == 'skipped') &&
-      (inputs.skip_ci || needs.ci.outputs.frontend == 'true' || needs.ci.outputs.shared-types == 'true')
+      (
+        (github.event_name == 'workflow_dispatch' && inputs.skip_ci == true) ||
+        needs.ci.outputs.frontend == 'true' ||
+        needs.ci.outputs['shared-types'] == 'true'
+      )
     runs-on: ubuntu-latest
     environment: production
 
