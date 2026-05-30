@@ -11,6 +11,16 @@ export interface CreateVideoTaskInput {
   referenceImageUrls?: string[];
 }
 
+export interface GenerateFirstFrameInput {
+  prompt: string;
+  referenceImages: string[];
+  size?: string;
+}
+
+export interface GenerateFirstFrameResult {
+  url: string;
+}
+
 export interface VolcanoVideoTask {
   id: string;
   status: 'queued' | 'running' | 'succeeded' | 'failed' | 'expired' | 'cancelled';
@@ -34,6 +44,10 @@ interface VolcanoErrorBody {
     message?: string;
     type?: string;
   };
+}
+
+interface VolcanoImageGenerationResponse {
+  data?: { url?: string }[];
 }
 
 const DEFAULT_VIDEO_FETCH_TIMEOUT_MS = 60000;
@@ -112,6 +126,43 @@ export class VolcanoClientProvider {
     const baseUrl = this.configService.get<string>('volcano.videoBaseUrl') ?? 'stub';
     this.logger.log(`Volcano video generation - stub (${baseUrl}, ${endpoint})`);
     return { task_id: 'stub' };
+  }
+
+  async generateFirstFrame(input: GenerateFirstFrameInput): Promise<GenerateFirstFrameResult> {
+    if (this.configService.get<boolean>('volcano.mockMode')) {
+      return {
+        url:
+          this.configService.get<string>('volcano.mockFirstFrameUrl') ||
+          this.configService.get<string>('volcano.mockVideoThumbnailUrl') ||
+          'https://example.com/mock-first-frame.png',
+      };
+    }
+
+    const apiKey = this.configService.get<string>('volcano.imageApiKey') ?? '';
+    const baseUrl = this.configService.get<string>('volcano.imageBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
+    const model = this.configService.get<string>('volcano.imageEndpoint') ?? '';
+    if (!apiKey || !model) {
+      throw new Error('VOLCANO_IMAGE_API_KEY and VOLCANO_IMAGE_ENDPOINT are required');
+    }
+
+    const response = await this.postImageGeneration(baseUrl, apiKey, {
+      model,
+      prompt: input.prompt,
+      image: input.referenceImages,
+      size: input.size ?? '1080x1920',
+      sequential_image_generation: 'disabled',
+      watermark: false,
+      response_format: 'url',
+    });
+
+    if (!response.ok) {
+      throw this.toVolcanoRequestError('Volcano first-frame generation failed', response.status, await response.text());
+    }
+
+    const data = (await response.json()) as VolcanoImageGenerationResponse;
+    const url = data.data?.[0]?.url;
+    if (!url) throw new Error('Volcano first-frame generation returned empty url');
+    return { url };
   }
 
   async createVideoTask(input: CreateVideoTaskInput): Promise<{ id: string }> {
@@ -236,6 +287,34 @@ export class VolcanoClientProvider {
       });
     } catch (error) {
       throw this.toVolcanoNetworkError('Volcano video task creation network failed', error);
+    }
+  }
+
+  private async postImageGeneration(
+    baseUrl: string,
+    apiKey: string,
+    body: {
+      model: string;
+      prompt: string;
+      image: string[];
+      size: string;
+      sequential_image_generation: 'disabled';
+      watermark: false;
+      response_format: 'url';
+    },
+  ) {
+    try {
+      return await fetch(`${baseUrl.replace(/\/$/, '')}/images/generations`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(this.getVideoFetchTimeoutMs()),
+      });
+    } catch (error) {
+      throw this.toVolcanoNetworkError('Volcano first-frame generation network failed', error);
     }
   }
 

@@ -66,7 +66,12 @@ export interface VideoSegmentResult {
   aspect_ratio: string;
   scene_orders: number[];
   input_frame_url?: string;
-  continuity_source?: 'product_image' | 'previous_last_frame' | 'text_only';
+  continuity_source?:
+    | 'generated_first_frame'
+    | 'product_image_fallback'
+    | 'product_image'
+    | 'previous_last_frame'
+    | 'text_only';
   status?: 'pending' | 'submitted' | 'running' | 'succeeded' | 'failed' | 'skipped';
   provider_task_id?: string;
   error?: TaskError;
