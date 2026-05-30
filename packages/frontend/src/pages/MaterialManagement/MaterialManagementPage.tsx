@@ -115,134 +115,137 @@ export default function MaterialManagementPage() {
 
 
   return (
-    <div>
-      <PageHeader
-        title="素材管理"
-        extra={
-          <Button type="primary" icon={<UploadOutlined />} onClick={() => setUploadVisible(true)}>
-            上传素材
-          </Button>
-        }
-      />
-
-      {/* 筛选栏 */}
-      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={8} md={6}>
-          <Input
-            placeholder="搜索素材名称 / 描述 / 标签..."
-            prefix={<SearchOutlined />}
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            allowClear
-          />
-        </Col>
-        <Col xs={8} sm={5} md={3}>
-          <Select
-            placeholder="类型"
-            allowClear
-            style={{ width: '100%' }}
-            onChange={handleTypeChange}
-            options={[
-              { label: '图片', value: 'image' },
-              { label: '视频', value: 'video' },
-            ]}
-          />
-        </Col>
-        <Col xs={8} sm={5} md={3}>
-          <Select
-            placeholder="分类"
-            allowClear
-            style={{ width: '100%' }}
-            onChange={handleCategoryChange}
-            options={Object.entries(MATERIAL_CATEGORY_LABELS).map(([k, v]) => ({ label: v, value: k }))}
-          />
-        </Col>
-        <Col xs={8} sm={5} md={3}>
-          <Select
-            placeholder="状态"
-            allowClear
-            style={{ width: '100%' }}
-            onChange={handleStatusChange}
-            options={Object.entries(MATERIAL_STATUS_LABELS).map(([k, v]) => ({ label: v, value: k }))}
-          />
-        </Col>
-        {selectedIds.length > 0 && (
-          <Col>
-            <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete}>
-              删除 ({selectedIds.length})
+    <div style={{ minHeight: 'calc(100vh - 200px)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1 }}>
+        <PageHeader
+          title="素材管理"
+          extra={
+            <Button type="primary" icon={<UploadOutlined />} onClick={() => setUploadVisible(true)}>
+              上传素材
             </Button>
-          </Col>
-        )}
-      </Row>
-
-      {/* 素材列表 */}
-      {!loading && items.length === 0 ? (
-        <EmptyState
-          description="暂无素材"
-          actionText="上传素材"
-          onAction={() => setUploadVisible(true)}
+          }
         />
-      ) : (
-        <>
-          <Row gutter={[16, 16]}>
-            {items.map((m, index) => (
-              <Col xs={12} sm={12} md={8} lg={6} key={m.id}>
-                <div ref={isMobile && index === items.length - 1 ? lastElementRef : undefined}>
-                  <MaterialCard
-                    material={m}
-                    selected={selectedIds.includes(m.id)}
-                    onClick={() => {
-                      if (selectedIds.length > 0) {
-                        // 多选模式
-                        setSelectedIds((prev) =>
-                          prev.includes(m.id)
-                            ? prev.filter((id) => id !== m.id)
-                            : [...prev, m.id],
-                        );
-                      } else {
-                        navigate(routePath.materialDetail(m.id));
-                      }
-                    }}
-                    onDelete={() => {
-                      Modal.confirm({
-                        title: '确认删除',
-                        content: `确定要删除素材 "${m.name}" 吗？`,
-                        okType: 'danger',
-                        onOk: () => remove(m.id),
-                      });
-                    }}
-                  />
-                </div>
-              </Col>
-            ))}
-          </Row>
 
-          {/* 分页 */}
-          {!isMobile && (
-            <div style={{ textAlign: 'right', marginTop: 24 }}>
-              <Button
-                disabled={pagination.page <= 1}
-                onClick={() => pagination.onChange(pagination.page - 1, pagination.pageSize)}
-                style={{ marginRight: 8 }}
-              >
-                上一页
+        {/* 筛选栏 */}
+        <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={8} md={6}>
+            <Input
+              placeholder="搜索素材名称 / 描述 / 标签..."
+              prefix={<SearchOutlined />}
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              allowClear
+            />
+          </Col>
+          <Col xs={8} sm={5} md={3}>
+            <Select
+              placeholder="类型"
+              allowClear
+              style={{ width: '100%' }}
+              onChange={handleTypeChange}
+              options={[
+                { label: '图片', value: 'image' },
+                { label: '视频', value: 'video' },
+              ]}
+            />
+          </Col>
+          <Col xs={8} sm={5} md={3}>
+            <Select
+              placeholder="分类"
+              allowClear
+              style={{ width: '100%' }}
+              onChange={handleCategoryChange}
+              options={Object.entries(MATERIAL_CATEGORY_LABELS).map(([k, v]) => ({ label: v, value: k }))}
+            />
+          </Col>
+          <Col xs={8} sm={5} md={3}>
+            <Select
+              placeholder="状态"
+              allowClear
+              style={{ width: '100%' }}
+              onChange={handleStatusChange}
+              options={Object.entries(MATERIAL_STATUS_LABELS).map(([k, v]) => ({ label: v, value: k }))}
+            />
+          </Col>
+          {selectedIds.length > 0 && (
+            <Col>
+              <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete}>
+                删除 ({selectedIds.length})
               </Button>
-              <span style={{ margin: '0 12px' }}>
-                第 {pagination.page} / {Math.ceil(pagination.total / pagination.pageSize) || 1} 页 (共 {pagination.total} 项)
-              </span>
-              <Button
-                disabled={pagination.page * pagination.pageSize >= pagination.total}
-                onClick={() => pagination.onChange(pagination.page + 1, pagination.pageSize)}
-              >
-                下一页
-              </Button>
-            </div>
+            </Col>
           )}
-          {isMobile && loading && (
-            <div style={{ textAlign: 'center', padding: '16px 0' }}>加载中...</div>
-          )}
-        </>
+        </Row>
+
+        {/* 素材列表 */}
+        {!loading && items.length === 0 ? (
+          <EmptyState
+            description="暂无素材"
+            actionText="上传素材"
+            onAction={() => setUploadVisible(true)}
+          />
+        ) : (
+          <>
+            <Row gutter={[16, 16]}>
+              {items.map((m, index) => (
+                <Col xs={12} sm={12} md={8} lg={6} key={m.id}>
+                  <div ref={isMobile && index === items.length - 1 ? lastElementRef : undefined}>
+                    <MaterialCard
+                      material={m}
+                      selected={selectedIds.includes(m.id)}
+                      onClick={() => {
+                        if (selectedIds.length > 0) {
+                          // 多选模式
+                          setSelectedIds((prev) =>
+                            prev.includes(m.id)
+                              ? prev.filter((id) => id !== m.id)
+                              : [...prev, m.id],
+                          );
+                        } else {
+                          navigate(routePath.materialDetail(m.id));
+                        }
+                      }}
+                      onDelete={() => {
+                        Modal.confirm({
+                          title: '确认删除',
+                          content: `确定要删除素材 "${m.name}" 吗？`,
+                          okType: 'danger',
+                          onOk: () => remove(m.id),
+                        });
+                      }}
+                    />
+                  </div>
+                </Col>
+              ))}
+            </Row>
+            {isMobile && loading && (
+              <div style={{ textAlign: 'center', padding: '16px 0' }}>加载中...</div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* 分页 */}
+      {!isMobile && items.length > 0 && (
+        <div style={{ textAlign: 'center', marginTop: 48, paddingBottom: 24 }}>
+          <Button
+            disabled={pagination.page <= 1}
+            onClick={() => pagination.onChange(pagination.page - 1, pagination.pageSize)}
+            style={{ marginRight: 8 }}
+          >
+            上一页
+          </Button>
+          <span style={{ margin: '0 12px' }}>
+            第 {pagination.page} / {Math.ceil(pagination.total / pagination.pageSize) || 1} 页 (共 {pagination.total} 项)
+          </span>
+          <Button
+            disabled={pagination.page * pagination.pageSize >= pagination.total}
+            onClick={() => pagination.onChange(pagination.page + 1, pagination.pageSize)}
+          >
+            下一页
+          </Button>
+        </div>
       )}
+
 
       {/* 上传 Modal */}
       <Modal
