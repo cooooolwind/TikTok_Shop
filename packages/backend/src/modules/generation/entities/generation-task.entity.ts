@@ -67,7 +67,6 @@ interface TaskResult {
     input_frame_url?: string;
     continuity_source?:
       | 'generated_first_frame'
-      | 'product_image_fallback'
       | 'product_image'
       | 'previous_last_frame'
       | 'text_only';

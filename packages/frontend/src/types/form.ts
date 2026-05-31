@@ -18,6 +18,8 @@ export interface ScriptGenerateFormValues {
   target_audience?: string;
   price?: string;
   product_images?: UploadFile[];
+  product_image_url?: string;
+  product_image_urls?: string[];
   product_link?: string;
 
   // 生成模式

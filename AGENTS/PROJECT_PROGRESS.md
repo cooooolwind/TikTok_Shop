@@ -100,7 +100,7 @@
 
 | # | 任务 | 状态 | 说明 |
 |---|------|:----:|------|
-| D6 | 智能剪辑：分镜拼接 + 转场 + 字幕（FFmpeg） | 🔧 | 已接入分镜优先视频 prompt、Seedream 商品图首帧生成、商品图兜底和按需 FFmpeg 拼接：后端逐分镜生成商品锚定首帧并作为 Seedance `first_frame` 生成视频片段，首帧失败时使用商品图兜底且不退化为纯文本；生成阶段不自动拼接，点击导出完整视频时输出 MP4 到 `packages/backend/uploads/generated/{taskId}.mp4`；转场、字幕、BGM 混音暂未实现 |
+| D6 | 智能剪辑：分镜拼接 + 转场 + 字幕（FFmpeg） | 🔧 | 已接入分镜优先视频 prompt、Seedream 商品图参考首帧生成和按需 FFmpeg 拼接：前端剧本生成页支持选择图片素材或填写商品图 URL，并在剧本详情/一键出片页展示或拦截缺失商品图；后端会将图片素材同步写入 `product_info.images`，本地上传商品图会转为 data URL 后提交 Seedream，并在出片 API 层校验商品图输入；逐分镜先用商品图作为 Seedream 参考生成商品锚定首帧，首帧尺寸按 Seedream 最小像素要求使用 9:16 `1600x2848`、16:9 `2848x1600`、1:1 `1920x1920`，再将 Seedream 首帧作为 Seedance `first_frame` 生成视频片段；原始商品图不会直接传给视频模型，首帧失败时仅重试 Seedream，仍失败则提示补充/调整商品图或分镜提示词；生成阶段不自动拼接，点击导出完整视频时输出 MP4 到 `packages/backend/uploads/generated/{taskId}.mp4`；转场、字幕、BGM 混音暂未实现 |
 | D7 | BGM 配乐库 + 按风格自动匹配 | ⬜ | BGM module 返回空列表，前端有 UI 但无数据 |
 | D8 | 分镜级编辑器前端（时间轴 + 拖拽） | 🔨 | `ScriptEditor.tsx` 完全实现分镜卡片流、字段编辑等（尚无拖拽功能） |
 | D9 | 分镜干预 API（单分镜重生成/替换/调时长） | ✅ | 提供单分镜的 regenerate 接口（目前为同步模拟，未调度异步任务） |

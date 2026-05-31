@@ -2,6 +2,7 @@ import { VideoGenerationProcessor } from './video-generation.processor';
 import { GenerationTask } from '../../modules/generation/entities/generation-task.entity';
 import { Script } from '../../modules/scripts/entities/script.entity';
 import { Scene } from '../../modules/scripts/entities/scene.entity';
+import { promises as fsPromises } from 'fs';
 
 const now = new Date('2026-05-25T00:00:00.000Z');
 
@@ -72,7 +73,7 @@ function makeTask(overrides: Partial<GenerationTask> = {}): GenerationTask {
 
 function makeProcessor(
   videoStatus: 'succeeded' | 'failed' | 'running' = 'succeeded',
-  configValues: Record<string, string | undefined> = {},
+  configValues: Record<string, unknown> = {},
 ) {
   const task = makeTask();
   const script = makeScript();
@@ -158,6 +159,10 @@ function makeProcessor(
 }
 
 describe('VideoGenerationProcessor', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('persists task result, creates video, and emits completion when video succeeds', async () => {
     const { processor, tasksRepository, videosRepository, volcanoClient, tasksGateway, videoStitchingService, job } =
       makeProcessor('succeeded');
@@ -193,6 +198,10 @@ describe('VideoGenerationProcessor', () => {
     await processor.process(job as never);
 
     expect(volcanoClient.generateFirstFrame).toHaveBeenCalledTimes(3);
+    expect(volcanoClient.generateFirstFrame).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ size: '1600x2848' }),
+    );
     expect(volcanoClient.createVideoTask).toHaveBeenCalledTimes(3);
     expect(volcanoClient.createVideoTask).toHaveBeenNthCalledWith(
       1,
@@ -226,6 +235,28 @@ describe('VideoGenerationProcessor', () => {
         imageUrls: [],
         firstFrameUrl: 'https://example.com/first-frame-3.png',
       }),
+    );
+  });
+
+  it('uses Seedream image sizes that satisfy the provider minimum pixel count', async () => {
+    const vertical = makeProcessor('succeeded');
+    await vertical.processor.process(vertical.job as never);
+    expect(vertical.volcanoClient.generateFirstFrame).toHaveBeenCalledWith(
+      expect.objectContaining({ size: '1600x2848' }),
+    );
+
+    const landscape = makeProcessor('succeeded');
+    landscape.job.data.options = { resolution: '1920x1080', aspect_ratio: '16:9' };
+    await landscape.processor.process(landscape.job as never);
+    expect(landscape.volcanoClient.generateFirstFrame).toHaveBeenCalledWith(
+      expect.objectContaining({ size: '2848x1600' }),
+    );
+
+    const square = makeProcessor('succeeded');
+    square.job.data.options = { resolution: '1080x1080', aspect_ratio: '1:1' };
+    await square.processor.process(square.job as never);
+    expect(square.volcanoClient.generateFirstFrame).toHaveBeenCalledWith(
+      expect.objectContaining({ size: '1920x1920' }),
     );
   });
 
@@ -291,7 +322,7 @@ describe('VideoGenerationProcessor', () => {
     );
   });
 
-  it('falls back to the product image when Seedream first-frame generation fails', async () => {
+  it('retries Seedream with a simplified prompt when first-frame generation fails', async () => {
     const { processor, volcanoClient, scriptsRepository, job } = makeProcessor('succeeded');
     scriptsRepository.findOne.mockResolvedValue(
       makeScript({
@@ -300,28 +331,71 @@ describe('VideoGenerationProcessor', () => {
     );
     volcanoClient.generateFirstFrame
       .mockResolvedValueOnce({ url: 'https://example.com/first-frame-1.png', prompt: 'first frame' })
-      .mockRejectedValueOnce(new Error('Seedream failed'));
+      .mockRejectedValueOnce(new Error('Seedream failed'))
+      .mockResolvedValueOnce({ url: 'https://example.com/first-frame-retry.png', prompt: 'retry first frame' });
 
     const result = await processor.process(job as never);
 
+    expect(volcanoClient.generateFirstFrame).toHaveBeenCalledTimes(3);
     expect(volcanoClient.createVideoTask).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
-        firstFrameUrl: 'https://example.com/product.png',
+        firstFrameUrl: 'https://example.com/first-frame-retry.png',
         imageUrls: [],
+      }),
+    );
+    expect(volcanoClient.createVideoTask).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        firstFrameUrl: 'https://example.com/product.png',
       }),
     );
     expect(result.result).toEqual(
       expect.objectContaining({
-        continuity_warning: expect.stringContaining('Seedream first-frame generation failed'),
+        continuity_warning: expect.stringContaining('retrying Seedream with a simplified product-first prompt'),
         segments: expect.arrayContaining([
           expect.objectContaining({
             index: 1,
-            input_frame_url: 'https://example.com/product.png',
-            continuity_source: 'product_image_fallback',
+            input_frame_url: 'https://example.com/first-frame-retry.png',
+            continuity_source: 'generated_first_frame',
           }),
         ]),
       }),
+    );
+  });
+
+  it('fails without sending raw product images to Seedance when Seedream cannot generate a first frame', async () => {
+    const { processor, volcanoClient, scriptsRepository, tasksRepository, tasksGateway, job } = makeProcessor('succeeded');
+    scriptsRepository.findOne.mockResolvedValue(
+      makeScript({
+        scenes: [makeScene({ id: 'scene-1', order: 1 })],
+      }),
+    );
+    volcanoClient.generateFirstFrame
+      .mockRejectedValueOnce(new Error('Seedream primary failed'))
+      .mockRejectedValueOnce(new Error('Seedream retry failed'));
+
+    await expect(processor.process(job as never)).rejects.toThrow('SEEDREAM_FIRST_FRAME_GENERATION_FAILED');
+
+    expect(volcanoClient.createVideoTask).not.toHaveBeenCalled();
+    expect(volcanoClient.createVideoTask).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        firstFrameUrl: 'https://example.com/product.png',
+      }),
+    );
+    expect(volcanoClient.createVideoTask).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        imageUrls: ['https://example.com/product.png'],
+      }),
+    );
+    expect(tasksRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'failed',
+        error: expect.objectContaining({ code: 'SEEDREAM_FIRST_FRAME_GENERATION_FAILED' }),
+      }),
+    );
+    expect(tasksGateway.emitTaskFailed).toHaveBeenCalledWith(
+      'task-1',
+      expect.objectContaining({ code: 'SEEDREAM_FIRST_FRAME_GENERATION_FAILED' }),
     );
   });
 
@@ -341,18 +415,68 @@ describe('VideoGenerationProcessor', () => {
     );
     volcanoClient.generateFirstFrame.mockRejectedValueOnce(new Error('Seedream failed'));
 
-    await expect(processor.process(job as never)).rejects.toThrow('PRODUCT_IMAGE_REQUIRED_FOR_VIDEO_FALLBACK');
+    await expect(processor.process(job as never)).rejects.toThrow('PRODUCT_IMAGE_REQUIRED_FOR_FIRST_FRAME');
 
     expect(tasksRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
         status: 'failed',
-        error: expect.objectContaining({ code: 'PRODUCT_IMAGE_REQUIRED_FOR_VIDEO_FALLBACK' }),
+        error: expect.objectContaining({ code: 'PRODUCT_IMAGE_REQUIRED_FOR_FIRST_FRAME' }),
       }),
     );
     expect(tasksGateway.emitTaskFailed).toHaveBeenCalledWith(
       'task-1',
-      expect.objectContaining({ code: 'PRODUCT_IMAGE_REQUIRED_FOR_VIDEO_FALLBACK' }),
+      expect.objectContaining({ code: 'PRODUCT_IMAGE_REQUIRED_FOR_FIRST_FRAME' }),
     );
+  });
+
+  it('converts local uploaded product image urls to data urls before calling Seedream', async () => {
+    const { processor, volcanoClient, scriptsRepository, job } = makeProcessor('succeeded', {
+      storage: { localPath: 'uploads-test' } as never,
+    });
+    jest.spyOn(fsPromises, 'readFile').mockResolvedValue(Buffer.from('image-bytes'));
+    scriptsRepository.findOne.mockResolvedValue(
+      makeScript({
+        productInfo: {
+          name: 'Dress',
+          description: 'Summer dress',
+          category: 'fashion',
+          selling_points: ['light'],
+          images: ['/uploads/materials/product.jpg'],
+        },
+        scenes: [makeScene({ id: 'scene-1', order: 1 })],
+      }),
+    );
+
+    await processor.process(job as never);
+
+    expect(volcanoClient.generateFirstFrame).toHaveBeenCalledWith(
+      expect.objectContaining({
+        referenceImages: ['data:image/jpeg;base64,aW1hZ2UtYnl0ZXM='],
+      }),
+    );
+  });
+
+  it('does not submit unreadable local product image urls to Seedream', async () => {
+    const { processor, volcanoClient, scriptsRepository, job } = makeProcessor('succeeded', {
+      storage: { localPath: 'uploads-test' } as never,
+    });
+    jest.spyOn(fsPromises, 'readFile').mockRejectedValue(new Error('missing file'));
+    scriptsRepository.findOne.mockResolvedValue(
+      makeScript({
+        productInfo: {
+          name: 'Dress',
+          description: 'Summer dress',
+          category: 'fashion',
+          selling_points: ['light'],
+          images: ['/uploads/materials/missing.jpg'],
+        },
+        scenes: [makeScene({ id: 'scene-1', order: 1 })],
+      }),
+    );
+
+    await expect(processor.process(job as never)).rejects.toThrow('PRODUCT_IMAGE_REQUIRED_FOR_FIRST_FRAME');
+
+    expect(volcanoClient.generateFirstFrame).not.toHaveBeenCalled();
   });
 
   it('uses scene-first prompts without narrative wrappers or legacy duration fields', async () => {
@@ -475,7 +599,7 @@ describe('VideoGenerationProcessor', () => {
     expect(videoStitchingService.stitch).not.toHaveBeenCalled();
   });
 
-  it('retries rejected generated first frames with product-image fallback', async () => {
+  it('fails when the generated first-frame input is rejected by the video provider', async () => {
     const { processor, volcanoClient, scriptsRepository, job } = makeProcessor('succeeded');
     scriptsRepository.findOne.mockResolvedValue(
       makeScript({
@@ -484,8 +608,7 @@ describe('VideoGenerationProcessor', () => {
     );
     volcanoClient.createVideoTask
       .mockResolvedValueOnce({ id: 'volcano-task-1' })
-      .mockRejectedValueOnce(Object.assign(new Error('Volcano video task creation failed: 404'), { status: 404 }))
-      .mockResolvedValueOnce({ id: 'volcano-task-2' });
+      .mockRejectedValueOnce(Object.assign(new Error('Volcano video task creation failed: 404'), { status: 404 }));
     volcanoClient.getVideoTask
       .mockResolvedValueOnce({
         id: 'volcano-task-1',
@@ -494,86 +617,22 @@ describe('VideoGenerationProcessor', () => {
         duration: 5,
         resolution: '1080p',
         ratio: '9:16',
-      })
-      .mockResolvedValueOnce({
-        id: 'volcano-task-2',
-        status: 'succeeded',
-        content: { video_url: 'https://example.com/segment-2.mp4', last_frame_url: 'https://example.com/frame-2.png' },
-        duration: 5,
-        resolution: '1080p',
-        ratio: '9:16',
       });
 
-    const result = await processor.process(job as never);
+    await expect(processor.process(job as never)).rejects.toThrow('Volcano video task creation failed: 404');
 
     expect(volcanoClient.createVideoTask).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({ firstFrameUrl: 'https://example.com/first-frame-2.png', imageUrls: [] }),
     );
-    expect(volcanoClient.createVideoTask).toHaveBeenNthCalledWith(
-      3,
-      expect.objectContaining({ firstFrameUrl: 'https://example.com/product.png', imageUrls: [] }),
-    );
-    expect(result.result).toEqual(
+    expect(volcanoClient.createVideoTask).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        continuity_warning: expect.stringContaining('product image fallback'),
-        segments: expect.arrayContaining([
-          expect.objectContaining({
-            index: 1,
-            input_frame_url: 'https://example.com/product.png',
-            continuity_source: 'product_image_fallback',
-          }),
-        ]),
+        firstFrameUrl: 'https://example.com/product.png',
       }),
     );
-  });
-
-  it('retries rejected product first-frame fallback as a plain product image input', async () => {
-    const { processor, volcanoClient, scriptsRepository, job } = makeProcessor('succeeded');
-    scriptsRepository.findOne.mockResolvedValue(
-      makeScript({
-        scenes: [makeScene({ id: 'scene-1', order: 1 }), makeScene({ id: 'scene-2', order: 2 })],
-      }),
-    );
-    volcanoClient.createVideoTask
-      .mockResolvedValueOnce({ id: 'volcano-task-1' })
-      .mockRejectedValueOnce(Object.assign(new Error('Volcano video task creation failed: 404'), { status: 404 }))
-      .mockRejectedValueOnce(Object.assign(new Error('Volcano video task creation failed: 400'), { status: 400 }))
-      .mockResolvedValueOnce({ id: 'volcano-task-2' });
-    volcanoClient.getVideoTask
-      .mockResolvedValueOnce({
-        id: 'volcano-task-1',
-        status: 'succeeded',
-        content: { video_url: 'https://example.com/segment-1.mp4', last_frame_url: 'https://example.com/frame-1.png' },
-        duration: 5,
-        resolution: '1080p',
-        ratio: '9:16',
-      })
-      .mockResolvedValueOnce({
-        id: 'volcano-task-2',
-        status: 'succeeded',
-        content: { video_url: 'https://example.com/segment-2.mp4', last_frame_url: 'https://example.com/frame-2.png' },
-        duration: 5,
-        resolution: '1080p',
-        ratio: '9:16',
-      });
-
-    const result = await processor.process(job as never);
-
-    expect(volcanoClient.createVideoTask).toHaveBeenNthCalledWith(
-      4,
-      expect.objectContaining({ firstFrameUrl: undefined, imageUrls: ['https://example.com/product.png'] }),
-    );
-    expect(result.result).toEqual(
+    expect(volcanoClient.createVideoTask).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        continuity_warning: expect.stringContaining('plain product image input'),
-        segments: expect.arrayContaining([
-          expect.objectContaining({
-            index: 1,
-            input_frame_url: 'https://example.com/product.png',
-            continuity_source: 'product_image_fallback',
-          }),
-        ]),
+        imageUrls: ['https://example.com/product.png'],
       }),
     );
   });

@@ -6,11 +6,12 @@ import { GenerationService } from './generation.service';
 import { GenerationTask } from './entities/generation-task.entity';
 import { Video } from './entities/video.entity';
 import { Script } from '../scripts/entities/script.entity';
+import { Material } from '../materials/entities/material.entity';
 import { QUEUES } from '../../tasks/queues';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([GenerationTask, Video, Script]),
+    TypeOrmModule.forFeature([GenerationTask, Video, Script, Material]),
     BullModule.registerQueue({ name: QUEUES.VIDEO_GENERATION }),
   ],
   controllers: [GenerationController],
