@@ -4,11 +4,14 @@ import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Script } from '../modules/scripts/entities/script.entity';
 import { Scene } from '../modules/scripts/entities/scene.entity';
+import { Material } from '../modules/materials/entities/material.entity';
+import { VideoSlice } from '../modules/materials/entities/video-slice.entity';
 import { GenerationTask } from '../modules/generation/entities/generation-task.entity';
 import { Video } from '../modules/generation/entities/video.entity';
 import { WebsocketModule } from '../websocket/websocket.module';
 import { ScriptGenerationProcessor } from './processors/script-generation.processor';
 import { VideoGenerationProcessor } from './processors/video-generation.processor';
+import { MaterialAnalysisProcessor } from './processors/material-analysis.processor';
 import { VideoStitchingService } from './services/video-stitching.service';
 import { QUEUES } from './queues';
 
@@ -25,10 +28,15 @@ import { QUEUES } from './queues';
       { name: QUEUES.VIDEO_GENERATION },
       { name: QUEUES.REFERENCE_ANALYSIS },
     ),
-    TypeOrmModule.forFeature([Script, Scene, GenerationTask, Video]),
+    TypeOrmModule.forFeature([Script, Scene, Material, VideoSlice, GenerationTask, Video]),
     WebsocketModule,
   ],
-  providers: [ScriptGenerationProcessor, VideoGenerationProcessor, VideoStitchingService],
+  providers: [
+    ScriptGenerationProcessor,
+    VideoGenerationProcessor,
+    MaterialAnalysisProcessor,
+    VideoStitchingService,
+  ],
   exports: [BullModule, VideoStitchingService],
 })
 export class TasksModule {}

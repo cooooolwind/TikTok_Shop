@@ -95,14 +95,18 @@ function makeService(options?: {
     emitMaterialAnalyzed: jest.fn(),
   };
 
+  const analysisQueue = {
+    add: jest.fn().mockResolvedValue({ id: 'job-1' }),
+  };
+
   const service = new MaterialsService(
     materialsRepository as never,
     videoSlicesRepository as never,
+    analysisQueue as never,
     configService as never,
-    tasksGateway as never,
   );
 
-  return { service, materialsRepository, videoSlicesRepository, queryBuilder, tasksGateway };
+  return { service, materialsRepository, videoSlicesRepository, queryBuilder, tasksGateway, analysisQueue };
 }
 
 describe('MaterialsService', () => {
@@ -220,14 +224,16 @@ describe('MaterialsService', () => {
     expect(result).toEqual({ message: 'deleted', deleted: 1 });
   });
 
-  it('analyzes material with mock metadata and emits websocket event', async () => {
-    const { service, materialsRepository, tasksGateway } = makeService();
+  it('analyzes material by adding it to the analysis queue', async () => {
+    const { service, materialsRepository, analysisQueue } = makeService();
 
     const result = await service.analyze('material-1');
 
-    expect(materialsRepository.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'ready' }));
-    expect(tasksGateway.emitMaterialAnalyzed).toHaveBeenCalled();
-    expect(result).toEqual({ task_id: 'material_analysis_material-1', status: 'queued' });
+    expect(materialsRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'processing' }),
+    );
+    expect(analysisQueue.add).toHaveBeenCalledWith('analyze', { materialId: 'material-1' });
+    expect(result).toEqual({ task_id: 'job-1', status: 'queued' });
   });
 
   it('searches similar materials with text fallback', async () => {
