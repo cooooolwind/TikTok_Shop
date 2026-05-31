@@ -10,7 +10,13 @@ function makeScript(overrides: Partial<Script> = {}): Script {
   return {
     id: 'script-1',
     merchantId: 'default',
-    productInfo: { name: 'Dress', description: 'Summer dress', category: 'fashion', selling_points: ['light'] },
+    productInfo: {
+      name: 'Dress',
+      description: 'Summer dress',
+      category: 'fashion',
+      selling_points: ['light'],
+      images: ['https://example.com/product.png'],
+    },
     templateId: null,
     referenceId: null,
     sourceMaterialIds: [],
@@ -109,6 +115,9 @@ function makeService(options?: {
   const videoQueue = {
     add: jest.fn(async () => ({ id: 'queue-job-1' })),
   };
+  const materialsRepository = {
+    findBy: jest.fn(async () => []),
+  };
   const videoStitchingService = {
     stitch: jest.fn(async () => stitched),
     hasGeneratedVideo: jest.fn(async () => true),
@@ -118,9 +127,10 @@ function makeService(options?: {
     tasksRepository as never,
     scriptsRepository as never,
     videosRepository as never,
+    materialsRepository as never,
     videoStitchingService as never,
   );
-  return { service, videoQueue, scriptsRepository, tasksRepository, videosRepository, videoStitchingService };
+  return { service, videoQueue, scriptsRepository, tasksRepository, videosRepository, materialsRepository, videoStitchingService };
 }
 
 describe('GenerationService', () => {
@@ -142,6 +152,33 @@ describe('GenerationService', () => {
     const { service } = makeService({ script: makeScript({ status: 'draft' }) });
 
     await expect(service.create({ script_id: 'script-1' })).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects video generation when the confirmed script has no product image', async () => {
+    const { service, videoQueue } = makeService({
+      script: makeScript({ productInfo: { name: 'Dress', description: 'Desc', category: 'fashion', selling_points: [], images: [] } }),
+    });
+
+    await expect(service.create({ script_id: 'script-1' })).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'PRODUCT_IMAGE_REQUIRED_FOR_FIRST_FRAME' }),
+    });
+    expect(videoQueue.add).not.toHaveBeenCalled();
+  });
+
+  it('allows video generation when source materials include an image even without product image urls', async () => {
+    const { service, videoQueue, materialsRepository } = makeService({
+      script: makeScript({
+        productInfo: { name: 'Dress', description: 'Desc', category: 'fashion', selling_points: [], images: [] },
+        sourceMaterialIds: ['material-1'],
+      }),
+    });
+    materialsRepository.findBy.mockResolvedValueOnce([
+      { id: 'material-1', type: 'image', category: 'product', url: '/uploads/materials/dress.jpg' },
+    ] as never);
+
+    await service.create({ script_id: 'script-1' });
+
+    expect(videoQueue.add).toHaveBeenCalled();
   });
 
   it('throws NotFoundException when the script is missing', async () => {

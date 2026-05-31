@@ -14,6 +14,14 @@ export default registerAs('volcano', () => ({
     '',
   videoBaseUrl: process.env.VOLCANO_VIDEO_BASE_URL || process.env.VOLCANO_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3',
   videoEndpoint: process.env.VOLCANO_VIDEO_ENDPOINT || '',
+  imageApiKey:
+    process.env.VOLCANO_IMAGE_API_KEY ||
+    process.env.VOLCANO_API_KEY ||
+    process.env.ARK_API_KEY ||
+    process.env.LAS_API_KEY ||
+    '',
+  imageBaseUrl: process.env.VOLCANO_IMAGE_BASE_URL || process.env.VOLCANO_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3',
+  imageEndpoint: process.env.VOLCANO_IMAGE_ENDPOINT || process.env.ARK_IMAGE_MODEL || '',
   videoMaxDuration: Number(process.env.VOLCANO_VIDEO_MAX_DURATION || '12'),
   videoPollingMaxAttempts: Number(process.env.VOLCANO_VIDEO_POLLING_MAX_ATTEMPTS || '120'),
   videoPollingIntervalMs: Number(process.env.VOLCANO_VIDEO_POLLING_INTERVAL_MS || '5000'),
@@ -21,6 +29,7 @@ export default registerAs('volcano', () => ({
     process.env.MOCK_VIDEO_URL ||
     'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
   mockVideoThumbnailUrl: process.env.MOCK_VIDEO_THUMBNAIL_URL || '',
+  mockFirstFrameUrl: process.env.MOCK_FIRST_FRAME_URL || '',
   mockMode: process.env.MOCK_MODE === 'true',
   videoCreateRetryAttempts: parseInt(process.env.VOLCANO_VIDEO_CREATE_RETRY_ATTEMPTS || '3', 10),
   videoCreateRetryDelayMs: parseInt(process.env.VOLCANO_VIDEO_CREATE_RETRY_DELAY_MS || '15000', 10),

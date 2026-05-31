@@ -8,6 +8,7 @@ import {
   Descriptions,
   Divider,
   Form,
+  Image,
   Input,
   InputNumber,
   Modal,
@@ -223,6 +224,31 @@ export default function ScriptEditor() {
                 已关联 {script.source_material_ids.length} 个素材
               </Tag>
             ) : null}
+            <Divider />
+            <Text strong>商品图</Text>
+            {script.product_info.images?.length ? (
+              <Image.PreviewGroup>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                  {script.product_info.images.slice(0, 6).map((url) => (
+                    <Image
+                      key={url}
+                      src={url}
+                      width={64}
+                      height={64}
+                      style={{ objectFit: 'cover', borderRadius: 6 }}
+                      alt="商品图"
+                    />
+                  ))}
+                </div>
+              </Image.PreviewGroup>
+            ) : (
+              <Alert
+                type="warning"
+                showIcon
+                style={{ marginTop: 8 }}
+                message="缺少商品图，无法进行 Seedream 首帧生成。"
+              />
+            )}
             {isDirty && <Tag color="warning" style={{ marginTop: 12 }}>有未保存的本地修改</Tag>}
           </Card>
 
