@@ -21,6 +21,7 @@ export interface MaterialState {
   loading: boolean;
   selectedMaterial: MaterialDetail | null;
   filters: MaterialListQuery;
+  analyzingIds: Set<string>;
 
   // 上传
   uploadVisible: boolean;
@@ -34,6 +35,7 @@ export interface MaterialState {
   remove: (id: string) => Promise<void>;
   batchRemove: (ids: string[]) => Promise<void>;
   triggerAnalysis: (id: string) => Promise<void>;
+  setMaterialAnalyzed: (id: string, tags: string[], description: string) => void;
   similarSearch: (query: string, type?: MaterialType, limit?: number, threshold?: number) => Promise<{ material: Material; score: number }[]>;
   setFilters: (filters: Partial<MaterialListQuery>) => void;
   setUploadVisible: (visible: boolean) => void;

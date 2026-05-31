@@ -44,6 +44,7 @@ export default function MaterialDetail() {
   const {
     selectedMaterial,
     loading,
+    analyzingIds,
     fetchDetail,
     updateMaterial,
     remove,
@@ -65,6 +66,7 @@ export default function MaterialDetail() {
   }
 
   const material = selectedMaterial;
+  const isAnalyzing = analyzingIds.has(material.id) || material.status === 'processing';
   const isVideo = material.type === 'video';
   const { aiTags, slices } = getMaterialDetailCollections(material);
   const metadata = material.metadata;
@@ -116,8 +118,13 @@ export default function MaterialDetail() {
         ]}
         extra={
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={() => triggerAnalysis(material.id)}>
-              重新分析
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => triggerAnalysis(material.id)}
+              loading={isAnalyzing}
+              disabled={isAnalyzing}
+            >
+              {isAnalyzing ? '分析中...' : '重新分析'}
             </Button>
             <Button danger icon={<DeleteOutlined />} onClick={handleDelete}>
               删除
