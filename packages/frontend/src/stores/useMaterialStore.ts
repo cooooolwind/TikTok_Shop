@@ -10,6 +10,7 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
   loading: false,
   selectedMaterial: null,
   filters: { page: 1, pageSize: 20 },
+  analyzingIds: new Set(),
   uploadVisible: false,
   uploading: false,
   uploadProgress: 0,
@@ -97,15 +98,59 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
   },
 
   triggerAnalysis: async (id) => {
+    set((s) => {
+      const newIds = new Set(s.analyzingIds);
+      newIds.add(id);
+      return {
+        analyzingIds: newIds,
+        items: s.items.map((m) => (m.id === id ? { ...m, status: 'processing' } : m)),
+        selectedMaterial:
+          s.selectedMaterial?.id === id
+            ? { ...s.selectedMaterial, status: 'processing' }
+            : s.selectedMaterial,
+      };
+    });
     try {
       await materialsApi.analyze(id);
-      set((s) => ({
-        items: s.items.map((m) => (m.id === id ? { ...m, status: 'processing' } : m)),
-      }));
       useUIStore.getState().pushNotification({ type: 'info', title: 'AI 分析已触发' });
     } catch {
+      set((s) => {
+        const newIds = new Set(s.analyzingIds);
+        newIds.delete(id);
+        return { analyzingIds: newIds };
+      });
       useUIStore.getState().pushNotification({ type: 'error', title: '触发分析失败' });
     }
+  },
+
+  setMaterialAnalyzed: (id, tags, description) => {
+    set((s) => {
+      const newIds = new Set(s.analyzingIds);
+      newIds.delete(id);
+
+      const updateDetail = (m: MaterialDetail | null) => {
+        if (m?.id !== id) return m;
+        return { ...m, ai_tags: tags, ai_description: description, status: 'ready' as const };
+      };
+
+      const updateItem = (m: Material) => {
+        if (m.id !== id) return m;
+        return { ...m, ai_tags: tags, ai_description: description, status: 'ready' as const };
+      };
+
+      return {
+        analyzingIds: newIds,
+        selectedMaterial: updateDetail(s.selectedMaterial),
+        items: s.items.map(updateItem),
+      };
+    });
+    
+    // 如果当前正在查看该素材详情，刷新以获取最新的分镜切片等完整信息
+    if (get().selectedMaterial?.id === id) {
+      get().fetchDetail(id);
+    }
+
+    useUIStore.getState().pushNotification({ type: 'success', title: '素材分析完成' });
   },
 
   similarSearch: async (query, type, limit, threshold) => {

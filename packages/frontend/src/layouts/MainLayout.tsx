@@ -19,6 +19,7 @@ import { useUIStore } from '../stores/useAppStore';
 import { ROUTES } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { useMaterialSubscription } from '../hooks/useMaterialSubscription';
 import { useEffect } from 'react';
 
 const { Sider, Content, Header } = Layout;
@@ -108,6 +109,8 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { token } = theme.useToken();
+
+  useMaterialSubscription();
 
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
