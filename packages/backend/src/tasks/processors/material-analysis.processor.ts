@@ -219,6 +219,13 @@ Output must be in JSON format.`,
     }
 
     await this.videoSlicesRepository.save(slices);
+
+    // Use the first slice's thumbnail as the material's main thumbnail if not already set
+    if (!material.thumbnailUrl && slices.length > 0 && slices[0].thumbnailUrl) {
+      material.thumbnailUrl = slices[0].thumbnailUrl;
+      await this.materialsRepository.save(material);
+      this.logger.log(`Set material ${material.id} main thumbnail from first slice`);
+    }
   }
 
   private parseAiResponse(content: string): AiAnalysisResult {
