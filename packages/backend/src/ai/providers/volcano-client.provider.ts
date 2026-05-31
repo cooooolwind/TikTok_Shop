@@ -141,7 +141,100 @@ export class VolcanoClientProvider {
     return data.id;
     }
 
+    async getFile(fileId: string): Promise<{ status: string }> {
+    const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
+    const baseUrl =
+      this.configService.get<string>('volcano.textBaseUrl') ??
+      'https://ark.cn-beijing.volces.com/api/v3';
+
+    if (!apiKey) throw new Error('VOLCANO_TEXT_API_KEY is required for file retrieval');
+
+    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/files/${fileId}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Volcano get file failed: ${response.status} ${errorText}`);
+    }
+
+    return (await response.json()) as { status: string };
+    }
+
+    async createResponse(input: any[], options?: Record<string, unknown>) {
+    const mockMode = this.configService.get<boolean>('volcano.mockMode');
+    if (mockMode) {
+      return this.mockCreateResponse(input);
+    }
+
+    const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
+    const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
+    const model = this.configService.get<string>('volcano.textEndpoint') ?? '';
+
+    if (!apiKey) throw new Error('VOLCANO_TEXT_API_KEY is missing');
+
+    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/responses`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        input,
+        ...options,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Volcano responses API failed: ${response.status} ${errorText}`);
+    }
+
+    const data = (await response.json()) as any;
+    // The response structure of Responses API can contain multiple parts (reasoning, message, etc.)
+    // Find the assistant message content
+    const messageOutput = data.output?.find((o: any) => o.type === 'message' && o.role === 'assistant');
+    const content =
+      messageOutput?.content?.find((c: any) => c.type === 'output_text')?.text ||
+      messageOutput?.content?.[0]?.text ||
+      messageOutput?.content?.text ||
+      data.output?.[0]?.content?.[0]?.text ||
+      data.output?.[0]?.content?.text;
+
+    if (!content) {
+      this.logger.error('Volcano responses API returned empty content', JSON.stringify(data));
+      throw new Error('Volcano responses API returned empty content');
+    }
+
+    return { content };
+    }
+
+  async mockCreateResponse(input: any[]) {
+    const isAnalysis = JSON.stringify(input).toLowerCase().includes('analyze') || 
+                       JSON.stringify(input).toLowerCase().includes('segment');
+    
+    if (isAnalysis) {
+      return {
+        content: JSON.stringify({
+          tags: ['mock-video', 'ecommerce', 'dynamic'],
+          description: 'A mock video analysis response.',
+          slices: [
+            { start_time: 0, end_time: 5, description: 'Product intro', tags: ['intro'] },
+            { start_time: 5, end_time: 10, description: 'Usage demo', tags: ['usage'] },
+          ],
+        }),
+      };
+    }
+
+    return { content: 'Mock response from Responses API' };
+  }
+
     async deleteFile(fileId: string): Promise<void> {
+
     const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
     const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
 

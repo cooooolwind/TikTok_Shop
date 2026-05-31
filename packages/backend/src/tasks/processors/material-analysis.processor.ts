@@ -51,6 +51,7 @@ export class MaterialAnalysisProcessor extends WorkerHost {
     this.logger.log(`Starting multimodal analysis for material: ${materialId}`);
 
     let fileId: string | null = null;
+    let result: AiAnalysisResult;
     try {
       const material = await this.materialsRepository.findOne({ where: { id: materialId } });
       if (!material) {
@@ -62,30 +63,74 @@ export class MaterialAnalysisProcessor extends WorkerHost {
       const filePath = join(storage.localPath, 'materials', filename);
       const isVideo = material.type === 'video';
 
-      let messages: any[];
-
       if (isVideo) {
         // 1. Upload video via Files API (Robust for large files)
         this.logger.log(`Uploading video to Volcano for analysis: ${materialId}`);
         const buffer = await fs.readFile(filePath);
         fileId = await this.volcanoClient.uploadFile(buffer, filename);
-        messages = this.buildVideoMessages(fileId);
+
+        // Wait for file to be active (Volcano process file asynchronously)
+        this.logger.log(`Waiting for video file to be active: ${fileId}`);
+        let attempts = 0;
+        const maxAttempts = 30; // 30 seconds
+        while (attempts < maxAttempts) {
+          const file = await this.volcanoClient.getFile(fileId);
+          if (file.status === 'active') break;
+          if (file.status === 'failed') throw new Error('Volcano file preprocessing failed');
+          
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          attempts += 1;
+        }
+        if (attempts >= maxAttempts) {
+          throw new Error('Volcano file preprocessing timeout');
+        }
+        
+        // 2. Prepare input for Responses API (Supports file_id correctly)
+        const input = [
+          {
+            role: 'system',
+            content: [
+              {
+                type: 'input_text',
+                text: `You are an expert in TikTok Shop video analysis and scene segmentation.
+Analyze the video and return a JSON object with:
+1. "tags": 5-8 general tags for the entire video.
+2. "description": A concise summary of the video content.
+3. "slices": An array of scene objects, each containing:
+   - "start_time": Start time in seconds (float).
+   - "end_time": End time in seconds (float).
+   - "description": What happens in this scene.
+   - "tags": 3-5 tags specific to this scene.
+Segment the video into natural, high-value scenes for e-commerce reuse. Output must be in JSON format.`,
+              },
+            ],
+          },
+          {
+            role: 'user',
+            content: [
+              { type: 'input_text', text: 'Please analyze and segment this video.' },
+              { type: 'input_video', file_id: fileId },
+            ],
+          },
+        ];
+
+        const aiResponse = await this.volcanoClient.createResponse(input, {
+          text: { format: { type: 'json_object' } },
+        });
+        result = this.parseAiResponse(aiResponse.content);
       } else {
-        // 2. Use Base64 for images (Fast and no double-hop)
+        // 3. Use Base64 for images (Fast and no double-hop)
         const buffer = await fs.readFile(filePath);
         const base64Data = `data:${material.mimeType};base64,${buffer.toString('base64')}`;
-        messages = this.buildImageMessages(base64Data);
+        const messages = this.buildImageMessages(base64Data);
+
+        const aiResponse = await this.volcanoClient.chatCompletion(messages, {
+          response_format: { type: 'json_object' },
+        });
+        result = this.parseAiResponse(aiResponse.content);
       }
 
-      // 3. Call AI Provider
-      const aiResponse = await this.volcanoClient.chatCompletion(messages, {
-        response_format: { type: 'json_object' },
-      });
-
-      // 4. Parse Result
-      const result = this.parseAiResponse(aiResponse.content);
-      
-      // 5. Update Material
+      // 4. Update Material
       material.aiTags = result.tags;
       material.aiDescription = result.description;
       material.status = 'ready';
@@ -130,31 +175,6 @@ Output must be in JSON format.`,
         content: [
           { type: 'text', text: 'Please analyze this e-commerce material.' },
           { type: 'image_url', image_url: { url: base64Data } },
-        ],
-      },
-    ];
-  }
-
-  private buildVideoMessages(fileId: string) {
-    return [
-      {
-        role: 'system',
-        content: `You are an expert in TikTok Shop video analysis and scene segmentation.
-Analyze the video and return a JSON object with:
-1. "tags": 5-8 general tags for the entire video.
-2. "description": A concise summary of the video content.
-3. "slices": An array of scene objects, each containing:
-   - "start_time": Start time in seconds (float).
-   - "end_time": End time in seconds (float).
-   - "description": What happens in this scene.
-   - "tags": 3-5 tags specific to this scene.
-Segment the video into natural, high-value scenes for e-commerce reuse. Output must be in JSON format.`,
-      },
-      {
-        role: 'user',
-        content: [
-          { type: 'text', text: 'Please analyze and segment this video.' },
-          { type: 'video_url', video_url: { url: fileId } },
         ],
       },
     ];

@@ -1,11 +1,15 @@
 import { registerAs } from '@nestjs/config';
 import { isAbsolute, join } from 'path';
-
-const backendRoot = join(__dirname, '..', '..');
+import { existsSync } from 'fs';
 
 function resolveUploadDir(value?: string) {
-  if (!value) return join(backendRoot, 'uploads');
-  return isAbsolute(value) ? value : join(backendRoot, value);
+  const cwd = process.cwd();
+  const backendPath = existsSync(join(cwd, 'packages', 'backend')) 
+    ? join(cwd, 'packages', 'backend') 
+    : cwd;
+
+  if (!value) return join(backendPath, 'uploads');
+  return isAbsolute(value) ? value : join(backendPath, value);
 }
 
 export default registerAs('storage', () => ({

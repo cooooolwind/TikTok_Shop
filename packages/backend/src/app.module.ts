@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ServeStaticModule } from '@nestjs/serve-static';
 
 import { configModuleOptions } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
@@ -24,6 +25,19 @@ import { WebsocketModule } from './websocket/websocket.module';
   imports: [
     ConfigModule.forRoot(configModuleOptions),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
+    ServeStaticModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const storage = config.get('storage') as { localPath: string };
+        return [
+          {
+            rootPath: storage.localPath,
+            serveRoot: '/uploads',
+          },
+        ];
+      },
+    }),
     DatabaseModule,
     CommonModule,
     MaterialsModule,

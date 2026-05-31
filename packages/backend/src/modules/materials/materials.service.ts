@@ -84,7 +84,14 @@ export class MaterialsService {
     const safeExtension = this.getFileExtension(file);
     const storedFilename = `${Date.now()}-${randomUUID()}${safeExtension}`;
     const storedPath = join(uploadDir, storedFilename);
-    await fs.writeFile(storedPath, file.buffer);
+
+    if (file.path) {
+      await fs.rename(file.path, storedPath);
+    } else if (file.buffer) {
+      await fs.writeFile(storedPath, file.buffer);
+    } else {
+      throw new BadRequestException('file content is missing');
+    }
 
     const url = `/uploads/materials/${storedFilename}`;
     const originalFilename = this.normalizeFilename(file.originalname);
@@ -111,6 +118,14 @@ export class MaterialsService {
 
     const saved = await this.materialsRepository.save(material);
     this.logger.log(`Uploaded material ${saved.id}: ${saved.filename} (name: ${saved.name})`);
+
+    // 自动触发多模态分析任务
+    try {
+      await this.analyze(saved.id);
+    } catch (e) {
+      const error = e instanceof Error ? e.message : String(e);
+      this.logger.error(`Failed to trigger auto-analysis for material ${saved.id}: ${error}`);
+    }
 
     return {
       id: saved.id,
@@ -299,9 +314,6 @@ export class MaterialsService {
     const maxSize = type === 'image' ? storage?.maxImageSize ?? 20 * 1024 * 1024 : storage?.maxVideoSize ?? 500 * 1024 * 1024;
     if (file.size > maxSize) {
       throw new BadRequestException(`${type} file is too large`);
-    }
-    if (!file.buffer) {
-      throw new BadRequestException('file buffer is empty');
     }
   }
 
