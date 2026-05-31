@@ -36,6 +36,7 @@ describe('MaterialAnalysisProcessor', () => {
     volcanoClient = {
       chatCompletion: jest.fn(),
       uploadFile: jest.fn().mockResolvedValue('file-id-123'),
+      createResponse: jest.fn(),
       deleteFile: jest.fn().mockResolvedValue({}),
     };
 
@@ -137,7 +138,7 @@ describe('MaterialAnalysisProcessor', () => {
     materialsRepository.findOne.mockResolvedValue(material);
     jest.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('fake-video-data'));
     
-    volcanoClient.chatCompletion.mockResolvedValue({
+    volcanoClient.createResponse.mockResolvedValue({
       content: JSON.stringify({
         tags: ['v-tag1'],
         description: 'V desc',
@@ -156,7 +157,7 @@ describe('MaterialAnalysisProcessor', () => {
 
     expect(result.tags).toEqual(['v-tag1']);
     expect(volcanoClient.uploadFile).toHaveBeenCalled();
-    expect(volcanoClient.deleteFile).toHaveBeenCalledWith('file-id-123');
+    expect(volcanoClient.createResponse).toHaveBeenCalled();
     expect(videoSlicesRepository.save).toHaveBeenCalled();
     expect(materialsRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'ready' }),

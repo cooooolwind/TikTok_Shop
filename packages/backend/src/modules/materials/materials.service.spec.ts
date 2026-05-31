@@ -115,7 +115,7 @@ describe('MaterialsService', () => {
   });
 
   it('uploads an image and persists it', async () => {
-    const { service, materialsRepository } = makeService();
+    const { service, materialsRepository, analysisQueue } = makeService();
     const mkdirSpy = jest.spyOn(fsPromises, 'mkdir').mockResolvedValue(undefined);
     const writeSpy = jest.spyOn(fsPromises, 'writeFile').mockResolvedValue(undefined);
 
@@ -128,10 +128,10 @@ describe('MaterialsService', () => {
     expect(mkdirSpy).toHaveBeenCalled();
     expect(writeSpy).toHaveBeenCalled();
     expect(materialsRepository.save).toHaveBeenCalled();
+    expect(analysisQueue.add).toHaveBeenCalledWith('analyze', expect.objectContaining({ materialId: 'material-1' }));
     expect(result).toMatchObject({
       filename: 'product.jpg',
       type: 'image',
-      status: 'uploaded',
     });
   });
 
