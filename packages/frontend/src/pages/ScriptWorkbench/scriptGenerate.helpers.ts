@@ -11,6 +11,8 @@ export interface ScriptGenerateFormValues {
   target_audience?: string;
   price?: string;
   product_link?: string;
+  product_image_url?: string;
+  product_image_urls?: string[];
   template_id?: string;
   material_ids?: string[];
   manual_text?: string;
@@ -60,6 +62,10 @@ export function getScriptStatusView(status: ScriptStatus) {
 }
 
 function buildProductInfo(values: ScriptGenerateFormValues) {
+  const images = [
+    ...(values.product_image_urls ?? []),
+    ...(values.product_image_url ? [values.product_image_url] : []),
+  ].filter(Boolean);
   return {
     name: values.product_name ?? '',
     description: values.product_description ?? '',
@@ -67,6 +73,7 @@ function buildProductInfo(values: ScriptGenerateFormValues) {
     selling_points: values.selling_points ?? [],
     target_audience: values.target_audience,
     price: values.price,
+    images: images.length > 0 ? [...new Set(images)] : undefined,
     link: values.product_link,
   };
 }

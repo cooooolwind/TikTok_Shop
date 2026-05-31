@@ -32,6 +32,7 @@ const DEFAULT_MERCHANT_ID = 'default';
 interface MaterialGenerationInput {
   context: string;
   media: { type: 'image' | 'video'; filename: string; imageUrl?: string; url?: string; thumbnailUrl?: string }[];
+  productImageUrls: string[];
 }
 
 @Injectable()
@@ -49,6 +50,7 @@ export class ScriptsService {
 
   async generate(data: GenerateScriptRequest): Promise<GenerateScriptQueuedResponse> {
     const materialInput = await this.buildMaterialInput(data.material_ids ?? []);
+    const productInfo = this.withMaterialProductImages(data.product_info, materialInput.productImageUrls);
     const template = data.template_id ? await this.templatesService.findRawById(data.template_id) : null;
     if (data.template_id && !template) throw new NotFoundException('Template not found');
 
@@ -56,7 +58,7 @@ export class ScriptsService {
     const script = await this.scriptsRepository.save(
       this.scriptsRepository.create({
         merchantId: DEFAULT_MERCHANT_ID,
-        productInfo: data.product_info,
+        productInfo,
         templateId: data.template_id ?? null,
         referenceId: data.reference_id ?? null,
         sourceMaterialIds: data.material_ids ?? [],
@@ -80,7 +82,7 @@ export class ScriptsService {
       {
         taskId: stableTaskId,
         scriptId: saved.id,
-        productInfo: data.product_info,
+        productInfo,
         mode: data.mode,
         preferences: data.preferences,
         template,
@@ -99,10 +101,12 @@ export class ScriptsService {
   }
 
   async create(data: CreateScriptRequest) {
+    const materialInput = await this.buildMaterialInput(data.source_material_ids ?? []);
+    const productInfo = this.withMaterialProductImages(data.product_info, materialInput.productImageUrls);
     const script = await this.scriptsRepository.save(
       this.scriptsRepository.create({
         merchantId: DEFAULT_MERCHANT_ID,
-        productInfo: data.product_info,
+        productInfo,
         templateId: data.template_id ?? null,
         referenceId: data.reference_id ?? null,
         sourceMaterialIds: data.source_material_ids ?? [],
@@ -290,7 +294,7 @@ export class ScriptsService {
   }
 
   private async buildMaterialInput(materialIds: string[]): Promise<MaterialGenerationInput> {
-    if (materialIds.length === 0) return { context: '', media: [] };
+    if (materialIds.length === 0) return { context: '', media: [], productImageUrls: [] };
     const materials = await this.materialsRepository.findBy({ id: In(materialIds), merchantId: DEFAULT_MERCHANT_ID });
     const context = materials
       .map((material) =>
@@ -307,7 +311,23 @@ export class ScriptsService {
       )
       .join('\n');
     const media = await Promise.all(materials.map((material) => this.toMaterialMedia(material)));
-    return { context, media: media.filter((item): item is NonNullable<typeof item> => Boolean(item)) };
+    const imageMaterials = materials
+      .filter((material) => material.type === 'image' && material.url)
+      .sort((a, b) => {
+        const aProduct = a.category === 'product' ? 0 : 1;
+        const bProduct = b.category === 'product' ? 0 : 1;
+        return aProduct - bProduct;
+      });
+    return {
+      context,
+      media: media.filter((item): item is NonNullable<typeof item> => Boolean(item)),
+      productImageUrls: imageMaterials.map((material) => material.url),
+    };
+  }
+
+  private withMaterialProductImages(productInfo: GenerateScriptRequest['product_info'], materialImageUrls: string[]) {
+    const images = [...new Set([...(productInfo.images ?? []), ...materialImageUrls].filter(Boolean))];
+    return images.length > 0 ? { ...productInfo, images } : productInfo;
   }
 
   private async toMaterialMedia(material: Material) {

@@ -3,17 +3,16 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
+import { promises as fs } from 'fs';
+import { basename, join } from 'path';
 import type { VideoOptions, TaskError, TaskProgress, TaskResult } from '@aigc/shared-types';
-import {
-  VolcanoClientProvider,
-  type CreateVideoTaskInput,
-  type VolcanoVideoTask,
-} from '../../ai/providers/volcano-client.provider';
+import { VolcanoClientProvider, type VolcanoVideoTask } from '../../ai/providers/volcano-client.provider';
 import { GenerationTask } from '../../modules/generation/entities/generation-task.entity';
 import { Video } from '../../modules/generation/entities/video.entity';
 import { Script } from '../../modules/scripts/entities/script.entity';
 import { Scene } from '../../modules/scripts/entities/scene.entity';
+import { Material } from '../../modules/materials/entities/material.entity';
 import { TasksGateway } from '../../websocket/tasks.gateway';
 import { QUEUES } from '../queues';
 
@@ -34,7 +33,7 @@ interface VideoSegmentPlan {
   duration: number;
 }
 
-type ContinuitySource = 'product_image' | 'previous_last_frame' | 'text_only';
+type ContinuitySource = 'generated_first_frame' | 'product_image' | 'previous_last_frame' | 'text_only';
 type ProgressPhase =
   | 'queued'
   | 'prepare'
@@ -66,6 +65,7 @@ export class VideoGenerationProcessor extends WorkerHost {
     @InjectRepository(GenerationTask) private readonly tasksRepository: Repository<GenerationTask>,
     @InjectRepository(Script) private readonly scriptsRepository: Repository<Script>,
     @InjectRepository(Video) private readonly videosRepository: Repository<Video>,
+    @InjectRepository(Material) private readonly materialsRepository: Repository<Material>,
     private readonly volcanoClient: VolcanoClientProvider,
     private readonly tasksGateway: TasksGateway,
     private readonly configService: ConfigService,
@@ -106,31 +106,29 @@ export class VideoGenerationProcessor extends WorkerHost {
       const segments = this.buildSegments(script);
       const segmentResults: SegmentResult[] = this.getReusableSegments(task.result?.segments, segments.length);
       const continuityWarnings: string[] = [];
-      const productImageUrls = script.productInfo.images ?? [];
-      let previousLastFrameUrl = segmentResults[segmentResults.length - 1]?.thumbnail_url ?? '';
+      const productImageUrls = await this.collectProductImageUrls(script);
 
       for (const segment of segments) {
         const reusable = segmentResults[segment.index];
         if (reusable?.status === 'succeeded' && reusable.video_url) {
-          previousLastFrameUrl = reusable.thumbnail_url;
           continue;
         }
 
-        const isFirstSegment = segment.index === 0;
-        const firstFrameUrl = isFirstSegment ? undefined : previousLastFrameUrl || undefined;
-        const imageUrls = isFirstSegment ? productImageUrls : [];
-        const inputFrameUrl = firstFrameUrl ?? (isFirstSegment ? productImageUrls[0] ?? '' : '');
-        const continuitySource: ContinuitySource = firstFrameUrl
-          ? 'previous_last_frame'
-          : isFirstSegment && productImageUrls.length > 0
-            ? 'product_image'
-            : 'text_only';
+        const frameInput = await this.prepareSegmentFirstFrame(
+          script,
+          segment,
+          productImageUrls,
+          continuityWarnings,
+          options?.aspect_ratio ?? this.inferAspectRatio(options?.resolution),
+        );
 
-        if (!isFirstSegment && !firstFrameUrl) {
-          continuityWarnings.push(`Segment ${segment.index + 1} generated without previous last frame input`);
-        }
-
-        const submittedSegment = this.makeSegmentPlaceholder(segment, options, inputFrameUrl, continuitySource, 'submitted');
+        const submittedSegment = this.makeSegmentPlaceholder(
+          segment,
+          options,
+          frameInput.inputFrameUrl,
+          frameInput.continuitySource,
+          'submitted',
+        );
         segmentResults[segment.index] = submittedSegment;
         await this.persistSegmentState(task, segmentResults, options, continuityWarnings);
         await this.updateSegmentProgress(job, segment, segments.length, 0, 'submit_segment', startedAt);
@@ -140,11 +138,9 @@ export class VideoGenerationProcessor extends WorkerHost {
             ratio: options?.aspect_ratio ?? this.inferAspectRatio(options?.resolution),
             resolution: this.toProviderResolution(options?.resolution),
             duration: segment.duration,
-            imageUrls,
-            firstFrameUrl,
-            inputFrameUrl,
-            continuitySource,
-            continuityWarnings,
+            firstFrameUrl: frameInput.firstFrameUrl,
+            inputFrameUrl: frameInput.inputFrameUrl,
+            continuitySource: frameInput.continuitySource,
           });
 
           segmentResults[segment.index] = {
@@ -174,7 +170,6 @@ export class VideoGenerationProcessor extends WorkerHost {
           segmentResults[segment.index] = segmentResult;
           await this.persistSegmentState(task, segmentResults, options, continuityWarnings);
           await this.updateSegmentProgress(job, segment, segments.length, 1, 'generate_segment', startedAt);
-          previousLastFrameUrl = segmentResult.thumbnail_url;
         } catch (error) {
           const taskError = this.toTaskError(error, segment.index);
           segmentResults[segment.index] = {
@@ -316,6 +311,9 @@ export class VideoGenerationProcessor extends WorkerHost {
   }
 
   private getContinuityInstruction(continuitySource: ContinuitySource) {
+    if (continuitySource === 'generated_first_frame') {
+      return 'Use the provided Seedream-generated first frame as the exact visual starting point for this scene.';
+    }
     if (continuitySource === 'previous_last_frame') {
       return 'Use the provided first frame from the previous segment. Continue from it and only perform the current scene action.';
     }
@@ -325,6 +323,145 @@ export class VideoGenerationProcessor extends WorkerHost {
     return 'No image input is available. Generate from the current scene prompt and product identity.';
   }
 
+  private async collectProductImageUrls(script: Script) {
+    const urls = new Set<string>();
+    const materialIds = script.sourceMaterialIds ?? [];
+    if (materialIds.length > 0) {
+      const materials = await this.materialsRepository.findBy({
+        id: In(materialIds),
+        merchantId: script.merchantId,
+        type: 'image',
+      });
+      const sorted = [...materials].sort((a, b) => {
+        const aProduct = a.category === 'product' ? 0 : 1;
+        const bProduct = b.category === 'product' ? 0 : 1;
+        return aProduct - bProduct;
+      });
+      for (const material of sorted) {
+        const url = await this.toMaterialImageInput(material);
+        if (url) urls.add(url);
+      }
+    }
+
+    for (const url of script.productInfo.images ?? []) {
+      const normalized = await this.toProductImageInput(url);
+      if (normalized) urls.add(normalized);
+    }
+
+    return [...urls];
+  }
+
+  private async toMaterialImageInput(material: Material) {
+    if (/^https?:\/\//i.test(material.url) || material.url.startsWith('data:')) return material.url;
+    return this.toLocalUploadDataUrl(material.url, material.mimeType || 'image/jpeg');
+  }
+
+  private async toProductImageInput(url: string) {
+    if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url;
+    if (url.startsWith('/uploads/') || url.startsWith('uploads/')) {
+      return this.toLocalUploadDataUrl(url, this.inferImageMimeType(url));
+    }
+    return undefined;
+  }
+
+  private async toLocalUploadDataUrl(url: string, mimeType: string) {
+    try {
+      const storage = this.configService.get<{ localPath: string }>('storage');
+      const localPath = storage?.localPath ?? join(process.cwd(), 'uploads');
+      const relative = url.replace(/^\/?uploads\/?/, '');
+      const filePath = join(localPath, relative || basename(url));
+      const bytes = await fs.readFile(filePath);
+      return `data:${mimeType};base64,${bytes.toString('base64')}`;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private inferImageMimeType(url: string) {
+    const clean = url.split('?')[0].toLowerCase();
+    if (clean.endsWith('.png')) return 'image/png';
+    if (clean.endsWith('.webp')) return 'image/webp';
+    if (clean.endsWith('.gif')) return 'image/gif';
+    if (clean.endsWith('.avif')) return 'image/avif';
+    return 'image/jpeg';
+  }
+
+  private async prepareSegmentFirstFrame(
+    script: Script,
+    segment: VideoSegmentPlan,
+    productImageUrls: string[],
+    continuityWarnings: string[],
+    aspectRatio: string,
+  ) {
+    if (productImageUrls.length === 0) {
+      throw this.makeProductImageRequiredError(segment.index);
+    }
+
+    try {
+      const generated = await this.volcanoClient.generateFirstFrame({
+        prompt: this.buildFirstFramePrompt(script, segment),
+        referenceImages: productImageUrls,
+        size: this.toFirstFrameSize(aspectRatio),
+      });
+      return {
+        firstFrameUrl: generated.url,
+        inputFrameUrl: generated.url,
+        continuitySource: 'generated_first_frame' as const,
+      };
+    } catch (error) {
+      continuityWarnings.push(
+        `Segment ${segment.index + 1} Seedream first-frame generation failed; retrying Seedream with a simplified product-first prompt: ${this.toErrorMessage(error)}`,
+      );
+    }
+
+    try {
+      const generated = await this.volcanoClient.generateFirstFrame({
+        prompt: this.buildFirstFrameRetryPrompt(script, segment),
+        referenceImages: productImageUrls,
+        size: this.toFirstFrameSize(aspectRatio),
+      });
+      return {
+        firstFrameUrl: generated.url,
+        inputFrameUrl: generated.url,
+        continuitySource: 'generated_first_frame' as const,
+      };
+    } catch (error) {
+      throw this.makeFirstFrameGenerationError(segment.index, error);
+    }
+  }
+
+  private buildFirstFramePrompt(script: Script, segment: VideoSegmentPlan) {
+    const scene = [...segment.scenes].sort((a, b) => a.order - b.order)[0];
+    const action = scene?.visualPrompt || scene?.description || 'Product hero shot';
+    return [
+      'Create a single ecommerce video first frame for TikTok Shop.',
+      `Product: ${script.productInfo.name || 'the product'}.`,
+      `Category: ${script.productInfo.category || 'ecommerce product'}.`,
+      `Selling points: ${(script.productInfo.selling_points ?? []).join(', ') || 'core product benefits'}.`,
+      script.productInfo.description ? `Description: ${script.productInfo.description}.` : '',
+      `Scene visual action: ${action}.`,
+      `Camera direction: ${scene?.cameraMotion || 'fixed product shot'}.`,
+      `Commercial style: ${script.visualStyle || 'clean, conversion-focused product demo'}.`,
+      'The product from the reference image must be clearly visible, recognizable, and faithful in shape, color, material, and packaging.',
+      'Do not replace the product with a different item. Do not create abstract or unrelated lifestyle imagery.',
+      (scene?.constraints ?? []).join(', '),
+    ]
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  private buildFirstFrameRetryPrompt(script: Script, segment: VideoSegmentPlan) {
+    const scene = [...segment.scenes].sort((a, b) => a.order - b.order)[0];
+    const action = scene?.visualPrompt || scene?.description || 'clean product first frame';
+    return [
+      'Create one clean ecommerce video first frame from the reference product image.',
+      `Product: ${script.productInfo.name || 'the product'}.`,
+      `Scene: ${action}.`,
+      'Keep the reference product clearly visible and faithful to its real shape, color, material, logo, and packaging.',
+      'Use a simple commercial product-demo composition with no extra objects that could change the product identity.',
+    ].join('\n');
+  }
+
   private async createVideoTaskForSegment(
     script: Script,
     segment: VideoSegmentPlan,
@@ -332,53 +469,53 @@ export class VideoGenerationProcessor extends WorkerHost {
       ratio: string;
       resolution: string;
       duration: number;
-      imageUrls: string[];
       firstFrameUrl?: string;
       inputFrameUrl: string;
       continuitySource: ContinuitySource;
-      continuityWarnings: string[];
     },
   ) {
-    const create = (overrides: Partial<CreateVideoTaskInput>, continuitySource: ContinuitySource) =>
-      this.volcanoClient.createVideoTask({
-        prompt: this.buildPrompt(script, segment, continuitySource),
-        ratio: input.ratio,
-        resolution: input.resolution,
-        duration: input.duration,
-        imageUrls: input.imageUrls,
-        firstFrameUrl: input.firstFrameUrl,
-        ...overrides,
-      });
-
-    try {
-      const created = await create({}, input.continuitySource);
-      return { ...created, inputFrameUrl: input.inputFrameUrl, continuitySource: input.continuitySource };
-    } catch (error) {
-      if (!input.firstFrameUrl || !this.isContinuityInputRejected(error)) throw error;
-
-      input.continuityWarnings.push(
-        `Segment ${segment.index + 1} first-frame input was rejected by provider; retried as plain image input`,
-      );
-    }
-
-    try {
-      const created = await create({ firstFrameUrl: undefined, imageUrls: [input.firstFrameUrl] }, 'previous_last_frame');
-      return { ...created, inputFrameUrl: input.firstFrameUrl, continuitySource: 'previous_last_frame' as const };
-    } catch (error) {
-      if (!this.isContinuityInputRejected(error)) throw error;
-
-      input.continuityWarnings.push(
-        `Segment ${segment.index + 1} plain image input was rejected by provider; retried as text-only`,
-      );
-    }
-
-    const created = await create({ firstFrameUrl: undefined, imageUrls: [] }, 'text_only');
-    return { ...created, inputFrameUrl: '', continuitySource: 'text_only' as const };
+    const created = await this.volcanoClient.createVideoTask({
+      prompt: this.buildPrompt(script, segment, input.continuitySource),
+      ratio: input.ratio,
+      resolution: input.resolution,
+      duration: input.duration,
+      imageUrls: [],
+      firstFrameUrl: input.firstFrameUrl,
+    });
+    return { ...created, inputFrameUrl: input.inputFrameUrl, continuitySource: input.continuitySource };
   }
 
-  private isContinuityInputRejected(error: unknown) {
-    const maybe = error as { status?: number; code?: string };
-    return maybe.status === 400 || maybe.status === 404 || maybe.code === 'InvalidParameter';
+  private makeProductImageRequiredError(segmentIndex: number) {
+    const error = new Error('PRODUCT_IMAGE_REQUIRED_FOR_FIRST_FRAME: 请先上传或填写商品图后再生成视频。');
+    Object.assign(error, {
+      code: 'PRODUCT_IMAGE_REQUIRED_FOR_FIRST_FRAME',
+      retryable: true,
+      segmentIndex,
+    });
+    return error;
+  }
+
+  private makeFirstFrameGenerationError(segmentIndex: number, cause: unknown) {
+    const error = new Error(
+      `SEEDREAM_FIRST_FRAME_GENERATION_FAILED: Seedream 首帧生成失败，请检查商品图或简化分镜提示词后重试。${this.toErrorMessage(cause) ? ` 原因：${this.toErrorMessage(cause)}` : ''}`,
+    );
+    Object.assign(error, {
+      code: 'SEEDREAM_FIRST_FRAME_GENERATION_FAILED',
+      retryable: true,
+      segmentIndex,
+    });
+    return error;
+  }
+
+  private toErrorMessage(error: unknown) {
+    if (error instanceof Error) return error.message;
+    return String(error);
+  }
+
+  private toFirstFrameSize(aspectRatio: string) {
+    if (aspectRatio === '16:9') return '2848x1600';
+    if (aspectRatio === '1:1') return '1920x1920';
+    return '1600x2848';
   }
 
   private async waitForProviderTask(providerTaskId: string, onAttempt?: (attempt: number) => Promise<void>) {
@@ -549,7 +686,7 @@ export class VideoGenerationProcessor extends WorkerHost {
   }
 
   private toTaskError(error: unknown, segmentIndex?: number): TaskError {
-    const maybe = error as { code?: string; message?: string; status?: number; retryable?: boolean };
+    const maybe = error as { code?: string; message?: string; status?: number; retryable?: boolean; segmentIndex?: number };
     const code = maybe.code || 'VIDEO_GENERATION_FAILED';
     const message = maybe.message || 'Video generation failed';
     const category = this.classifyError(code, message, maybe.status);
@@ -558,7 +695,12 @@ export class VideoGenerationProcessor extends WorkerHost {
       message,
       retryable: maybe.retryable ?? category !== 'moderation',
       category,
-      segment_index: segmentIndex === undefined ? undefined : segmentIndex + 1,
+      segment_index:
+        segmentIndex === undefined
+          ? maybe.segmentIndex === undefined
+            ? undefined
+            : maybe.segmentIndex + 1
+          : segmentIndex + 1,
       user_action:
         category === 'moderation'
           ? '请修改失败分镜的提示词，移除可能触发审核的内容后重试。'
