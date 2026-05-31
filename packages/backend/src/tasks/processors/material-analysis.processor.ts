@@ -64,6 +64,37 @@ export class MaterialAnalysisProcessor extends WorkerHost {
       const isVideo = material.type === 'video';
 
       if (isVideo) {
+        // 0. Transcode and Compress for web compatibility
+        this.logger.log(`Transcoding video for compatibility: ${materialId}`);
+        const transcodedPath = `${filePath}.transcoded.mp4`;
+        try {
+          const transcodeResult = await VideoUtil.transcode(filePath, transcodedPath, {
+            bitrateThresholdKbps: 6000, // 6Mbps threshold
+            targetCrf: 23,
+          });
+
+          // Replace original file with transcoded one
+          await fs.unlink(filePath);
+          await fs.rename(transcodedPath, filePath);
+
+          // Update metadata (size and duration)
+          const newMeta = await VideoUtil.getMetadata(filePath);
+          material.size = newMeta.size;
+          material.metadata = {
+            ...material.metadata,
+            duration: newMeta.duration,
+            compressed: transcodeResult.compressed,
+          };
+          await this.materialsRepository.save(material);
+          this.logger.log(`Transcoding completed for ${materialId}. Compressed: ${transcodeResult.compressed}`);
+        } catch (e) {
+          const error = e instanceof Error ? e.message : String(e);
+          this.logger.warn(`Transcoding failed for ${materialId}, falling back to original: ${error}`);
+          if (await fs.stat(transcodedPath).catch(() => null)) {
+            await fs.unlink(transcodedPath).catch(() => {});
+          }
+        }
+
         // 1. Upload video via Files API (Robust for large files)
         this.logger.log(`Uploading video to Volcano for analysis: ${materialId}`);
         const buffer = await fs.readFile(filePath);

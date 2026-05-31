@@ -9,6 +9,7 @@ import {
   Input,
   List,
   Modal,
+  Progress,
   Row,
   Space,
   Spin,
@@ -137,11 +138,50 @@ export default function MaterialDetail() {
         <Col xs={24} md={12}>
           <Card title="预览" style={{ marginBottom: 24 }}>
             {isVideo ? (
-              <video
-                src={material.url}
-                controls
-                style={{ width: '100%', borderRadius: 8, background: '#000' }}
-              />
+              <div style={{ position: 'relative', width: '100%', borderRadius: 8, overflow: 'hidden', background: '#000' }}>
+                {material.status === 'processing' ? (
+                  <>
+                    <img
+                      src={material.thumbnail_url}
+                      alt="Transcoding..."
+                      style={{
+                        width: '100%',
+                        display: 'block',
+                        filter: 'brightness(0.4) blur(2px)',
+                        borderRadius: 8,
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: '80%',
+                        textAlign: 'center',
+                        color: '#fff',
+                      }}
+                    >
+                      <Progress
+                        percent={99}
+                        status="active"
+                        strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
+                        showInfo={false}
+                      />
+                      <div style={{ marginTop: 8, fontSize: 14, fontWeight: 'bold', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                        视频智能转码与压缩中...
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <video
+                    key={`${material.id}-${material.updated_at}`}
+                    src={material.url}
+                    controls
+                    style={{ width: '100%', display: 'block', borderRadius: 8 }}
+                  />
+                )}
+              </div>
             ) : (
               <Image
                 src={material.url}
