@@ -36,6 +36,7 @@ describe('MaterialAnalysisProcessor', () => {
     volcanoClient = {
       chatCompletion: jest.fn(),
       uploadFile: jest.fn().mockResolvedValue('file-id-123'),
+      getFile: jest.fn().mockResolvedValue({ status: 'active' }),
       createResponse: jest.fn(),
       deleteFile: jest.fn().mockResolvedValue({}),
     };
