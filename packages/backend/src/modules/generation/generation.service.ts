@@ -14,6 +14,7 @@ import type {
 } from '@aigc/shared-types';
 import { QUEUES } from '../../tasks/queues';
 import { Script } from '../scripts/entities/script.entity';
+import { Material } from '../materials/entities/material.entity';
 import { GenerationTask } from './entities/generation-task.entity';
 import { Video } from './entities/video.entity';
 import { VideoStitchingService } from '../../tasks/services/video-stitching.service';
@@ -66,6 +67,7 @@ export class GenerationService {
     @InjectRepository(GenerationTask) private readonly tasksRepository: Repository<GenerationTask>,
     @InjectRepository(Script) private readonly scriptsRepository: Repository<Script>,
     @InjectRepository(Video) private readonly videosRepository: Repository<Video>,
+    @InjectRepository(Material) private readonly materialsRepository: Repository<Material>,
     private readonly videoStitchingService: VideoStitchingService,
   ) {}
 
@@ -74,6 +76,14 @@ export class GenerationService {
     if (!script) throw new NotFoundException('Script not found');
     if (script.status !== 'confirmed') {
       throw new BadRequestException('Only confirmed scripts can be used to create videos');
+    }
+    if (!(await this.hasProductImageInput(script))) {
+      throw new BadRequestException({
+        code: 'PRODUCT_IMAGE_REQUIRED_FOR_FIRST_FRAME',
+        message: '请先为剧本补充商品图，再生成视频。Seedream 首帧生成需要商品图作为参考输入。',
+        retryable: true,
+        user_action: '请回到剧本生成页或素材库上传/选择商品图后重试。',
+      });
     }
 
     const task = await this.tasksRepository.save(
@@ -269,6 +279,14 @@ export class GenerationService {
       { taskId, scriptId, options },
       { attempts: 1, removeOnComplete: true, removeOnFail: false },
     );
+  }
+
+  private async hasProductImageInput(script: Script) {
+    if ((script.productInfo.images ?? []).some((url) => Boolean(url))) return true;
+    const materialIds = script.sourceMaterialIds ?? [];
+    if (materialIds.length === 0) return false;
+    const materials = await this.materialsRepository.findBy({ id: In(materialIds), merchantId: script.merchantId });
+    return materials.some((material) => material.type === 'image' && Boolean(material.url));
   }
 
   private async findRawTask(taskId: string) {

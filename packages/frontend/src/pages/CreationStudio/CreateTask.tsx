@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Card, Form, Select, Slider, Button, Typography,
-  Row, Col, Divider, Spin,
+  Row, Col, Divider, Spin, Alert, Image, message,
 } from 'antd';
 import { ThunderboltOutlined } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
@@ -13,13 +13,14 @@ import { useBGMStore } from '../../stores/useBGMStore';
 import { RESOLUTIONS } from '../../utils/constants';
 import type { Script } from '@aigc/shared-types';
 import { formatScriptDisplayId } from '../../utils/format';
+import { hasScriptProductImageInput } from './createTask.helpers';
 
 const { Text } = Typography;
 
 export default function CreateTask() {
   const navigate = useNavigate();
   const [form] = Form.useForm();
-  const { creating, createVideo, quickGenerate } = useCreationStore();
+  const { creating, createVideo } = useCreationStore();
   const { items: scripts, loading: scriptsLoading, fetchList: fetchScripts } = useScriptStore();
   const { voices, loading: ttsLoading, fetchVoices } = useTTSStore();
   const { items: bgms, loading: bgmLoading, fetchList: fetchBGM } = useBGMStore();
@@ -39,6 +40,10 @@ export default function CreateTask() {
 
   const handleCreate = () => {
     form.validateFields().then((values) => {
+      if (!hasScriptProductImageInput(selectedScript)) {
+        message.error('请先为剧本补充商品图，再生成视频');
+        return;
+      }
       createVideo({
         script_id: values.script_id,
         options: {
@@ -97,6 +102,36 @@ export default function CreateTask() {
                     <Col span={8}><Text type="secondary">总时长：</Text><Text strong>{selectedScript.total_duration}s</Text></Col>
                     <Col span={8}><Text type="secondary">视觉风格：</Text><Text strong>{selectedScript.visual_style}</Text></Col>
                   </Row>
+                  <Divider style={{ margin: '12px 0' }} />
+                  {selectedScript.product_info.images?.length ? (
+                    <Image.PreviewGroup>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {selectedScript.product_info.images.slice(0, 4).map((url) => (
+                          <Image
+                            key={url}
+                            src={url}
+                            width={56}
+                            height={56}
+                            style={{ objectFit: 'cover', borderRadius: 6 }}
+                            alt="商品图"
+                          />
+                        ))}
+                      </div>
+                    </Image.PreviewGroup>
+                  ) : selectedScript.source_material_ids?.length ? (
+                    <Alert
+                      type="info"
+                      showIcon
+                      message="该剧本绑定了素材库图片，后台会在出片前校验商品图素材。"
+                    />
+                  ) : (
+                    <Alert
+                      type="warning"
+                      showIcon
+                      message="缺少商品图，无法生成 Seedream 分镜首帧。"
+                      description="请回到剧本生成页选择图片素材，或补充商品图 URL。"
+                    />
+                  )}
                 </Card>
               )}
 

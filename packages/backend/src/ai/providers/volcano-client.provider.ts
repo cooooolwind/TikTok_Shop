@@ -149,7 +149,7 @@ export class VolcanoClientProvider {
       model,
       prompt: input.prompt,
       image: input.referenceImages,
-      size: input.size ?? '1080x1920',
+      size: input.size ?? '1600x2848',
       sequential_image_generation: 'disabled',
       watermark: false,
       response_format: 'url',

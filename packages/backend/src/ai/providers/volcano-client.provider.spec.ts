@@ -84,6 +84,31 @@ describe('VolcanoClientProvider video generation', () => {
     expect(result).toEqual({ url: 'https://example.com/first-frame.png' });
   });
 
+  it('defaults Seedream first-frame size to the provider minimum-compatible vertical size', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          data: [{ url: 'https://example.com/first-frame.png' }],
+        }),
+        { status: 200 },
+      ),
+    );
+    const { provider } = makeProvider({
+      'volcano.mockMode': false,
+      'volcano.imageApiKey': 'image-key',
+      'volcano.imageBaseUrl': 'https://ark.cn-beijing.volces.com/api/v3',
+      'volcano.imageEndpoint': 'seedream-endpoint',
+    });
+
+    await provider.generateFirstFrame({
+      prompt: 'Create a product hero first frame',
+      referenceImages: ['https://example.com/product.png'],
+    });
+
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.size).toBe('1600x2848');
+  });
+
   it('creates and queries real video tasks with the Ark content generation path', async () => {
     const fetchMock = jest.spyOn(global, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
