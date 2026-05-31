@@ -37,7 +37,12 @@ export default function ScriptGenerate() {
   }, [fetchTemplates, fetchMaterials]);
 
   const handleSubmit = async (values: ScriptGenerateFormValues) => {
-    const payload = { ...values, entry };
+    const selectedImageUrls =
+      values.material_ids
+        ?.map((id) => materials.find((material) => material.id === id))
+        .filter((material) => material?.type === 'image' && Boolean(material.url))
+        .map((material) => material!.url) ?? [];
+    const payload = { ...values, entry, product_image_urls: selectedImageUrls };
     if (entry === 'manual_structured') {
       const script = await create(buildManualDraftPayload(payload));
       navigate(`/scripts/${script.id}`);
@@ -120,21 +125,38 @@ export default function ScriptGenerate() {
               <Form.Item name="product_link" label="商品链接">
                 <Input placeholder="TikTok Shop 商品链接，可选" />
               </Form.Item>
+              <Form.Item
+                name="product_image_url"
+                label="商品图 URL"
+                rules={[
+                  {
+                    required: entry !== 'material',
+                    message: '请填写商品图 URL，或切换到素材模式选择商品图',
+                  },
+                  { type: 'url', warningOnly: true, message: '建议填写可访问的图片 URL' },
+                ]}
+                extra="商品图会作为 Seedream 首帧生成参考，不会直接传给视频模型。"
+              >
+                <Input placeholder="https://example.com/product.jpg" />
+              </Form.Item>
 
               {entry === 'material' && (
                 <>
                   <Text strong>素材选择</Text>
                   <Divider />
-                  <Form.Item name="material_ids" label="选择素材" rules={[{ required: true, message: '请选择至少一个素材' }]}>
+                  <Form.Item name="material_ids" label="选择商品图素材" rules={[{ required: true, message: '请选择至少一张图片素材' }]}>
                     <Select
                       mode="multiple"
                       showSearch
-                      placeholder="可选择 uploaded 或 ready 素材"
+                      placeholder="请选择图片素材，商品类素材会优先用于首帧"
                       optionFilterProp="label"
-                      options={materials.map((material) => ({
-                       label: `${material.name} · ${material.status}`,
-                       value: material.id,
-                      }))}
+                      options={materials
+                        .filter((material) => material.type === 'image')
+                        .sort((a, b) => (a.category === 'product' ? 0 : 1) - (b.category === 'product' ? 0 : 1))
+                        .map((material) => ({
+                          label: `${material.name} · ${material.category} · ${material.status}`,
+                          value: material.id,
+                        }))}
 
                     />
                   </Form.Item>
