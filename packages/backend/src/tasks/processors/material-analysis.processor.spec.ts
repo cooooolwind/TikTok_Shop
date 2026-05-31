@@ -8,7 +8,6 @@ import { VolcanoClientProvider } from '../../ai/providers/volcano-client.provide
 import { TasksGateway } from '../../websocket/tasks.gateway';
 import { Job } from 'bullmq';
 import { promises as fs } from 'fs';
-import { VideoUtil } from '../../common/utils/video.util';
 
 jest.mock('../../common/utils/video.util');
 
