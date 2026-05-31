@@ -171,6 +171,76 @@ describe('ScriptsService', () => {
     );
   });
 
+  it('copies selected image material urls into generated script product images', async () => {
+    const { service, scriptsRepository, materialsRepository } = makeService();
+    materialsRepository.findBy.mockResolvedValue([
+      {
+        id: 'material-1',
+        type: 'image',
+        url: '/uploads/materials/dress.jpg',
+        filename: 'dress.jpg',
+        tags: [],
+        aiTags: [],
+        aiDescription: '',
+        category: 'product',
+        status: 'uploaded',
+      },
+      {
+        id: 'material-2',
+        type: 'video',
+        url: '/uploads/materials/demo.mp4',
+        filename: 'demo.mp4',
+        tags: [],
+        aiTags: [],
+        aiDescription: '',
+        category: 'scene',
+        status: 'uploaded',
+      },
+    ] as never);
+
+    await service.generate({
+      product_info: { name: 'Dress', description: 'Desc', category: 'fashion', selling_points: [] },
+      mode: 'imitation',
+      material_ids: ['material-1', 'material-2'],
+    });
+
+    expect(scriptsRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        productInfo: expect.objectContaining({ images: ['/uploads/materials/dress.jpg'] }),
+      }),
+    );
+  });
+
+  it('copies selected image material urls into manual draft product images', async () => {
+    const { service, scriptsRepository, materialsRepository } = makeService();
+    materialsRepository.findBy.mockResolvedValue([
+      {
+        id: 'material-1',
+        type: 'image',
+        url: '/uploads/materials/dress.jpg',
+        filename: 'dress.jpg',
+        tags: [],
+        aiTags: [],
+        aiDescription: '',
+        category: 'product',
+        status: 'uploaded',
+      },
+    ] as never);
+
+    await service.create({
+      product_info: { name: 'Dress', description: 'Desc', category: 'fashion', selling_points: [] },
+      mode: 'free',
+      source_material_ids: ['material-1'],
+      scenes: [],
+    });
+
+    expect(scriptsRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        productInfo: expect.objectContaining({ images: ['/uploads/materials/dress.jpg'] }),
+      }),
+    );
+  });
+
   it('embeds local image materials as multimodal data URLs', async () => {
     const { service, materialsRepository, scriptQueue } = makeService();
     jest.spyOn(fsPromises, 'readFile').mockResolvedValue(Buffer.from('image-bytes'));
