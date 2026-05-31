@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { promises as fsPromises } from 'fs';
 import { MaterialsService } from './materials.service';
 import { Material } from './entities/material.entity';
+import { VideoUtil } from '../../common/utils/video.util';
 
 const now = new Date('2026-05-23T00:00:00.000Z');
 
@@ -133,6 +134,27 @@ describe('MaterialsService', () => {
       filename: 'product.jpg',
       type: 'image',
     });
+  });
+
+  it('uploads a video and eagerly generates a thumbnail', async () => {
+    const { service, materialsRepository } = makeService();
+    jest.spyOn(fsPromises, 'mkdir').mockResolvedValue(undefined);
+    jest.spyOn(fsPromises, 'writeFile').mockResolvedValue(undefined);
+    const extractSpy = jest.spyOn(VideoUtil, 'extractFrameAt').mockResolvedValue(Buffer.from('frame'));
+
+    const result = await service.upload(makeFile({ mimetype: 'video/mp4', originalname: 'video.mp4' }), {
+      category: 'product',
+      source_declaration: 'owned',
+    });
+
+    expect(extractSpy).toHaveBeenCalledWith(expect.any(String), 0);
+    expect(materialsRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'video',
+        thumbnailUrl: expect.stringContaining('.jpg'),
+      }),
+    );
+    expect(result.type).toBe('video');
   });
 
   it('normalizes mojibake upload filenames before persisting', async () => {

@@ -14,6 +14,7 @@ import { basename, extname, join } from 'path';
 import { Brackets, Repository } from 'typeorm';
 import { Material } from './entities/material.entity';
 import { VideoSlice } from './entities/video-slice.entity';
+import { VideoUtil } from '../../common/utils/video.util';
 import { MaterialListQueryDto } from './dto/material-list-query.dto';
 import { SimilarSearchDto } from './dto/similar-search.dto';
 import { UploadMaterialDto } from './dto/upload-material.dto';
@@ -95,11 +96,32 @@ export class MaterialsService {
 
     const url = `/uploads/materials/${storedFilename}`;
     const originalFilename = this.normalizeFilename(file.originalname);
+
+    // Eagerly generate thumbnail for videos to improve UI response time
+    let thumbnailUrl = type === 'image' ? url : '';
+    if (type === 'video') {
+      try {
+        const storage = this.configService.get('storage') as { localPath: string };
+        const thumbnailsDir = join(storage.localPath, 'materials', 'thumbnails');
+        await fs.mkdir(thumbnailsDir, { recursive: true });
+
+        const thumbnailFilename = `${storedFilename}.jpg`;
+        const thumbnailPath = join(thumbnailsDir, thumbnailFilename);
+
+        const frameBuffer = await VideoUtil.extractFrameAt(storedPath, 0);
+        await fs.writeFile(thumbnailPath, frameBuffer);
+        thumbnailUrl = `/uploads/materials/thumbnails/${thumbnailFilename}`;
+      } catch (e) {
+        const error = e instanceof Error ? e.message : String(e);
+        this.logger.warn(`Failed to generate eager thumbnail for ${storedFilename}: ${error}`);
+      }
+    }
+
     const material = this.materialsRepository.create({
       merchantId: DEFAULT_MERCHANT_ID,
       type,
       url,
-      thumbnailUrl: type === 'image' ? url : '',
+      thumbnailUrl,
       name: dto.name || originalFilename,
       filename: originalFilename,
       size: file.size,
