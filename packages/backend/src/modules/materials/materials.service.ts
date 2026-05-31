@@ -6,17 +6,19 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import { basename, extname, join } from 'path';
 import { Brackets, Repository } from 'typeorm';
-import { TasksGateway } from '../../websocket/tasks.gateway';
 import { Material } from './entities/material.entity';
 import { VideoSlice } from './entities/video-slice.entity';
 import { MaterialListQueryDto } from './dto/material-list-query.dto';
 import { SimilarSearchDto } from './dto/similar-search.dto';
 import { UploadMaterialDto } from './dto/upload-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
+import { QUEUES } from '../../tasks/queues';
 
 type MaterialResponse = {
   id: string;
@@ -63,8 +65,9 @@ export class MaterialsService {
     private readonly materialsRepository: Repository<Material>,
     @InjectRepository(VideoSlice)
     private readonly videoSlicesRepository: Repository<VideoSlice>,
+    @InjectQueue(QUEUES.MATERIAL_ANALYSIS)
+    private readonly analysisQueue: Queue,
     private readonly configService: ConfigService,
-    private readonly tasksGateway: TasksGateway,
   ) {}
 
   async upload(file: Express.Multer.File | undefined, dto: UploadMaterialDto) {
@@ -231,14 +234,12 @@ export class MaterialsService {
       throw new NotFoundException('material not found');
     }
 
-    material.status = 'ready';
-    material.aiTags = this.buildMockTags(material);
-    material.aiDescription = this.buildMockDescription(material);
-    const saved = await this.materialsRepository.save(material);
+    material.status = 'processing';
+    await this.materialsRepository.save(material);
 
-    this.tasksGateway.emitMaterialAnalyzed(saved.id, saved.aiTags, saved.aiDescription);
+    const job = await this.analysisQueue.add('analyze', { materialId: material.id });
 
-    return { task_id: `material_analysis_${saved.id}`, status: 'queued' as const };
+    return { task_id: job.id, status: 'queued' as const };
   }
 
   async findSlices(id: string) {
@@ -334,15 +335,6 @@ export class MaterialsService {
         this.logger.warn(`Failed to delete local material file ${filename}: ${(error as Error).message}`);
       }
     }
-  }
-
-  private buildMockTags(material: Material) {
-    const baseTags = [material.category, material.type, ...material.tags].filter(Boolean);
-    return Array.from(new Set(baseTags));
-  }
-
-  private buildMockDescription(material: Material) {
-    return `Mock analysis for ${this.normalizeFilename(material.filename)}. Type: ${material.type}; category: ${material.category}.`;
   }
 
   private calculateTextScore(material: Material, query: string) {

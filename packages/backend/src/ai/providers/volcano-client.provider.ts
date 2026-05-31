@@ -53,6 +53,18 @@ export class VolcanoClientProvider {
     const mockMode = this.configService.get<boolean>('volcano.mockMode');
 
     if (mockMode) {
+      const isAnalysis = JSON.stringify(messages).toLowerCase().includes('analyze') || 
+                         JSON.stringify(messages).toLowerCase().includes('material');
+      
+      if (isAnalysis) {
+        return {
+          content: JSON.stringify({
+            tags: ['ecommerce', 'modern', 'high-quality', 'product-shot', 'TikTok-style'],
+            description: 'A professional e-commerce product material optimized for TikTok Shop conversion.',
+          }),
+        };
+      }
+
       return {
         content: JSON.stringify({
           narrative_framework: 'Hook - product benefits - CTA',
@@ -99,7 +111,59 @@ export class VolcanoClientProvider {
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error('Volcano chat completion returned empty content');
     return { content };
-  }
+    }
+
+    async uploadFile(fileBuffer: Buffer, filename: string, purpose = 'user_data'): Promise<string> {
+    const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
+    const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
+
+    if (!apiKey) throw new Error('VOLCANO_TEXT_API_KEY is required for file upload');
+
+    const formData = new FormData();
+    const blob = new Blob([fileBuffer]);
+    formData.append('file', blob, filename);
+    formData.append('purpose', purpose);
+
+    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/files`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Volcano file upload failed: ${response.status} ${errorText}`);
+    }
+
+    const data = (await response.json()) as { id: string };
+    return data.id;
+    }
+
+    async deleteFile(fileId: string): Promise<void> {
+    const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
+    const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
+
+    if (!apiKey) return;
+
+    try {
+      const response = await fetch(`${baseUrl.replace(/\/$/, '')}/files/${fileId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      });
+
+      if (!response.ok) {
+        this.logger.warn(`Failed to delete Volcano file ${fileId}: ${response.status} ${await response.text()}`);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Error deleting Volcano file ${fileId}: ${errorMessage}`);
+    }
+    }
+
 
   async stubChatCompletion() {
     const endpoint = this.configService.get<string>('volcano.textEndpoint') ?? 'stub';
