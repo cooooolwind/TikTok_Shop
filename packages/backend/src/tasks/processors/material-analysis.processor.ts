@@ -188,44 +188,40 @@ Output must be in JSON format.`,
     const thumbnailsDir = join(storage.localPath, 'materials', 'thumbnails');
     await fs.mkdir(thumbnailsDir, { recursive: true });
 
-    const slices: VideoSlice[] = [];
-    for (const aiSlice of aiSlices) {
-      const sliceId = `${material.id}-${Math.round(aiSlice.start_time * 1000)}`;
-      const thumbnailFilename = `${sliceId}.jpg`;
-      const thumbnailPath = join(thumbnailsDir, thumbnailFilename);
-      
-      const slice = this.videoSlicesRepository.create({
-        materialId: material.id,
-        startTime: aiSlice.start_time,
-        endTime: aiSlice.end_time,
-        description: aiSlice.description,
-        tags: aiSlice.tags,
-        thumbnailUrl: `/uploads/materials/thumbnails/${thumbnailFilename}`,
-      });
+    // Parallelize thumbnail generation for slices
+    const slices = await Promise.all(
+      aiSlices.map(async (aiSlice) => {
+        const sliceId = `${material.id}-${Math.round(aiSlice.start_time * 1000)}`;
+        const thumbnailFilename = `${sliceId}.jpg`;
+        const thumbnailPath = join(thumbnailsDir, thumbnailFilename);
 
-      // Generate thumbnail for the slice (mid-point frame)
-      try {
-        const midTime = (aiSlice.start_time + aiSlice.end_time) / 2;
-        const frameBuffer = await VideoUtil.extractFrameAt(videoPath, midTime);
-        await fs.writeFile(thumbnailPath, frameBuffer);
-      } catch (e) {
-        const thumbError = e instanceof Error ? e.message : String(e);
-        this.logger.warn(`Failed to generate thumbnail for slice ${sliceId}: ${thumbError}`);
-        // Fallback to material thumbnail if extraction fails
-        slice.thumbnailUrl = material.thumbnailUrl;
-      }
+        const slice = this.videoSlicesRepository.create({
+          materialId: material.id,
+          startTime: aiSlice.start_time,
+          endTime: aiSlice.end_time,
+          description: aiSlice.description,
+          tags: aiSlice.tags,
+          thumbnailUrl: `/uploads/materials/thumbnails/${thumbnailFilename}`,
+        });
 
-      slices.push(slice);
-    }
+        // Generate thumbnail for the slice (mid-point frame)
+        try {
+          const midTime = (aiSlice.start_time + aiSlice.end_time) / 2;
+          const frameBuffer = await VideoUtil.extractFrameAt(videoPath, midTime);
+          await fs.writeFile(thumbnailPath, frameBuffer);
+        } catch (e) {
+          const thumbError = e instanceof Error ? e.message : String(e);
+          this.logger.warn(`Failed to generate thumbnail for slice ${sliceId}: ${thumbError}`);
+          // Fallback to material thumbnail if extraction fails
+          slice.thumbnailUrl = material.thumbnailUrl;
+        }
+
+        return slice;
+      }),
+    );
 
     await this.videoSlicesRepository.save(slices);
-
-    // Use the first slice's thumbnail as the material's main thumbnail if not already set
-    if (!material.thumbnailUrl && slices.length > 0 && slices[0].thumbnailUrl) {
-      material.thumbnailUrl = slices[0].thumbnailUrl;
-      await this.materialsRepository.save(material);
-      this.logger.log(`Set material ${material.id} main thumbnail from first slice`);
-    }
+    this.logger.log(`Saved ${slices.length} slices for material ${material.id}`);
   }
 
   private parseAiResponse(content: string): AiAnalysisResult {
