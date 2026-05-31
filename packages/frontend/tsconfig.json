@@ -11,7 +11,8 @@
     "noUnusedParameters": false,
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "types": ["vitest/globals"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
