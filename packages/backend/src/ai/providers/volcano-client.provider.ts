@@ -7,15 +7,35 @@ export interface CreateVideoTaskInput {
   resolution: string;
   duration: number;
   imageUrl?: string;
+  imageUrls?: string[];
+  referenceImageUrls?: string[];
+  firstFrameUrl?: string;
 }
 
 export interface CreateVideoTaskResult {
+  id: string;
   task_id: string;
 }
 
-export interface GetVideoTaskResult {
+export interface VolcanoVideoTask {
+  id: string;
   task_id: string;
-  status: 'pending' | 'running' | 'success' | 'failed';
+  status: 'pending' | 'running' | 'succeeded' | 'failed' | 'expired' | 'cancelled';
+  duration?: number;
+  ratio?: string;
+  resolution?: string;
+  content?: {
+    video_url?: string;
+    file_url?: string;
+    last_frame_url?: string;
+  };
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
+export interface GetVideoTaskResult extends VolcanoVideoTask {
   video_url?: string;
   video_thumbnail_url?: string;
   error_code?: string;
@@ -24,11 +44,30 @@ export interface GetVideoTaskResult {
 
 export interface GenerateFirstFrameInput {
   prompt: string;
-  ratio: string;
+  ratio?: string;
+  referenceImages?: string[];
+  size?: string;
 }
 
 export interface GenerateFirstFrameResult {
+  url: string;
   imageUrl: string;
+}
+
+export interface VolcanoChatCompletionResult {
+  choices: Array<{
+    message: {
+      role: string;
+      content: string;
+    };
+    finish_reason: string;
+  }>;
+  content: string;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
 }
 
 const DEFAULT_VIDEO_FETCH_TIMEOUT_MS = 60000;
@@ -39,7 +78,7 @@ export class VolcanoClientProvider {
 
   constructor(private readonly configService: ConfigService) {}
 
-  async generateChat(messages: any[], options?: any) {
+  async generateChat(messages: any[], options?: any): Promise<VolcanoChatCompletionResult> {
     const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
     const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
     const model = this.configService.get<string>('volcano.textEndpoint') ?? '';
@@ -69,14 +108,63 @@ export class VolcanoClientProvider {
         throw new Error(`Volcano API error: ${JSON.stringify(error)}`);
       }
 
-      return await response.json();
-    } catch (error) {
+      const result: any = await response.json();
+      return {
+        ...result,
+        content: result.choices?.[0]?.message?.content || '',
+      };
+    } catch (error: any) {
       this.logger.error(`Failed to generate chat: ${error.message}`);
       throw error;
     }
   }
 
-  async uploadFile(fileBuffer: Buffer, filename: string) {
+  async chatCompletion(messages: any[], options?: any): Promise<VolcanoChatCompletionResult> {
+    return this.generateChat(messages, options);
+  }
+
+  async createResponse(input: any, options?: any): Promise<VolcanoChatCompletionResult> {
+    const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
+    const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
+    const model = this.configService.get<string>('volcano.textEndpoint') ?? '';
+
+    if (!apiKey || !model) {
+      this.logger.error('VOLCANO_TEXT_API_KEY or VOLCANO_TEXT_ENDPOINT is missing');
+      throw new Error('Volcano Text configuration is missing');
+    }
+
+    try {
+      const response = await fetch(`${baseUrl.replace(/\/$/, '')}/responses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          input,
+          ...options,
+        }),
+        signal: AbortSignal.timeout(this.getVideoFetchTimeoutMs()),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Volcano API error: ${JSON.stringify(error)}`);
+      }
+
+      const result: any = await response.json();
+      return {
+        ...result,
+        content: result.choices?.[0]?.message?.content || '',
+      };
+    } catch (error: any) {
+      this.logger.error(`Failed to create response: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async uploadFile(fileBuffer: Buffer, filename: string): Promise<string> {
     const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
     const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
 
@@ -102,14 +190,15 @@ export class VolcanoClientProvider {
         throw new Error(`Volcano API error: ${JSON.stringify(error)}`);
       }
 
-      return await response.json();
-    } catch (error) {
+      const result: any = await response.json();
+      return result.id;
+    } catch (error: any) {
       this.logger.error(`Failed to upload file: ${error.message}`);
       throw error;
     }
   }
 
-  async retrieveFile(fileId: string) {
+  async retrieveFile(fileId: string): Promise<any> {
     const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
     const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
 
@@ -130,13 +219,17 @@ export class VolcanoClientProvider {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Failed to retrieve file: ${error.message}`);
       throw error;
     }
   }
 
-  async deleteFile(fileId: string) {
+  async getFile(fileId: string): Promise<any> {
+    return this.retrieveFile(fileId);
+  }
+
+  async deleteFile(fileId: string): Promise<any> {
     const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
     const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
 
@@ -157,13 +250,13 @@ export class VolcanoClientProvider {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Failed to delete file: ${error.message}`);
       throw error;
     }
   }
 
-  async listFiles() {
+  async listFiles(): Promise<any> {
     const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
     const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
 
@@ -184,16 +277,16 @@ export class VolcanoClientProvider {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Failed to list files: ${error.message}`);
       throw error;
     }
   }
 
   async generateFirstFrame(input: GenerateFirstFrameInput): Promise<GenerateFirstFrameResult> {
-    if (this.configService.get<boolean>('mockMode')) {
-      const mockUrl = this.configService.get<string>('volcano.mockFirstFrameUrl');
-      return { imageUrl: mockUrl || 'https://example.com/mock-first-frame.png' };
+    if (this.configService.get<boolean>('volcano.mockMode')) {
+      const mockUrl = this.configService.get<string>('volcano.mockFirstFrameUrl') || 'https://example.com/mock-first-frame.png';
+      return { url: mockUrl, imageUrl: mockUrl } as any;
     }
 
     const apiKey = this.configService.get<string>('volcano.imageApiKey') ?? '';
@@ -205,22 +298,26 @@ export class VolcanoClientProvider {
       throw new Error('Volcano Image configuration is missing');
     }
 
-    const response = await this.postImageGeneration(baseUrl, apiKey, {
+    const response: any = await this.postImageGeneration(baseUrl, apiKey, {
       model,
       prompt: input.prompt,
-      render_size: input.ratio === '16:9' ? '1280x720' : '720x1280',
+      image: input.referenceImages || [],
+      size: input.size || '1600x2848',
+      sequential_image_generation: 'disabled',
+      watermark: false,
+      response_format: 'url',
     });
 
     if (response.data?.[0]?.url) {
-      return { imageUrl: response.data[0].url };
+      return { url: response.data[0].url } as any;
     }
 
     throw new Error(`Failed to generate first frame: ${JSON.stringify(response)}`);
   }
 
   async createVideoTask(input: CreateVideoTaskInput): Promise<CreateVideoTaskResult> {
-    if (this.configService.get<boolean>('mockMode')) {
-      return { task_id: `mock-task-${Date.now()}` };
+    if (this.configService.get<boolean>('volcano.mockMode')) {
+      return { id: 'mock_video_task' } as any;
     }
 
     const apiKey = this.configService.get<string>('volcano.videoApiKey') ?? '';
@@ -228,32 +325,57 @@ export class VolcanoClientProvider {
     const model = this.configService.get<string>('volcano.videoEndpoint') ?? '';
 
     if (!apiKey || !model) {
-      this.logger.error('VOLCANO_VIDEO_API_KEY or VOLCANO_VIDEO_ENDPOINT is missing');
-      throw new Error('Volcano Video configuration is missing');
+      throw new Error('VOLCANO_VIDEO_API_KEY and VOLCANO_VIDEO_ENDPOINT are required');
     }
 
-    const retryAttempts = this.configService.get<number>('volcano.videoCreateRetryAttempts') || 3;
-    const retryDelay = this.configService.get<number>('volcano.videoCreateRetryDelayMs') || 15000;
+    const retryAttempts = this.configService.get<number>('volcano.videoCreateRetryAttempts') ?? 3;
+    const retryDelay = this.configService.get<number>('volcano.videoCreateRetryDelayMs') ?? 15000;
 
+    let useLastFrame = true;
     for (let attempt = 1; attempt <= retryAttempts; attempt++) {
       try {
-        const response = await this.postVideoGeneration(baseUrl, apiKey, {
+        const body: any = {
           model,
           content: this.buildVideoContent(input),
-          render_spec: {
-            duration: this.normalizeVideoDuration(input.duration),
-            fps: 25,
-            aspect_ratio: input.ratio === '16:9' ? '16:9' : '9:16',
-          },
-        });
-
-        if (response.id) {
-          return { task_id: response.id };
+        };
+        if (useLastFrame) {
+          body.return_last_frame = true;
         }
 
-        throw new Error(`Unexpected video task creation response: ${JSON.stringify(response)}`);
+        const response = await fetch(`${baseUrl.replace(/\/$/, '')}/contents/generations/tasks`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(this.getVideoFetchTimeoutMs()),
+        });
+
+        if (response.status === 404 && useLastFrame) {
+          useLastFrame = false;
+          attempt--; // Retry immediately without last frame
+          continue;
+        }
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(`Volcano API error: ${JSON.stringify(error)}`);
+        }
+
+        const result: any = await response.json();
+        if (result.id) {
+          return { id: result.id } as any;
+        }
+
+        throw new Error(`Unexpected video task creation response: ${JSON.stringify(result)}`);
       } catch (error: any) {
-        const isRateLimit = error.message?.includes('429');
+        if (error instanceof TypeError && (error.message === 'fetch failed' || error.message.includes('network'))) {
+          const cause = (error as any).cause;
+          throw new Error(`Volcano video task creation network failed: fetch failed; cause=${cause?.message}; code=${cause?.code}`);
+        }
+
+        const isRateLimit = error.message?.includes('429') || error.message?.includes('TooManyRequests') || error.message?.includes('RPM limit exceeded');
         const isRetryable = isRateLimit || attempt < retryAttempts;
 
         if (isRetryable) {
@@ -263,6 +385,7 @@ export class VolcanoClientProvider {
           await this.sleep(attempt * retryDelay);
           continue;
         }
+        
         throw error;
       }
     }
@@ -271,13 +394,15 @@ export class VolcanoClientProvider {
   }
 
   async getVideoTask(taskId: string): Promise<GetVideoTaskResult> {
-    if (this.configService.get<boolean>('mockMode')) {
+    if (this.configService.get<boolean>('volcano.mockMode')) {
       return {
-        task_id: taskId,
-        status: 'success',
-        video_url: this.configService.get<string>('volcano.mockVideoUrl'),
-        video_thumbnail_url: this.configService.get<string>('volcano.mockVideoThumbnailUrl'),
-      };
+        id: taskId,
+        status: 'succeeded',
+        content: {
+          video_url: this.configService.get<string>('volcano.mockVideoUrl'),
+          last_frame_url: this.configService.get<string>('volcano.mockVideoThumbnailUrl'),
+        },
+      } as any;
     }
 
     const apiKey = this.configService.get<string>('volcano.videoApiKey') ?? '';
@@ -299,7 +424,7 @@ export class VolcanoClientProvider {
 
       const result = await response.json();
       return this.mapVideoTaskResult(result);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Failed to get video task: ${error.message}`);
       throw error;
     }
@@ -309,49 +434,43 @@ export class VolcanoClientProvider {
     const statusMap: Record<string, GetVideoTaskResult['status']> = {
       pending: 'pending',
       running: 'running',
-      succeeded: 'success',
+      succeeded: 'succeeded',
       failed: 'failed',
     };
 
     return {
-      task_id: result.id,
+      ...result,
+      id: result.id,
       status: statusMap[result.status] || 'failed',
-      video_url: result.result?.video_url,
-      video_thumbnail_url: result.result?.video_thumbnail_url,
+      video_url: result.result?.video_url || result.content?.video_url,
+      video_thumbnail_url: result.result?.video_thumbnail_url || result.content?.last_frame_url,
       error_code: result.error?.code,
       error_message: result.error?.message,
-    };
+    } as any;
   }
 
   private buildVideoContent(input: CreateVideoTaskInput) {
-    const content: any[] = [{ type: 'text', text: input.prompt }];
-    if (input.imageUrl) {
-      content.push({ type: 'image_url', image_url: { url: input.imageUrl } });
+    const prompt = `${input.prompt} --duration ${this.normalizeVideoDuration(input.duration)} --ratio ${input.ratio} --camerafixed false --watermark false`;
+    const content: any[] = [{ type: 'text', text: prompt }];
+    
+    if (input.firstFrameUrl) {
+      content.push({
+        type: 'image_url',
+        image_url: { url: input.firstFrameUrl },
+        role: 'first_frame',
+      });
     }
+
+    const referenceImages = input.imageUrls || input.referenceImageUrls || [];
+    for (const url of referenceImages) {
+      content.push({ type: 'image_url', image_url: { url } });
+    }
+
     return content;
   }
 
   private async postImageGeneration(baseUrl: string, apiKey: string, body: any) {
     const response = await fetch(`${baseUrl.replace(/\/$/, '')}/images/generations`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(this.getVideoFetchTimeoutMs()),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Volcano API error: ${JSON.stringify(error)}`);
-    }
-
-    return await response.json();
-  }
-
-  private async postVideoGeneration(baseUrl: string, apiKey: string, body: any) {
-    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/contents/generations/tasks`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -378,7 +497,7 @@ export class VolcanoClientProvider {
 
   private normalizeVideoDuration(duration?: number) {
     if (!duration) return 5;
-    return Math.min(Math.max(duration, 2), 15);
+    return Math.min(Math.max(duration, 4), 12);
   }
 
   private sleep(ms: number) {
