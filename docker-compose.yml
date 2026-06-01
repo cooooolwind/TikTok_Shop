@@ -43,14 +43,16 @@ services:
       dockerfile: docker/backend.Dockerfile
     container_name: aigc-backend
     environment:
-      NODE_ENV: production
-      TZ: ${TZ:-Asia/Shanghai}
-      POSTGRES_HOST: postgres
-      REDIS_HOST: redis
+      - NODE_ENV=production
+      - TZ=${TZ:-Asia/Shanghai}
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+      - BACKEND_PORT=3000
     env_file:
       - .env
     ports:
       - "${BACKEND_PORT:-3000}:3000"
+
     volumes:
       - backend_uploads:/app/uploads
     depends_on:
