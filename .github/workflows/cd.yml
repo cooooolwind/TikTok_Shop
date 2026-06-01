@@ -205,7 +205,13 @@ jobs:
               
               if [ "$UPDATE_BACKEND" = "true" ]; then
                 echo "Backend health check..."
-                curl -fsS http://localhost:3000/api/v1/health \
+                # 从 .env 文件中提取端口和前缀，如果不存在则使用默认值
+                HEALTH_PORT=$(grep ^BACKEND_PORT .env | cut -d= -f2 || echo 3000)
+                HEALTH_PREFIX=$(grep ^API_PREFIX .env | cut -d= -f2 || echo api/v1)
+                HEALTH_PORT=${HEALTH_PORT:-3000}
+                HEALTH_PREFIX=${HEALTH_PREFIX:-api/v1}
+                
+                curl -fsS http://localhost:${HEALTH_PORT}/${HEALTH_PREFIX}/health \
                   && echo "Backend OK" \
                   || (echo "Backend health check failed" && exit 1)
               fi
@@ -221,3 +227,24 @@ jobs:
             fi
 
             docker logout $ACR_REGISTRY
+
+  # ──────────────────────────────────────────────
+  # Stage 4: Status Conclusion (用于提供清晰的合并状态)
+  # ──────────────────────────────────────────────
+  cd-status:
+    needs: [ci, build-and-push-backend, build-and-push-frontend, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report status
+        run: |
+          RESULTS="${{ join(needs.*.result, ' ') }}"
+          echo "Workflow results: $RESULTS"
+          
+          if echo "$RESULTS" | grep -q "failure"; then
+            echo "CD pipeline failed"
+            exit 1
+          fi
+          
+          echo "CD pipeline passed or skipped correctly"
+          exit 0

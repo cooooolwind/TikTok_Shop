@@ -38,9 +38,10 @@ services:
     image: ${BACKEND_IMAGE:-registry.cn-shanghai.aliyuncs.com/your-namespace/aigc-backend:latest}
     container_name: aigc-backend
     environment:
-      NODE_ENV: production
-      POSTGRES_HOST: postgres
-      REDIS_HOST: redis
+      - NODE_ENV=production
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+      - BACKEND_PORT=3000
     env_file:
       - .env
     ports:

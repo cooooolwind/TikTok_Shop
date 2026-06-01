@@ -53,32 +53,41 @@ jobs:
       - name: Detect affected packages
         id: affected
         run: |
-          # 使用 turbo --affected --dry-run 获取受影响的 packages
+          # 1. 使用 turbo --affected --dry-run 获取受影响的 packages
           AFFECTED=$(pnpm turbo build lint test typecheck --affected --dry-run=json 2>/dev/null | jq -r '.packages[]' | sort -u)
+          
+          # 2. 检查基础设施文件是否有变动
+          # 包括：.github/workflows, docker/, scripts/, docker-compose*, .env.example
+          INFRA_CHANGED=$(git diff --name-only ${{ github.event.before || 'HEAD~1' }} HEAD | grep -E '^(.github/workflows/|docker/|scripts/|docker-compose|.env.example)' || true)
 
           echo "Affected packages: $AFFECTED"
+          if [ -n "$INFRA_CHANGED" ]; then
+            echo "Infrastructure files changed: $INFRA_CHANGED"
+          fi
 
-          # 设置每个 package 的 affected 状态
-          if echo "$AFFECTED" | grep -q "@aigc/backend"; then
+          # 设置 backend affected 状态
+          if echo "$AFFECTED" | grep -q "@aigc/backend" || [ -n "$INFRA_CHANGED" ]; then
             echo "backend=true" >> $GITHUB_OUTPUT
           else
             echo "backend=false" >> $GITHUB_OUTPUT
           fi
 
-          if echo "$AFFECTED" | grep -q "@aigc/frontend"; then
+          # 设置 frontend affected 状态
+          if echo "$AFFECTED" | grep -q "@aigc/frontend" || [ -n "$INFRA_CHANGED" ]; then
             echo "frontend=true" >> $GITHUB_OUTPUT
           else
             echo "frontend=false" >> $GITHUB_OUTPUT
           fi
 
+          # 设置 shared-types affected 状态 (基础类型变动通常会由 turbo 反应到 affected package)
           if echo "$AFFECTED" | grep -q "@aigc/shared-types"; then
             echo "shared-types=true" >> $GITHUB_OUTPUT
           else
             echo "shared-types=false" >> $GITHUB_OUTPUT
           fi
 
-          # 判断是否有任何 package 受影响
-          if [ -z "$AFFECTED" ] || [ "$AFFECTED" = "//" ]; then
+          # 判断是否有任何 package 或 基础设施 受影响
+          if { [ -z "$AFFECTED" ] || [ "$AFFECTED" = "//" ]; } && [ -z "$INFRA_CHANGED" ]; then
             echo "any_affected=false" >> $GITHUB_OUTPUT
           else
             echo "any_affected=true" >> $GITHUB_OUTPUT
@@ -204,3 +213,29 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo build --affected
 
+  # ──────────────────────────────────────────────
+  # Stage 6: Status Conclusion (用于提供清晰的合并状态)
+  # ──────────────────────────────────────────────
+  ci-status:
+    needs: [detect-affected, lint-and-typecheck, test-backend, test-frontend, build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report status
+        run: |
+          # 检查是否有任何前置任务失败 (排除 cancelled 和 skipped)
+          # 注意：skipped 不算失败
+          RESULTS="${{ join(needs.*.result, ' ') }}"
+          echo "Workflow results: $RESULTS"
+          
+          if echo "$RESULTS" | grep -q "failure"; then
+            echo "CI pipeline failed"
+            exit 1
+          fi
+          
+          if echo "$RESULTS" | grep -q "cancelled"; then
+            echo "CI pipeline was cancelled"
+          fi
+          
+          echo "CI pipeline passed or skipped correctly"
+          exit 0
