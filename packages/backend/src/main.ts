@@ -7,7 +7,8 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.setGlobalPrefix('api/v1');
+  const apiPrefix = process.env.API_PREFIX || 'api/v1';
+  app.setGlobalPrefix(apiPrefix);
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -19,7 +20,9 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: process.env.NODE_ENV === 'production' ? false : '*',
+    origin: process.env.NODE_ENV === 'production' 
+      ? (process.env.FRONTEND_URL || `http://localhost:${process.env.FRONTEND_PORT || 5173}`) 
+      : '*',
     credentials: true,
   });
 

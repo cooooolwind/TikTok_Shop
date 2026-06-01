@@ -11,18 +11,18 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: Number(process.env.FRONTEND_PORT) || 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: `http://localhost:${process.env.BACKEND_PORT || 3000}`,
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:3000',
+        target: `http://localhost:${process.env.BACKEND_PORT || 3000}`,
         ws: true,
       },
       '/uploads': {
-        target: 'http://localhost:3000',
+        target: `http://localhost:${process.env.BACKEND_PORT || 3000}`,
         changeOrigin: true,
       },
     },

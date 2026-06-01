@@ -549,10 +549,8 @@ export class VolcanoClientProvider {
   }
 
   private getVideoFetchTimeoutMs() {
-    const configured =
-      this.configService.get<number>('volcano.videoFetchTimeoutMs') ??
-      Number(process.env.VOLCANO_VIDEO_FETCH_TIMEOUT_MS);
-    return Number.isFinite(configured) && configured > 0
+    const configured = this.configService.get<number>('volcano.videoFetchTimeoutMs');
+    return Number.isFinite(configured) && configured && configured > 0
       ? configured
       : DEFAULT_VIDEO_FETCH_TIMEOUT_MS;
   }
