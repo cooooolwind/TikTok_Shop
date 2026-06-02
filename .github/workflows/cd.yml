@@ -202,6 +202,21 @@ jobs:
               
               echo "Waiting for services..."
               sleep 10
+
+              retry_health() {
+                local url="$1" label="$2" max_attempts=5 interval=5 attempt=1
+                while [ $attempt -le $max_attempts ]; do
+                  if curl -fsS "$url" > /dev/null 2>&1; then
+                    return 0
+                  fi
+                  if [ $attempt -lt $max_attempts ]; then
+                    echo "  ${label} health check attempt ${attempt}/${max_attempts} failed, retrying in ${interval}s..."
+                    sleep $interval
+                  fi
+                  attempt=$((attempt + 1))
+                done
+                return 1
+              }
               
               if [ "$UPDATE_BACKEND" = "true" ]; then
                 echo "Backend health check..."
@@ -211,16 +226,28 @@ jobs:
                 HEALTH_PORT=${HEALTH_PORT:-3000}
                 HEALTH_PREFIX=${HEALTH_PREFIX:-api/v1}
                 
-                curl -fsS http://localhost:${HEALTH_PORT}/${HEALTH_PREFIX}/health \
-                  && echo "Backend OK" \
-                  || (echo "Backend health check failed" && exit 1)
+                if retry_health "http://localhost:${HEALTH_PORT}/${HEALTH_PREFIX}/health" "Backend"; then
+                  echo "Backend OK"
+                else
+                  echo "Backend health check failed"
+                  echo "--- Backend container logs (last 100 lines) ---"
+                  docker logs aigc-backend --tail 100 2>&1 || echo "(unable to fetch logs)"
+                  echo "--- End of backend logs ---"
+                  exit 1
+                fi
               fi
               
               if [ "$UPDATE_FRONTEND" = "true" ]; then
                 echo "Frontend health check..."
-                curl -fsS http://localhost/ \
-                  && echo "Frontend OK" \
-                  || (echo "Frontend health check failed" && exit 1)
+                if retry_health "http://localhost/" "Frontend"; then
+                  echo "Frontend OK"
+                else
+                  echo "Frontend health check failed"
+                  echo "--- Frontend container logs (last 100 lines) ---"
+                  docker logs aigc-frontend --tail 100 2>&1 || echo "(unable to fetch logs)"
+                  echo "--- End of frontend logs ---"
+                  exit 1
+                fi
               fi
             else
               echo "No services to update."
