@@ -154,6 +154,7 @@ export class MaterialAnalysisProcessor extends WorkerHost {
         const aiResponse = await this.volcanoClient.createResponse(input, {
           text: { format: { type: 'json_object' } },
         });
+        this.logger.debug(`Responses API raw content length: ${aiResponse.content?.length ?? 0}`);
         result = this.parseAiResponse(aiResponse.content);
       } else {
         // 3. Use Base64 for images (Fast and no double-hop)
@@ -164,13 +165,15 @@ export class MaterialAnalysisProcessor extends WorkerHost {
         const aiResponse = await this.volcanoClient.chatCompletion(messages, {
           response_format: { type: 'json_object' },
         });
+        this.logger.debug(`Chat API raw content length: ${aiResponse.content?.length ?? 0}`);
         result = this.parseAiResponse(aiResponse.content);
       }
 
       // 4. Update Material
       material.aiTags = result.tags;
       material.aiDescription = result.description;
-      material.status = 'ready';
+      const isFallback = result.tags.length === 1 && result.tags[0] === 'auto-tagged';
+      material.status = isFallback ? 'failed' : 'ready';
       await this.materialsRepository.save(material);
 
       // 6. Handle Video Slices (Option C: Semantic Slicing)
@@ -180,7 +183,11 @@ export class MaterialAnalysisProcessor extends WorkerHost {
       }
 
       // 7. Notify via WebSocket
-      this.tasksGateway.emitMaterialAnalyzed(material.id, material.aiTags, material.aiDescription);
+      if (isFallback) {
+        this.tasksGateway.emitMaterialAnalysisFailed(material.id, result.description);
+      } else {
+        this.tasksGateway.emitMaterialAnalyzed(material.id, material.aiTags, material.aiDescription);
+      }
 
       this.logger.log(`Completed analysis for material: ${materialId}`);
       return result;
