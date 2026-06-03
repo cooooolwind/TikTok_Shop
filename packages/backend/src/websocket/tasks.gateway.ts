@@ -8,6 +8,7 @@ import {
 } from '@nestjs/websockets';
 import type {
   MaterialAnalyzedEvent,
+  MaterialAnalysisFailedEvent,
   ScriptGeneratedEvent,
   TaskCompletedEvent,
   TaskFailedEvent,
@@ -22,6 +23,7 @@ const WsEvent = {
   TASK_COMPLETED: 'task:completed',
   TASK_FAILED: 'task:failed',
   MATERIAL_ANALYZED: 'material:analyzed',
+  MATERIAL_ANALYSIS_FAILED: 'material:analysis_failed',
   SCRIPT_GENERATED: 'script:generated',
 } as const;
 
@@ -76,6 +78,14 @@ export class TasksGateway implements OnGatewayConnection, OnGatewayDisconnect {
       ai_description: aiDescription,
     };
     this.server.emit(WsEvent.MATERIAL_ANALYZED, payload);
+  }
+
+  emitMaterialAnalysisFailed(materialId: string, error: string) {
+    const payload: MaterialAnalysisFailedEvent = {
+      material_id: materialId,
+      error,
+    };
+    this.server.emit(WsEvent.MATERIAL_ANALYSIS_FAILED, payload);
   }
 
   emitScriptGenerated(scriptId: string) {

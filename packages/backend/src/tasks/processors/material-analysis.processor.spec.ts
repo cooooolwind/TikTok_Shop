@@ -42,6 +42,7 @@ describe('MaterialAnalysisProcessor', () => {
 
     tasksGateway = {
       emitMaterialAnalyzed: jest.fn(),
+      emitMaterialAnalysisFailed: jest.fn(),
     };
 
     configService = {
@@ -188,5 +189,43 @@ describe('MaterialAnalysisProcessor', () => {
 
     expect(result.tags).toEqual(['auto-tagged']);
     expect(materialsRepository.save).toHaveBeenCalled();
+  });
+
+  it('should preserve previous aiTags and aiDescription on analysis failure', async () => {
+    const materialId = 'test-id';
+    const material = {
+      id: materialId,
+      url: '/uploads/materials/test.jpg',
+      type: 'image',
+      mimeType: 'image/jpeg',
+      aiTags: ['existing-tag'],
+      aiDescription: 'existing description',
+      status: 'processing',
+    };
+
+    materialsRepository.findOne.mockResolvedValue(material);
+    jest.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('fake-image-data'));
+    
+    volcanoClient.chatCompletion.mockRejectedValue(new Error('AI service error'));
+
+    const job = {
+      data: { materialId },
+    } as Job;
+
+    await expect(processor.process(job)).rejects.toThrow('AI service error');
+
+    expect(materialsRepository.update).toHaveBeenCalledWith(
+      materialId,
+      { status: 'failed' },
+    );
+    expect(tasksGateway.emitMaterialAnalysisFailed).toHaveBeenCalledWith(
+      materialId,
+      'AI service error',
+    );
+    // Verify aiTags and aiDescription are NOT overwritten
+    expect(materialsRepository.update).not.toHaveBeenCalledWith(
+      materialId,
+      expect.objectContaining({ aiDescription: expect.any(String) }),
+    );
   });
 });

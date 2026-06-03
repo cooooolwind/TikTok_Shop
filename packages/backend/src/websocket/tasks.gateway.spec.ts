@@ -75,6 +75,17 @@ describe('TasksGateway', () => {
     });
   });
 
+  it('emits material analysis failure events globally', () => {
+    const { gateway, server } = makeGateway();
+
+    gateway.emitMaterialAnalysisFailed('material-1', 'AI service unavailable');
+
+    expect(server.emit).toHaveBeenCalledWith('material:analysis_failed', {
+      material_id: 'material-1',
+      error: 'AI service unavailable',
+    });
+  });
+
   it('emits script generated events globally', () => {
     const { gateway, server } = makeGateway();
 
