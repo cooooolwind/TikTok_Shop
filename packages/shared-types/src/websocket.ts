@@ -12,6 +12,7 @@ export const WsEvent = {
   TASK_COMPLETED: 'task:completed',
   TASK_FAILED: 'task:failed',
   MATERIAL_ANALYZED: 'material:analyzed',
+  MATERIAL_ANALYSIS_FAILED: 'material:analysis_failed',
   SCRIPT_GENERATED: 'script:generated',
 } as const;
 
@@ -44,6 +45,11 @@ export interface MaterialAnalyzedEvent {
   material_id: string;
   ai_tags: string[];
   ai_description: string;
+}
+
+export interface MaterialAnalysisFailedEvent {
+  material_id: string;
+  error: string;
 }
 
 export interface ScriptGeneratedEvent {

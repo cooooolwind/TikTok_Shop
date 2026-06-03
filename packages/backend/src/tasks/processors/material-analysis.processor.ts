@@ -283,8 +283,8 @@ export class MaterialAnalysisProcessor extends WorkerHost {
     try {
       await this.materialsRepository.update(id, {
         status: 'failed',
-        aiDescription: `分析失败：${errorMessage}`,
       });
+      this.tasksGateway.emitMaterialAnalysisFailed(id, errorMessage);
     } catch (e) {
       const markFailedError = e instanceof Error ? e.message : String(e);
       this.logger.error(`Failed to mark material ${id} as failed: ${markFailedError}`);

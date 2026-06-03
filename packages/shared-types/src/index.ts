@@ -104,5 +104,6 @@ export {
   type TaskCompletedEvent,
   type TaskFailedEvent,
   type MaterialAnalyzedEvent,
+  type MaterialAnalysisFailedEvent,
   type ScriptGeneratedEvent,
 } from './websocket';
