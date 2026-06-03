@@ -114,7 +114,7 @@ export class VolcanoClientProvider {
         content: result.choices?.[0]?.message?.content || '',
       };
     } catch (error: any) {
-      this.logger.error(`Failed to generate chat: ${error.message}`);
+      this.logger.error(`Failed to generate chat: ${error.message}${(error as any).cause ? `; cause=${(error as any).cause.message}` : ''}`);
       throw error;
     }
   }
@@ -124,6 +124,23 @@ export class VolcanoClientProvider {
   }
 
   async createResponse(input: any, options?: any): Promise<VolcanoChatCompletionResult> {
+    if (this.configService.get<boolean>('volcano.mockMode')) {
+      this.logger.log('Mock mode: returning simulated multimodal analysis response');
+      const mockContent = JSON.stringify({
+        tags: ['mock-tag-1', 'mock-tag-2', 'mock-tag-3'],
+        description: 'Mock 分析描述：这是一个模拟的多模态分析结果。',
+        slices: [
+          { start_time: 0, end_time: 5, description: '模拟场景1', tags: ['mock-slice'] },
+          { start_time: 5, end_time: 10, description: '模拟场景2', tags: ['mock-slice'] },
+        ],
+      });
+      return {
+        choices: [{ message: { role: 'assistant', content: mockContent }, finish_reason: 'stop' }],
+        content: mockContent,
+        usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+      };
+    }
+
     const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
     const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
     const model = this.configService.get<string>('volcano.textEndpoint') ?? '';
@@ -159,12 +176,17 @@ export class VolcanoClientProvider {
         content: result.choices?.[0]?.message?.content || '',
       };
     } catch (error: any) {
-      this.logger.error(`Failed to create response: ${error.message}`);
+      this.logger.error(`Failed to create response: ${error.message}${(error as any).cause ? `; cause=${(error as any).cause.message}` : ''}`);
       throw error;
     }
   }
 
   async uploadFile(fileBuffer: Buffer, filename: string): Promise<string> {
+    if (this.configService.get<boolean>('volcano.mockMode')) {
+      this.logger.log('Mock mode: returning simulated file upload ID');
+      return `mock-file-${Date.now()}`;
+    }
+
     const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
     const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
 
@@ -173,7 +195,7 @@ export class VolcanoClientProvider {
     const formData = new FormData();
     const blob = new Blob([fileBuffer]);
     formData.append('file', blob, filename);
-    formData.append('purpose', 'fine-tune');
+    formData.append('purpose', 'user_data');
 
     try {
       const response = await fetch(`${baseUrl.replace(/\/$/, '')}/files`, {
@@ -193,12 +215,17 @@ export class VolcanoClientProvider {
       const result: any = await response.json();
       return result.id;
     } catch (error: any) {
-      this.logger.error(`Failed to upload file: ${error.message}`);
+      this.logger.error(`Failed to upload file: ${error.message}${(error as any).cause ? `; cause=${(error as any).cause.message}` : ''}`);
       throw error;
     }
   }
 
   async retrieveFile(fileId: string): Promise<any> {
+    if (this.configService.get<boolean>('volcano.mockMode')) {
+      this.logger.log('Mock mode: returning simulated file status');
+      return { id: fileId, status: 'active' };
+    }
+
     const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
     const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
 
@@ -220,7 +247,7 @@ export class VolcanoClientProvider {
 
       return await response.json();
     } catch (error: any) {
-      this.logger.error(`Failed to retrieve file: ${error.message}`);
+      this.logger.error(`Failed to retrieve file: ${error.message}${(error as any).cause ? `; cause=${(error as any).cause.message}` : ''}`);
       throw error;
     }
   }
@@ -230,6 +257,11 @@ export class VolcanoClientProvider {
   }
 
   async deleteFile(fileId: string): Promise<any> {
+    if (this.configService.get<boolean>('volcano.mockMode')) {
+      this.logger.log('Mock mode: simulating file deletion');
+      return { id: fileId, deleted: true };
+    }
+
     const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
     const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
 
@@ -251,7 +283,7 @@ export class VolcanoClientProvider {
 
       return await response.json();
     } catch (error: any) {
-      this.logger.error(`Failed to delete file: ${error.message}`);
+      this.logger.error(`Failed to delete file: ${error.message}${(error as any).cause ? `; cause=${(error as any).cause.message}` : ''}`);
       throw error;
     }
   }
