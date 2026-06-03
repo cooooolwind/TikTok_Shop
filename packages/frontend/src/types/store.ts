@@ -36,6 +36,7 @@ export interface MaterialState {
   batchRemove: (ids: string[]) => Promise<void>;
   triggerAnalysis: (id: string) => Promise<void>;
   setMaterialAnalyzed: (id: string, tags: string[], description: string) => void;
+  setMaterialAnalysisFailed: (id: string, error: string) => void;
   similarSearch: (query: string, type?: MaterialType, limit?: number, threshold?: number) => Promise<{ material: Material; score: number }[]>;
   setFilters: (filters: Partial<MaterialListQuery>) => void;
   setUploadVisible: (visible: boolean) => void;

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
+  Alert,
   Button,
   Card,
   Col,
@@ -104,6 +105,21 @@ export default function MaterialDetail() {
     });
   };
 
+  const handleReanalyze = () => {
+    const hasAiContent = material.ai_tags?.length > 0 || !!material.ai_description;
+    if (hasAiContent) {
+      Modal.confirm({
+        title: '重新分析',
+        content: '当前素材已有 AI 识别内容，重新分析将会覆盖原有结果。是否继续？',
+        okText: '继续分析',
+        cancelText: '取消',
+        onOk: () => triggerAnalysis(material.id),
+      });
+    } else {
+      triggerAnalysis(material.id);
+    }
+  };
+
   return (
     <div>
       <PageHeader
@@ -121,7 +137,7 @@ export default function MaterialDetail() {
           <Space>
             <Button
               icon={<ReloadOutlined />}
-              onClick={() => triggerAnalysis(material.id)}
+              onClick={handleReanalyze}
               loading={isAnalyzing}
               disabled={isAnalyzing}
             >
@@ -243,6 +259,16 @@ export default function MaterialDetail() {
           )}
         </Col>
       </Row>
+
+      {material.status === 'failed' && (
+        <Alert
+          message="AI 分析失败"
+          description="素材分析未成功完成，您可以点击「重新分析」重试。之前的 AI 识别内容（如有）已保留。"
+          type="error"
+          showIcon
+          style={{ marginBottom: 24 }}
+        />
+      )}
 
       {aiTags.length > 0 && (
         <Card title="AI 识别标签" style={{ marginBottom: 24 }}>
