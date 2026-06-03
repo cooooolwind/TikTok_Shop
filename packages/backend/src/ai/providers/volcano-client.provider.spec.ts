@@ -394,4 +394,56 @@ describe('VolcanoClientProvider video generation', () => {
       }),
     );
   });
+
+  it('extracts content from Responses API output format', async () => {
+    const responsesApiBody = {
+      id: 'resp-123',
+      object: 'response',
+      output: [
+        {
+          type: 'message',
+          role: 'assistant',
+          content: [
+            { type: 'output_text', text: '{"tags":["tag1"],"description":"test"}' },
+          ],
+        },
+      ],
+      status: 'completed',
+    };
+    jest.spyOn(global, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify(responsesApiBody), { status: 200 }),
+    );
+    const { provider } = makeProvider({
+      'volcano.mockMode': false,
+      'volcano.textApiKey': 'test-key',
+      'volcano.textBaseUrl': 'https://ark.cn-beijing.volces.com/api/v3',
+      'volcano.textEndpoint': 'ep-test',
+    });
+
+    const result = await provider.createResponse([{ role: 'user', content: 'hello' }]);
+
+    expect(result.content).toBe('{"tags":["tag1"],"description":"test"}');
+  });
+
+  it('falls back to choices format when Responses API output is empty', async () => {
+    const chatApiBody = {
+      id: 'chat-123',
+      choices: [
+        { message: { role: 'assistant', content: 'chat response' }, finish_reason: 'stop' },
+      ],
+    };
+    jest.spyOn(global, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify(chatApiBody), { status: 200 }),
+    );
+    const { provider } = makeProvider({
+      'volcano.mockMode': false,
+      'volcano.textApiKey': 'test-key',
+      'volcano.textBaseUrl': 'https://ark.cn-beijing.volces.com/api/v3',
+      'volcano.textEndpoint': 'ep-test',
+    });
+
+    const result = await provider.createResponse([{ role: 'user', content: 'hello' }]);
+
+    expect(result.content).toBe('chat response');
+  });
 });
