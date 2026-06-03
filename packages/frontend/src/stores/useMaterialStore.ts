@@ -153,6 +153,35 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
     useUIStore.getState().pushNotification({ type: 'success', title: '素材分析完成' });
   },
 
+  setMaterialAnalysisFailed: (id, error) => {
+    set((s) => {
+      const newIds = new Set(s.analyzingIds);
+      newIds.delete(id);
+
+      const updateDetail = (m: MaterialDetail | null) => {
+        if (m?.id !== id) return m;
+        return { ...m, status: 'failed' as const };
+      };
+
+      const updateItem = (m: Material) => {
+        if (m.id !== id) return m;
+        return { ...m, status: 'failed' as const };
+      };
+
+      return {
+        analyzingIds: newIds,
+        selectedMaterial: updateDetail(s.selectedMaterial),
+        items: s.items.map(updateItem),
+      };
+    });
+
+    if (get().selectedMaterial?.id === id) {
+      get().fetchDetail(id);
+    }
+
+    useUIStore.getState().pushNotification({ type: 'error', title: '素材分析失败', message: error });
+  },
+
   similarSearch: async (query, type, limit, threshold) => {
     const results = await materialsApi.searchSimilar({ query, type, limit, threshold });
     return results;
