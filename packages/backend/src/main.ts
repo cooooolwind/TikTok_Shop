@@ -39,6 +39,15 @@ async function bootstrap() {
   await app.listen(port);
   console.log(`Server running on http://localhost:${port}`);
   console.log(`Swagger docs: http://localhost:${port}/api/docs`);
+
+  const shutdown = async (signal: string) => {
+    console.log(`Received ${signal}, shutting down gracefully...`);
+    await app.close();
+    process.exit(0);
+  };
+
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
 }
 
 bootstrap();
