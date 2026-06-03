@@ -328,4 +328,70 @@ describe('VolcanoClientProvider video generation', () => {
       provider.createVideoTask({ prompt: 'product demo', ratio: '9:16', resolution: '1080p', duration: 5 }),
     ).rejects.toThrow('Volcano video task creation network failed: fetch failed; cause=Connect Timeout Error; code=UND_ERR_CONNECT_TIMEOUT');
   });
+
+  it('returns mock file ID in mock mode without calling fetch', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch');
+    const { provider } = makeProvider({ 'volcano.mockMode': true });
+
+    const fileId = await provider.uploadFile(Buffer.from('fake-video'), 'test.mp4');
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(fileId).toMatch(/^mock-file-\d+$/);
+  });
+
+  it('returns active file status in mock mode without calling fetch', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch');
+    const { provider } = makeProvider({ 'volcano.mockMode': true });
+
+    const result = await provider.getFile('mock-file-123');
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(result).toEqual({ id: 'mock-file-123', status: 'active' });
+  });
+
+  it('deletes file in mock mode without calling fetch', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch');
+    const { provider } = makeProvider({ 'volcano.mockMode': true });
+
+    const result = await provider.deleteFile('mock-file-123');
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(result).toEqual({ id: 'mock-file-123', deleted: true });
+  });
+
+  it('returns mock multimodal analysis response in mock mode', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch');
+    const { provider } = makeProvider({ 'volcano.mockMode': true });
+
+    const input = [{ role: 'user', content: [{ type: 'input_text', text: 'analyze' }] }];
+    const result = await provider.createResponse(input);
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    const parsed = JSON.parse(result.content);
+    expect(parsed.tags).toEqual(['mock-tag-1', 'mock-tag-2', 'mock-tag-3']);
+    expect(parsed.description).toContain('Mock');
+  });
+
+  it('uploads file with purpose=user_data to Volcano Files API', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: 'file-abc-123', object: 'file', status: 'uploaded' }), { status: 200 }),
+    );
+    const { provider } = makeProvider({
+      'volcano.mockMode': false,
+      'volcano.textApiKey': 'test-key',
+      'volcano.textBaseUrl': 'https://ark.cn-beijing.volces.com/api/v3',
+    });
+
+    const fileId = await provider.uploadFile(Buffer.from('fake-video-data'), 'test.mp4');
+
+    expect(fileId).toBe('file-abc-123');
+    const callArgs = fetchMock.mock.calls[0];
+    expect(callArgs[0]).toBe('https://ark.cn-beijing.volces.com/api/v3/files');
+    expect(callArgs[1]).toEqual(
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ Authorization: 'Bearer test-key' }),
+      }),
+    );
+  });
 });
