@@ -123,23 +123,23 @@ export class MaterialAnalysisProcessor extends WorkerHost {
             content: [
               {
                 type: 'input_text',
-                text: `You are an expert in TikTok Shop video analysis and scene segmentation.
-Analyze the video and return a JSON object with:
-1. "tags": 5-8 general tags for the entire video.
-2. "description": A concise summary of the video content.
-3. "slices": An array of scene objects, each containing:
-   - "start_time": Start time in seconds (float).
-   - "end_time": End time in seconds (float).
-   - "description": What happens in this scene.
-   - "tags": 3-5 tags specific to this scene.
-Segment the video into natural, high-value scenes for e-commerce reuse. Output must be in JSON format.`,
+                text: `你是一位抖音小店视频分析与场景分割专家。
+分析视频并返回 JSON 对象，包含：
+1. "tags"：5-8 个视频整体标签。
+2. "description"：视频内容的简洁摘要。
+3. "slices"：场景对象数组，每个包含：
+   - "start_time"：开始时间（秒，浮点数）。
+   - "end_time"：结束时间（秒，浮点数）。
+   - "description"：该场景的内容描述。
+   - "tags"：3-5 个该场景的专属标签。
+将视频分割为适合电商复用的自然高价值场景。输出必须为 JSON 格式。`,
               },
             ],
           },
           {
             role: 'user',
             content: [
-              { type: 'input_text', text: 'Please analyze and segment this video.' },
+              { type: 'input_text', text: '请分析并分割这段视频。' },
               { type: 'input_video', file_id: fileId },
             ],
           },
@@ -195,16 +195,16 @@ Segment the video into natural, high-value scenes for e-commerce reuse. Output m
     return [
       {
         role: 'system',
-        content: `You are an expert in TikTok Shop content analysis. 
-Analyze the image and return a JSON object with:
-1. "tags": 5-8 general descriptive tags.
-2. "description": A concise, one-sentence summary.
-Output must be in JSON format.`,
+        content: `你是一位抖音小店内容分析专家。
+分析图片并返回 JSON 对象，包含：
+1. "tags"：5-8 个描述性标签。
+2. "description"：简洁的一句话摘要。
+输出必须为 JSON 格式。`,
       },
       {
         role: 'user',
         content: [
-          { type: 'text', text: 'Please analyze this e-commerce material.' },
+          { type: 'text', text: '请分析这张电商素材图片。' },
           { type: 'image_url', image_url: { url: base64Data } },
         ],
       },
@@ -268,7 +268,7 @@ Output must be in JSON format.`,
       this.logger.error(`Failed to parse AI response: ${content}`);
       return {
         tags: ['auto-tagged'],
-        description: 'Failed to parse detailed AI analysis.',
+        description: '未能解析详细的 AI 分析结果。',
       };
     }
   }
@@ -277,7 +277,7 @@ Output must be in JSON format.`,
     try {
       await this.materialsRepository.update(id, {
         status: 'failed',
-        aiDescription: `Analysis failed: ${errorMessage}`,
+        aiDescription: `分析失败：${errorMessage}`,
       });
     } catch (e) {
       const markFailedError = e instanceof Error ? e.message : String(e);

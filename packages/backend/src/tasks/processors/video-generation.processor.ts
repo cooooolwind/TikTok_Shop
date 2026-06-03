@@ -274,37 +274,37 @@ export class VideoGenerationProcessor extends WorkerHost {
   private buildPrompt(script: Script, segment: VideoSegmentPlan, continuitySource: ContinuitySource) {
     const sortedScenes = [...segment.scenes].sort((a, b) => a.order - b.order);
     const scene = sortedScenes[0];
-    const visualAction = scene?.visualPrompt || scene?.description || 'Show the product clearly.';
+    const visualAction = scene?.visualPrompt || scene?.description || '清晰展示商品。';
     const continuityInstruction = this.getContinuityInstruction(continuitySource);
 
     return [
-      'Create one TikTok Shop video segment.',
+      '生成一段抖音小店视频分镜。',
       '',
-      'Task:',
-      'Generate only the current scene. Do not add extra story beats.',
+      '任务：',
+      '仅生成当前分镜。不要添加额外的故事节点。',
       '',
-      'Visual action:',
+      '视觉动作：',
       visualAction,
       '',
-      'Product identity:',
-      `Product: ${script.productInfo.name || 'the product'}`,
-      `Category: ${script.productInfo.category || 'e-commerce product'}`,
-      `Selling points: ${(script.productInfo.selling_points ?? []).join(', ') || 'core product benefits'}`,
-      script.productInfo.description ? `Description: ${script.productInfo.description}` : '',
+      '产品信息：',
+      `产品：${script.productInfo.name || '该产品'}`,
+      `品类：${script.productInfo.category || '电商产品'}`,
+      `卖点：${(script.productInfo.selling_points ?? []).join('、') || '核心产品优势'}`,
+      script.productInfo.description ? `描述：${script.productInfo.description}` : '',
       '',
-      'Continuity:',
+      '连续性：',
       continuityInstruction,
-      'Preserve product identity, color, shape, material, lighting, and commercial style.',
+      '保持产品外观、颜色、形状、材质、灯光和商业风格的一致性。',
       '',
-      'Scene details:',
-      `Camera: ${scene?.cameraMotion || 'fixed'}`,
-      `Output duration: ${segment.duration} seconds.`,
-      `Voiceover: ${scene?.dialogue || ''}`,
-      `Subtitle: ${scene?.subtitle || ''}`,
+      '分镜详情：',
+      `镜头：${scene?.cameraMotion || '固定'}`,
+      `输出时长：${segment.duration} 秒。`,
+      `旁白：${scene?.dialogue || ''}`,
+      `字幕：${scene?.subtitle || ''}`,
       '',
-      'Constraints:',
-      (scene?.constraints ?? []).join(', ') || 'Keep the product visible and recognizable.',
-      'Keep the product visible, commercially safe, and suitable for e-commerce conversion.',
+      '约束条件：',
+      (scene?.constraints ?? []).join('、') || '保持产品可见且可识别。',
+      '保持产品可见、商业安全、适合电商转化。',
     ]
       .filter(Boolean)
       .join('\n');
@@ -312,15 +312,15 @@ export class VideoGenerationProcessor extends WorkerHost {
 
   private getContinuityInstruction(continuitySource: ContinuitySource) {
     if (continuitySource === 'generated_first_frame') {
-      return 'Use the provided Seedream-generated first frame as the exact visual starting point for this scene.';
+      return '使用提供的 Seedream 生成首帧作为当前分镜的视觉起始点。';
     }
     if (continuitySource === 'previous_last_frame') {
-      return 'Use the provided first frame from the previous segment. Continue from it and only perform the current scene action.';
+      return '使用上一段视频的最后一帧作为起始画面。仅执行当前分镜的动作。';
     }
     if (continuitySource === 'product_image') {
-      return 'Use the provided product image as the first-frame visual anchor.';
+      return '使用提供的产品图片作为首帧视觉锚点。';
     }
-    return 'No image input is available. Generate from the current scene prompt and product identity.';
+    return '没有可用的图片输入。根据当前分镜提示词和产品信息生成画面。';
   }
 
   private async collectProductImageUrls(script: Script) {
@@ -410,7 +410,7 @@ export class VideoGenerationProcessor extends WorkerHost {
       };
     } catch (error) {
       continuityWarnings.push(
-        `Segment ${segment.index + 1} Seedream first-frame generation failed; retrying Seedream with a simplified product-first prompt: ${this.toErrorMessage(error)}`,
+        `分镜 ${segment.index + 1} Seedream 首帧生成失败；正在使用简化产品优先提示词重试 Seedream：${this.toErrorMessage(error)}`,
       );
     }
 
@@ -432,19 +432,19 @@ export class VideoGenerationProcessor extends WorkerHost {
 
   private buildFirstFramePrompt(script: Script, segment: VideoSegmentPlan) {
     const scene = [...segment.scenes].sort((a, b) => a.order - b.order)[0];
-    const action = scene?.visualPrompt || scene?.description || 'Product hero shot';
+    const action = scene?.visualPrompt || scene?.description || '产品主视觉';
     return [
-      'Create a single ecommerce video first frame for TikTok Shop.',
-      `Product: ${script.productInfo.name || 'the product'}.`,
-      `Category: ${script.productInfo.category || 'ecommerce product'}.`,
-      `Selling points: ${(script.productInfo.selling_points ?? []).join(', ') || 'core product benefits'}.`,
-      script.productInfo.description ? `Description: ${script.productInfo.description}.` : '',
-      `Scene visual action: ${action}.`,
-      `Camera direction: ${scene?.cameraMotion || 'fixed product shot'}.`,
-      `Commercial style: ${script.visualStyle || 'clean, conversion-focused product demo'}.`,
-      'The product from the reference image must be clearly visible, recognizable, and faithful in shape, color, material, and packaging.',
-      'Do not replace the product with a different item. Do not create abstract or unrelated lifestyle imagery.',
-      (scene?.constraints ?? []).join(', '),
+      '为抖音小店生成一张电商视频首帧画面。',
+      `产品：${script.productInfo.name || '该产品'}。`,
+      `品类：${script.productInfo.category || '电商产品'}。`,
+      `卖点：${(script.productInfo.selling_points ?? []).join('、') || '核心产品优势'}。`,
+      script.productInfo.description ? `描述：${script.productInfo.description}。` : '',
+      `分镜视觉动作：${action}。`,
+      `镜头方向：${scene?.cameraMotion || '固定产品镜头'}。`,
+      `商业风格：${script.visualStyle || '简洁、转化导向的产品展示'}。`,
+      '参考图中的产品必须清晰可见、可识别，在形状、颜色、材质和包装上忠实还原。',
+      '不要用其他物品替换产品。不要创建抽象或无关的生活场景。',
+      (scene?.constraints ?? []).join('、'),
     ]
       .filter(Boolean)
       .join('\n');
@@ -452,13 +452,13 @@ export class VideoGenerationProcessor extends WorkerHost {
 
   private buildFirstFrameRetryPrompt(script: Script, segment: VideoSegmentPlan) {
     const scene = [...segment.scenes].sort((a, b) => a.order - b.order)[0];
-    const action = scene?.visualPrompt || scene?.description || 'clean product first frame';
+    const action = scene?.visualPrompt || scene?.description || '简洁产品首帧';
     return [
-      'Create one clean ecommerce video first frame from the reference product image.',
-      `Product: ${script.productInfo.name || 'the product'}.`,
-      `Scene: ${action}.`,
-      'Keep the reference product clearly visible and faithful to its real shape, color, material, logo, and packaging.',
-      'Use a simple commercial product-demo composition with no extra objects that could change the product identity.',
+      '根据参考产品图生成一张简洁的电商视频首帧。',
+      `产品：${script.productInfo.name || '该产品'}。`,
+      `分镜：${action}。`,
+      '保持参考产品清晰可见，忠实地还原其真实形状、颜色、材质、logo和包装。',
+      '使用简洁的商业产品展示构图，不加任何可能改变产品身份的额外元素。',
     ].join('\n');
   }
 

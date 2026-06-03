@@ -207,7 +207,7 @@ describe('VideoGenerationProcessor', () => {
       1,
       expect.objectContaining({
         duration: 4,
-        prompt: expect.stringContaining('Visual action:'),
+        prompt: expect.stringContaining('视觉动作：'),
         imageUrls: [],
         firstFrameUrl: 'https://example.com/first-frame-1.png',
       }),
@@ -222,7 +222,7 @@ describe('VideoGenerationProcessor', () => {
       2,
       expect.objectContaining({
         duration: 7,
-        prompt: expect.stringContaining('Visual action:'),
+        prompt: expect.stringContaining('视觉动作：'),
         imageUrls: [],
         firstFrameUrl: 'https://example.com/first-frame-2.png',
       }),
@@ -231,7 +231,7 @@ describe('VideoGenerationProcessor', () => {
       3,
       expect.objectContaining({
         duration: 4,
-        prompt: expect.stringContaining('Visual action:'),
+        prompt: expect.stringContaining('视觉动作：'),
         imageUrls: [],
         firstFrameUrl: 'https://example.com/first-frame-3.png',
       }),
@@ -322,7 +322,7 @@ describe('VideoGenerationProcessor', () => {
     );
   });
 
-  it('retries Seedream with a simplified prompt when first-frame generation fails', async () => {
+  it('当首帧生成失败时使用简化提示词重试 Seedream', async () => {
     const { processor, volcanoClient, scriptsRepository, job } = makeProcessor('succeeded');
     scriptsRepository.findOne.mockResolvedValue(
       makeScript({
@@ -351,7 +351,7 @@ describe('VideoGenerationProcessor', () => {
     );
     expect(result.result).toEqual(
       expect.objectContaining({
-        continuity_warning: expect.stringContaining('retrying Seedream with a simplified product-first prompt'),
+        continuity_warning: expect.stringContaining('使用简化产品优先提示词重试 Seedream'),
         segments: expect.arrayContaining([
           expect.objectContaining({
             index: 1,
@@ -479,7 +479,7 @@ describe('VideoGenerationProcessor', () => {
     expect(volcanoClient.generateFirstFrame).not.toHaveBeenCalled();
   });
 
-  it('uses scene-first prompts without narrative wrappers or legacy duration fields', async () => {
+  it('使用场景优先提示词，不含叙事包装或旧版时长字段', async () => {
     const { processor, volcanoClient, job } = makeProcessor('succeeded');
 
     await processor.process(job as never);
@@ -487,9 +487,9 @@ describe('VideoGenerationProcessor', () => {
     expect(volcanoClient.createVideoTask).toHaveBeenCalled();
     const firstCreateCall = volcanoClient.createVideoTask.mock.calls[0] as unknown as [{ prompt: string }];
     const prompt = firstCreateCall[0].prompt;
-    expect(prompt).toContain('Visual action:');
+    expect(prompt).toContain('视觉动作：');
     expect(prompt).toContain('Close-up dress fabric');
-    expect(prompt).toContain('Output duration: 4 seconds.');
+    expect(prompt).toContain('输出时长：4 秒。');
     expect(prompt).not.toContain('Narrative:');
     expect(prompt).not.toContain('Segment scenes:');
     expect(prompt).not.toContain('duration=4s');
