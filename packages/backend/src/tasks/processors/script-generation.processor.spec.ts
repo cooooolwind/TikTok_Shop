@@ -113,10 +113,10 @@ describe('ScriptGenerationProcessor', () => {
     expect(result).toEqual({ script_id: 'script-1', status: 'draft' });
   });
 
-  it('marks script failed when AI returns invalid JSON', async () => {
+  it('当 AI 返回无效 JSON 时标记剧本失败', async () => {
     const { processor, scriptsRepository, tasksGateway, job } = makeProcessor('not json');
 
-    await expect(processor.process(job as never)).rejects.toThrow('AI response is not valid JSON');
+    await expect(processor.process(job as never)).rejects.toThrow('AI 返回结果不是合法 JSON');
 
     expect(scriptsRepository.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed' }));
     expect(tasksGateway.emitTaskFailed).toHaveBeenCalledWith(
@@ -161,7 +161,7 @@ describe('ScriptGenerationProcessor', () => {
     );
   });
 
-  it('uses a conversion-focused ecommerce prompt and commerce objective payload', async () => {
+  it('使用转化导向的电商提示词和商业目标载荷', async () => {
     const { processor, volcanoClient, job } = makeProcessor(
       JSON.stringify({
         narrative_framework: 'Hook - proof - CTA',
@@ -185,7 +185,7 @@ describe('ScriptGenerationProcessor', () => {
       expect.arrayContaining([
         expect.objectContaining({
           role: 'system',
-          content: expect.stringContaining('conversion-focused TikTok Shop ecommerce'),
+          content: expect.stringContaining('抖音小店电商短视频导演'),
         }),
         expect.objectContaining({
           role: 'system',
@@ -193,7 +193,7 @@ describe('ScriptGenerationProcessor', () => {
         }),
         expect.objectContaining({
           role: 'system',
-          content: expect.stringContaining('product visible'),
+          content: expect.stringContaining('产品可见'),
         }),
         expect.objectContaining({
           role: 'user',
@@ -201,7 +201,7 @@ describe('ScriptGenerationProcessor', () => {
         }),
         expect.objectContaining({
           role: 'user',
-          content: expect.stringContaining('why to buy this product now'),
+          content: expect.stringContaining('为什么要现在购买'),
         }),
       ]),
       expect.objectContaining({ response_format: { type: 'json_object' } }),

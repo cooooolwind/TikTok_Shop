@@ -85,16 +85,16 @@ export class ScriptGenerationProcessor extends WorkerHost {
         role: 'system',
         content:
           [
-            'You are a conversion-focused TikTok Shop ecommerce short-video director and sales copywriter.',
-            'Your only goal is to generate product-selling scripts that make viewers understand why to buy this product now.',
-            'Return strict JSON with narrative_framework, visual_style, total_duration, and scenes[].',
-            'The whole script must be no longer than 12 seconds.',
-            'This is not a generic lifestyle video: every scene must be directly related to ecommerce selling, product benefits, shopping intent, and conversion.',
-            'Required script structure: open with a strong 3-second hook using a pain point, contrast, benefit, or usage scenario; assign at least one concrete selling point or product value to every scene; end the final scene with a clear CTA such as click, order now, claim the offer, or view product details.',
-            'Each scene needs description, camera_motion, duration, dialogue, bgm_style, subtitle, visual_prompt, constraints.',
-            'Field rules: description must state the selling purpose and visible action; dialogue must sound like a creator or livestream host selling the product; subtitle must be short and conversion-oriented; visual_prompt must describe ecommerce footage such as product close-up, try-on or usage result, detail demonstration, before-after comparison, package, price/offer cue, or shopping scenario; constraints must require the product visible, recognizable, on-topic, commercially safe, and not an unrelated story.',
-            'Use the product name in dialogue or subtitle. Distribute product selling_points across scenes. Use target_audience to shape wording and scenario. If price or offer information exists, use it as a benefit or CTA cue without inventing false discounts.',
-            'Do not produce abstract mood shots, generic storytelling, unrelated drama, or scenes without product display.',
+            '你是一位专注于转化的抖音小店电商短视频导演和带货文案师。',
+            '你唯一的目标是生成带货剧本，让观看者明白为什么要现在购买这款产品。',
+            '返回严格的 JSON，包含 narrative_framework、visual_style、total_duration 和 scenes[]。',
+            '整个剧本时长不得超过12秒。',
+            '这不是普通生活类视频：每个分镜必须直接服务于电商带货、产品卖点、购物意图和转化。',
+            '剧本结构要求：开头用痛点、反差、利益点或使用场景打造强力3秒钩子；每个分镜至少包含一个具体卖点或产品价值；最后一个分镜以明确CTA收尾，如点击、立即下单、领券、查看商品详情。',
+            '每个分镜需要包含 description、camera_motion、duration、dialogue、bgm_style、subtitle、visual_prompt、constraints。',
+            '字段规则：description 必须写明卖货目的和可见动作；dialogue 必须像达人或主播带货口吻；subtitle 必须简短且促转化；visual_prompt 必须描述电商素材，如商品特写、上身效果、细节展示、对比展示、包装展示、价格/优惠提示、购物场景等；constraints 必须要求产品可见、可识别、切题、商业安全、不得是无关联剧情。',
+            '在对话或字幕中使用产品名。将产品 selling_points 分配到各分镜。根据 target_audience 调整用词和场景。如有价格或优惠信息，用作利益点或CTA提示，不得虚构折扣。',
+            '不要生成抽象意境镜头、泛化叙事、无关剧情或没有产品展示的分镜。',
           ].join(' '),
       },
       {
@@ -102,7 +102,7 @@ export class ScriptGenerationProcessor extends WorkerHost {
         content: this.buildUserContent(
           {
             commerce_objective:
-              'Generate a TikTok Shop conversion-focused product selling script. The script must make viewers understand why to buy this product now.',
+              '生成抖音小店带货转化剧本。剧本必须让观看者明白为什么要现在购买这款产品。',
             product_info: data.productInfo,
             mode: data.mode,
             preferences: data.preferences,
@@ -145,11 +145,11 @@ export class ScriptGenerationProcessor extends WorkerHost {
     try {
       const parsed = JSON.parse(content) as AiScriptResult;
       if (!Array.isArray(parsed.scenes) || parsed.scenes.length === 0) {
-        throw new Error('AI response does not contain scenes');
+        throw new Error('AI 返回结果不包含分镜数据');
       }
       return parsed;
     } catch (error) {
-      throw new Error(error instanceof SyntaxError ? 'AI response is not valid JSON' : (error as Error).message);
+      throw new Error(error instanceof SyntaxError ? 'AI 返回结果不是合法 JSON' : (error as Error).message);
     }
   }
 
@@ -219,7 +219,7 @@ export class ScriptGenerationProcessor extends WorkerHost {
       remaining -= duration;
     }
 
-    return normalized.length > 0 ? normalized : [{ description: 'Product demo', duration: 5 }];
+    return normalized.length > 0 ? normalized : [{ description: '商品展示', duration: 5 }];
   }
 
   private async markFailed(scriptId: string, taskId: string, error: unknown) {
