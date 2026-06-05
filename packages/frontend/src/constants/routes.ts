@@ -13,7 +13,10 @@ export const ROUTES = {
   CREATION_NEW: '/creation/new',
   CREATION_TASK: '/creation/tasks/:taskId',
   CREATION_PREVIEW: '/creation/tasks/:taskId/preview',
+  CREATION_EDITOR: '/creation/tasks/:taskId/editor',
   ANALYTICS: '/analytics',
+  EDITOR: '/editor',
+  EDITOR_TASK: '/editor/:taskId',
 } as const;
 
 /** 构造动态路径 */
@@ -23,4 +26,6 @@ export const routePath = {
   referenceDetail: (id: string) => `/references/${id}`,
   creationTask: (taskId: string) => `/creation/tasks/${taskId}`,
   creationPreview: (taskId: string) => `/creation/tasks/${taskId}/preview`,
+  creationEditor: (taskId: string) => `/creation/tasks/${taskId}/editor`,
+  editorTask: (taskId: string) => `/editor/${taskId}`,
 };

@@ -1,0 +1,399 @@
+.timelineOuter {
+  --timeline-bg: #161823;
+  --timeline-ruler: #0f111a;
+  --timeline-track: #151924;
+  --timeline-border: #2a2d3d;
+  --timeline-grid: rgba(255, 255, 255, 0.05);
+  --timeline-grid-major: rgba(255, 255, 255, 0.08);
+  --timeline-card: rgba(255, 255, 255, 0.06);
+  --timeline-card-hover: rgba(255, 255, 255, 0.09);
+  --timeline-text: #d0d4e0;
+  --timeline-muted: #8890a4;
+  --timeline-accent: #fe2c55;
+
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--timeline-bg);
+  border-radius: 6px 6px 0 0;
+  user-select: none;
+}
+
+:global([data-theme='light']) .timelineOuter {
+  --timeline-bg: #f5f7fb;
+  --timeline-ruler: #eef2f7;
+  --timeline-track: #fafbff;
+  --timeline-border: #d9e0ea;
+  --timeline-grid: rgba(15, 23, 42, 0.06);
+  --timeline-grid-major: rgba(15, 23, 42, 0.1);
+  --timeline-card: #eaf2ff;
+  --timeline-card-hover: #dcecff;
+  --timeline-text: #172033;
+  --timeline-muted: #667085;
+}
+
+.timelineOuter::-webkit-scrollbar {
+  display: block;
+  height: 10px;
+  width: 10px;
+  background: transparent;
+}
+
+.timelineOuter::-webkit-scrollbar-thumb {
+  background-clip: padding-box;
+  background-color: rgba(148, 163, 184, 0.5);
+  border: 2px solid transparent;
+  border-radius: 42px;
+  visibility: hidden;
+}
+
+.timelineOuter:hover::-webkit-scrollbar-thumb {
+  visibility: visible;
+}
+
+.timelineOuter::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.timelineInner {
+  position: relative;
+  min-height: 180px;
+  padding-bottom: 4px;
+}
+
+.ruler {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  height: 32px;
+  background: var(--timeline-ruler);
+  border-bottom: 1px solid var(--timeline-border);
+  cursor: pointer;
+}
+
+.rulerMark {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: var(--timeline-border);
+}
+
+.rulerLabel {
+  position: absolute;
+  top: 4px;
+  font-size: 10px;
+  color: var(--timeline-muted);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.track {
+  position: relative;
+  height: 96px;
+  margin-top: 4px;
+  border-radius: 4px;
+  background: var(--timeline-track);
+}
+
+.gridLine {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: var(--timeline-grid);
+  pointer-events: none;
+}
+
+.gridLineMajor {
+  background: var(--timeline-grid-major);
+}
+
+.dropIndicator {
+  position: absolute;
+  top: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--timeline-accent);
+  z-index: 12;
+  pointer-events: none;
+  box-shadow: 0 0 8px rgba(254, 44, 85, 0.5);
+}
+
+.clipBar {
+  position: absolute;
+  top: 8px;
+  height: 80px;
+  border-radius: 6px;
+  background: var(--timeline-card);
+  border: 1.5px solid rgba(148, 163, 184, 0.28);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  align-items: stretch;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
+  overflow: hidden;
+}
+
+.clipBar:hover {
+  border-color: rgba(148, 163, 184, 0.52);
+  background: var(--timeline-card-hover);
+}
+
+.clipBarSelected {
+  border-color: var(--timeline-accent) !important;
+  background: rgba(254, 44, 85, 0.12) !important;
+  box-shadow:
+    0 0 0 1px var(--timeline-accent),
+    0 0 14px rgba(254, 44, 85, 0.25);
+}
+
+.clipBarDragging {
+  opacity: 0.4;
+  z-index: 3 !important;
+}
+
+.clipThumbStrip {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 70% 22%, rgba(255, 255, 255, 0.3), transparent 26%),
+    linear-gradient(145deg, #335fa6, #111827 62%, #cb3157);
+  color: #fff;
+  font-weight: 800;
+}
+
+.clipThumbStrip img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.clipTextLayer {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 12px 0 10px;
+}
+
+.clipLabel {
+  color: var(--timeline-text);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clipTime {
+  color: var(--timeline-muted);
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trimHandle {
+  position: absolute;
+  top: 0;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.trimHandle:hover {
+  background: rgba(254, 44, 85, 0.2);
+}
+
+.trimHandleLeft {
+  left: 0;
+  border-radius: 6px 0 0 6px;
+}
+
+.trimHandleRight {
+  right: 0;
+  border-radius: 0 6px 6px 0;
+}
+
+.transitionMarker {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(254, 44, 85, 0.25);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.transitionMarker:hover,
+.transitionMarkerSelected {
+  border-color: var(--timeline-accent);
+  border-style: solid;
+  background: rgba(254, 44, 85, 0.12);
+}
+
+.transitionLabel {
+  color: var(--timeline-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.transitionMarkerSelected .transitionLabel {
+  color: var(--timeline-accent);
+}
+
+.playhead {
+  position: absolute;
+  top: 0;
+  bottom: 4px;
+  width: 2px;
+  background: var(--timeline-accent);
+  z-index: 10;
+  pointer-events: none;
+  box-shadow: 0 0 6px rgba(254, 44, 85, 0.5);
+}
+
+.playheadHead {
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 10px solid var(--timeline-accent);
+}
+
+.playheadDragger {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: col-resize;
+  pointer-events: auto;
+  z-index: 11;
+}
+
+.zoomBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: var(--timeline-ruler, #0f111a);
+  border-top: 1px solid var(--timeline-border, #2a2d3d);
+  border-radius: 0 0 6px 6px;
+}
+
+.zoomLabel {
+  color: var(--timeline-muted, #8890a4);
+  font-size: 11px;
+}
+
+.emptyTimeline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 180px;
+  color: var(--timeline-muted);
+  font-size: 13px;
+}
+
+.emptyTimeline.dropActive {
+  background: rgba(254, 44, 85, 0.06);
+  border: 2px dashed var(--timeline-accent);
+  border-radius: 6px;
+  color: var(--timeline-accent);
+}
+
+.timeCode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--timeline-card, #1a1d2a);
+  border-radius: 4px;
+  color: var(--timeline-text, #c0c4d0);
+  font-size: 12px;
+  font-family: monospace;
+  margin-left: auto;
+}
+
+.transitionDropZone {
+  position: absolute;
+  top: 10px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 76px;
+  transform: translateX(-50%);
+  border-radius: 7px;
+}
+
+.transitionDropZone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+  background: rgba(148, 163, 184, 0.04);
+  opacity: 0;
+  transition:
+    opacity 0.15s,
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.transitionDropZone:hover::before {
+  opacity: 1;
+  border-color: var(--timeline-accent);
+  background: rgba(254, 44, 85, 0.08);
+}
+
+.transitionDropHint {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(254, 44, 85, 0.12);
+  color: var(--timeline-accent);
+  font-size: 18px;
+  font-weight: 700;
+  opacity: 0.72;
+}
+
+.transitionDropZone:hover .transitionDropHint {
+  opacity: 1;
+}
+
+:global([data-theme='light']) .zoomBar {
+  --timeline-ruler: #eef2f7;
+  --timeline-border: #d9e0ea;
+  --timeline-card: #ffffff;
+  --timeline-text: #172033;
+  --timeline-muted: #667085;
+}

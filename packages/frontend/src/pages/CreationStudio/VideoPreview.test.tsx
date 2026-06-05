@@ -86,6 +86,7 @@ describe('VideoPreview', () => {
     renderPreview();
 
     expect(screen.getByLabelText('video preview').getAttribute('src')).toBe('/uploads/generated/task-1.mp4');
+    expect(screen.getByText('视频剪辑')).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText('preview segment 2'));
 
