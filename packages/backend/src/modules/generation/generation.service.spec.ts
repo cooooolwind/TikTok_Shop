@@ -82,11 +82,13 @@ function makeService(options?: {
   task?: GenerationTask | null;
   video?: Video | null;
   stitched?: { video_url: string; file_size: number };
+  rendered?: { video_url: string; file_size: number };
 }) {
   const script = options && 'script' in options ? options.script : makeScript();
   const task = options && 'task' in options ? options.task : makeTask();
   const video = options && 'video' in options ? options.video : makeVideo();
   const stitched = options?.stitched ?? { video_url: '/uploads/generated/task-1.mp4', file_size: 9876 };
+  const rendered = options?.rendered ?? { video_url: '/uploads/generated/task-1-remotion.mp4', file_size: 7654 };
   const scriptsRepository = {
     findOne: jest.fn(async () => script),
     find: jest.fn(async () => (script ? [script] : [])),
@@ -122,6 +124,9 @@ function makeService(options?: {
     stitch: jest.fn(async () => stitched),
     hasGeneratedVideo: jest.fn(async () => true),
   };
+  const remotionRenderingService = {
+    render: jest.fn(async () => rendered),
+  };
   const service = new GenerationService(
     videoQueue as never,
     tasksRepository as never,
@@ -129,9 +134,11 @@ function makeService(options?: {
     videosRepository as never,
     materialsRepository as never,
     videoStitchingService as never,
+    remotionRenderingService as never,
   );
-  return { service, videoQueue, scriptsRepository, tasksRepository, videosRepository, materialsRepository, videoStitchingService };
-}
+
+  return { service, videoQueue, scriptsRepository, tasksRepository, videosRepository, materialsRepository, videoStitchingService, remotionRenderingService };
+
 
 describe('GenerationService', () => {
   it('creates a queued video generation task for confirmed scripts', async () => {
@@ -302,6 +309,101 @@ describe('GenerationService', () => {
       segments: doneTask.result?.segments,
     });
     expect(result.download_url).toBe('/uploads/generated/task-1.mp4');
+  });
+
+  it('renders segmented tasks with Remotion when requested', async () => {
+    const doneTask = makeTask({ status: 'done', result: makeSegmentedVideoResult() });
+    const existingVideo = makeVideo({ url: 'https://example.com/segment-1.mp4', fileSize: 0 });
+    const { service, tasksRepository, videosRepository, videoStitchingService, remotionRenderingService } = makeService({
+      task: doneTask,
+      video: existingVideo,
+    });
+
+    const result = await service.export('task-1', {
+      format: 'mp4',
+      resolution: '1080x1920',
+      quality: 'high',
+      render_engine: 'remotion',
+      transition: { type: 'slide', duration_frames: 15 },
+    });
+
+    expect(videoStitchingService.stitch).not.toHaveBeenCalled();
+    expect(remotionRenderingService.render).toHaveBeenCalledWith({
+      taskId: 'task-1',
+      segments: doneTask.result?.segments,
+      resolution: '1080x1920',
+      transition: { type: 'slide', duration_frames: 15 },
+      editProject: undefined,
+    });
+    expect(tasksRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        result: expect.objectContaining({
+          video_url: '/uploads/generated/task-1-remotion.mp4',
+          file_size: 7654,
+          render_engine: 'remotion',
+        }),
+      }),
+    );
+    expect(videosRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ url: '/uploads/generated/task-1-remotion.mp4', fileSize: 7654 }),
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        download_url: '/uploads/generated/task-1-remotion.mp4',
+        source: 'remotion',
+        segments_count: 2,
+      }),
+    );
+  });
+
+  it('passes timeline edit projects to Remotion rendering', async () => {
+    const doneTask = makeTask({ status: 'done', result: makeSegmentedVideoResult() });
+    const { service, remotionRenderingService } = makeService({ task: doneTask });
+    const editProject = {
+      clips: [
+        { id: 'clip-2', segment_index: 1, start_seconds: 1, end_seconds: 5 },
+        { id: 'clip-1', segment_index: 0, start_seconds: 0, end_seconds: 4 },
+      ],
+      transitions: [
+        {
+          id: 'transition-1',
+          from_clip_id: 'clip-2',
+          to_clip_id: 'clip-1',
+          type: 'wipe' as const,
+          duration_frames: 10,
+        },
+      ],
+    };
+
+    await service.export('task-1', {
+      format: 'mp4',
+      resolution: '1080x1920',
+      quality: 'high',
+      render_engine: 'remotion',
+      edit_project: editProject,
+    });
+
+    expect(remotionRenderingService.render).toHaveBeenCalledWith(
+      expect.objectContaining({
+        editProject,
+      }),
+    );
+  });
+
+  it('returns a clear export error when Remotion rendering fails', async () => {
+    const doneTask = makeTask({ status: 'done', result: makeSegmentedVideoResult() });
+    const { service, remotionRenderingService } = makeService({ task: doneTask });
+    remotionRenderingService.render.mockRejectedValueOnce(new Error('chromium missing'));
+
+    await expect(
+      service.export('task-1', {
+        format: 'mp4',
+        resolution: '1080x1920',
+        quality: 'high',
+        render_engine: 'remotion',
+        transition: { type: 'fade', duration_frames: 12 },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('returns a clear export error when stitching fails and leaves generated segments untouched', async () => {

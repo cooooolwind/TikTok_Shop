@@ -36,6 +36,10 @@ const CreateTask = lazy(() => import('../pages/CreationStudio/CreateTask'));
 const TaskDetail = lazy(() => import('../pages/CreationStudio/TaskDetail'));
 const VideoPreview = lazy(() => import('../pages/CreationStudio/VideoPreview'));
 
+// ===== 视频剪辑 =====
+const EditorTaskSelector = lazy(() => import('../pages/Editor/EditorTaskSelector'));
+const VideoEditor = lazy(() => import('../pages/Editor/VideoEditor'));
+
 // ===== 数据看板 =====
 const AnalyticsDashboardPage = lazy(() => import('../pages/AnalyticsDashboard/AnalyticsDashboardPage'));
 
@@ -69,6 +73,10 @@ export const router: Router = createBrowserRouter([
       { path: 'creation/new', element: <LazyPage Component={CreateTask} /> },
       { path: 'creation/tasks/:taskId', element: <LazyPage Component={TaskDetail} /> },
       { path: 'creation/tasks/:taskId/preview', element: <LazyPage Component={VideoPreview} /> },
+
+      // 视频剪辑
+      { path: 'editor', element: <LazyPage Component={EditorTaskSelector} /> },
+      { path: 'editor/:taskId', element: <LazyPage Component={VideoEditor} /> },
 
       // 数据看板
       { path: 'analytics', element: <LazyPage Component={AnalyticsDashboardPage} /> },

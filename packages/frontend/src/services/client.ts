@@ -3,7 +3,7 @@ import type { ApiResponse } from '@aigc/shared-types';
 
 const client = axios.create({
   baseURL: '/api/v1',
-  timeout: 30000,
+  timeout: 180000,
   headers: { 'Content-Type': 'application/json' },
 });
 

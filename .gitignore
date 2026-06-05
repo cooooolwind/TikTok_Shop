@@ -70,3 +70,9 @@ tools/ffmpeg-release-essentials.zip
 
 # Husky
 .husky/_
+
+#copy
+copy
+
+#superpower
+.superpowers/

@@ -3,7 +3,7 @@ import type {
   Script, Scene, ScriptListQuery, ScriptMode, ScriptStatus,
   CreateScriptRequest, GenerateScriptQueuedResponse, GenerateScriptRequest, ProductInfo,
   GenerationTask, GenerationStatus, GenerationListQuery, ExportResponse,
-  TaskProgress, TaskResult, TaskError, VideoOptions,
+  TaskProgress, TaskResult, TaskError, VideoOptions, ExportRequest,
   ReferenceVideo, ReferenceListQuery,
   Template, TemplateListQuery,
   Voice, BGM, BGMListQuery,
@@ -148,7 +148,13 @@ export interface CreationState {
   retry: (taskId: string) => Promise<void>;
   cancel: (taskId: string) => Promise<void>;
   remove: (taskId: string) => Promise<void>;
-  exportVideo: (taskId: string, format: string, resolution: string, quality: string) => Promise<ExportResponse>;
+  exportVideo: (
+    taskId: string,
+    format: string,
+    resolution: string,
+    quality: string,
+    options?: Pick<ExportRequest, 'render_engine' | 'transition'>,
+  ) => Promise<ExportResponse>;
   regenerateSceneVideo: (taskId: string, sceneId: string, instruction?: string, materialId?: string) => Promise<void>;
 
   // WebSocket 驱动
