@@ -1,0 +1,28 @@
+{
+  "name": "@aigc/video-renderer",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "aigc-video-renderer": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "render": "tsc && node dist/cli.js",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@remotion/bundler": "^4.0.320",
+    "@remotion/renderer": "^4.0.320",
+    "@remotion/transitions": "^4.0.320",
+    "remotion": "^4.0.320",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.3.0",
+    "typescript": "^5.4.0"
+  }
+}

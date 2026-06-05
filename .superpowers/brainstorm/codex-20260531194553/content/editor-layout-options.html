@@ -1,0 +1,36 @@
+﻿<style>
+.editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}.mini-editor{background:#10131d;border:1px solid #272b38;border-radius:10px;overflow:hidden;color:#dce1ee;box-shadow:0 10px 24px rgba(0,0,0,.16)}.mini-title{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#171b27;border-bottom:1px solid #272b38;font-size:12px}.mini-body{display:grid;grid-template-columns:78px 1fr 92px;min-height:280px}.rail{background:#0d1018;border-right:1px solid #242836;padding:8px;display:flex;flex-direction:column;gap:8px}.rail-item{height:34px;border-radius:7px;background:#1b2030;display:flex;align-items:center;justify-content:center;font-size:11px;color:#aeb6c8}.asset-panel{background:#151925;border-right:1px solid #242836;padding:10px;display:flex;flex-direction:column;gap:8px}.asset-card{height:46px;border-radius:7px;background:linear-gradient(135deg,#27344d,#171d2c);border:1px solid #32394a;font-size:10px;display:flex;align-items:end;padding:6px}.stage{display:flex;flex-direction:column;min-width:0}.canvas{flex:1;display:flex;align-items:center;justify-content:center;background:#0b0d13}.phone{width:92px;height:164px;border-radius:10px;background:#050505;border:2px solid #2f3544;box-shadow:0 0 0 5px rgba(255,255,255,.03)}.toolbar{height:42px;background:#121722;border-top:1px solid #242836;display:flex;align-items:center;justify-content:center;gap:8px}.dot{width:18px;height:18px;border-radius:999px;background:#252c3c}.props{background:#151925;border-left:1px solid #242836;padding:9px;font-size:10px}.prop-line{height:20px;background:#202638;border-radius:5px;margin-bottom:8px}.timeline{grid-column:1/4;background:#111620;border-top:1px solid #242836;padding:10px;min-height:84px}.track{height:28px;background:#1a2030;border-radius:6px;margin:8px 0;position:relative}.clip{position:absolute;top:4px;height:20px;border-radius:5px;background:#315bbd;border:1px solid #6790ff}.clip.c2{background:#884ed8;border-color:#b486ff}.clip.c3{background:#d14b6d;border-color:#ff8aa4}.chip{display:inline-block;font-size:10px;padding:2px 6px;border-radius:999px;background:#252b3b;color:#aeb6c8;margin-right:4px}.card[data-choice]{cursor:pointer}.card[data-choice]:hover{outline:2px solid #fe2c55}.notes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.note{padding:10px;border-radius:8px;background:#f6f7fb;border:1px solid #e6e8ef;font-size:13px}.note b{display:block;margin-bottom:4px}@media(max-width:800px){.editor-grid{grid-template-columns:1fr}.mini-body{grid-template-columns:58px 1fr}.props{display:none}.timeline{grid-column:1/3}.notes{grid-template-columns:1fr}}
+</style>
+<h2>剪辑功能优化方向：参考剪映，但服务 TikTok Shop 工作流</h2>
+<p class="subtitle">我先把现有剪辑页和更接近剪映的目标工作台放在一起。请主要看布局、操作密度和后端能力边界。</p>
+<div class="editor-grid">
+  <div class="card" data-choice="current" onclick="toggleSelect(this)">
+    <div class="mini-editor">
+      <div class="mini-title"><b>现状：生成片段拼接页</b><span>低密度</span></div>
+      <div class="mini-body">
+        <div class="asset-panel"><span class="chip">素材片段</span><div class="asset-card">第 1 段</div><div class="asset-card">第 2 段</div><div class="asset-card">第 3 段</div></div>
+        <div class="stage"><div class="canvas"><div class="phone"></div></div><div class="toolbar"><div class="dot"></div><div class="dot"></div></div></div>
+        <div class="props"><span class="chip">属性</span><div class="prop-line"></div><div class="prop-line"></div><div class="prop-line"></div></div>
+        <div class="timeline"><span class="chip">时间线</span><div class="track"><div class="clip" style="left:4%;width:26%"></div><div class="clip c2" style="left:32%;width:28%"></div><div class="clip c3" style="left:62%;width:30%"></div></div></div>
+      </div>
+    </div>
+    <div class="card-body"><h3>A. 保守增强</h3><p>修复乱码、增强时间线和导出校验，布局维持左中右。最快落地，但不像剪映。</p></div>
+  </div>
+  <div class="card" data-choice="jianying" onclick="toggleSelect(this)">
+    <div class="mini-editor">
+      <div class="mini-title"><b>目标：剪映式编辑工作台</b><span>高密度</span></div>
+      <div class="mini-body">
+        <div class="rail"><div class="rail-item">媒体</div><div class="rail-item">文本</div><div class="rail-item">音频</div><div class="rail-item">转场</div><div class="rail-item">导出</div></div>
+        <div class="stage"><div style="display:grid;grid-template-columns:120px 1fr;min-height:238px"><div class="asset-panel"><span class="chip">资源库</span><div class="asset-card">商品镜头</div><div class="asset-card">口播字幕</div><div class="asset-card">BGM</div></div><div class="canvas"><div class="phone"></div></div></div><div class="toolbar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+        <div class="props"><span class="chip">检查器</span><div class="prop-line"></div><div class="prop-line"></div><div class="prop-line"></div><div class="prop-line"></div></div>
+        <div class="timeline"><span class="chip">多轨时间线</span><div class="track"><div class="clip" style="left:3%;width:30%"></div><div class="clip c2" style="left:35%;width:25%"></div><div class="clip c3" style="left:62%;width:30%"></div></div><div class="track" style="height:18px"><div class="clip c2" style="left:8%;width:72%;height:10px"></div></div></div>
+      </div>
+    </div>
+    <div class="card-body"><h3>B. 推荐：剪映式轻量工作台</h3><p>增加左侧工具栏、资源库、中央预览、右侧检查器、底部多轨时间线；后端保存剪辑工程并异步导出。</p></div>
+  </div>
+</div>
+<div class="notes">
+  <div class="note"><b>前端重点</b>修复中文乱码，重组为剪映式暗色工作台；移动端在 768px 下切为顶部工具 + 抽屉资源/属性 + 横向时间线。</div>
+  <div class="note"><b>后端重点</b>补齐 edit_project 校验、草稿保存、导出状态追踪；继续用 Remotion/FFmpeg，避免一次性做完整专业 NLE。</div>
+  <div class="note"><b>风险边界</b>不复刻剪映全部能力，先做商品短视频必要功能：片段裁剪、排序、转场、字幕/音频轨道占位、导出可恢复。</div>
+</div>

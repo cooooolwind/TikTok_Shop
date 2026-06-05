@@ -52,6 +52,7 @@ export interface TaskResult {
   resolution: string;
   aspect_ratio: string;
   file_size: number;
+  render_engine?: RenderEngine;
   segments?: VideoSegmentResult[];
   continuity_warning?: string;
   stitching_warning?: string;
@@ -119,16 +120,48 @@ export interface RegenerateSceneVideoRequest {
   material_id?: string;
 }
 
+export type RenderEngine = 'ffmpeg' | 'remotion';
+
+export type TransitionType = 'none' | 'fade' | 'slide' | 'wipe' | 'zoom_blur';
+
+export interface TransitionConfig {
+  type: TransitionType;
+  duration_frames?: number;
+}
+
+export interface TimelineClip {
+  id: string;
+  segment_index: number;
+  start_seconds: number;
+  end_seconds: number;
+}
+
+export interface TimelineTransition {
+  id: string;
+  from_clip_id: string;
+  to_clip_id: string;
+  type: TransitionType;
+  duration_frames?: number;
+}
+
+export interface VideoEditProject {
+  clips: TimelineClip[];
+  transitions: TimelineTransition[];
+}
+
 export interface ExportRequest {
   format: 'mp4' | 'webm';
   resolution: '1080x1920' | '1920x1080' | '720x1280';
   quality: 'high' | 'medium' | 'low';
+  render_engine?: RenderEngine;
+  transition?: TransitionConfig;
+  edit_project?: VideoEditProject;
 }
 
 export interface ExportResponse {
   download_url: string;
   expires_at: string;
-  source?: 'segment' | 'stitched';
+  source?: 'segment' | 'stitched' | 'remotion';
   segments_count?: number;
 }
 

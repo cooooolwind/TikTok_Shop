@@ -4,6 +4,7 @@ import { Button, Card, Descriptions, List, Space, Spin, Tag, Typography } from '
 import { ArrowLeftOutlined, DownloadOutlined, EditOutlined } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
 import { useCreationStore } from '../../stores/useGenerationStore';
+import { routePath } from '../../constants';
 import { formatBytes, formatDuration, formatGenerationTaskDisplayId } from '../../utils/format';
 
 const { Text } = Typography;
@@ -111,6 +112,9 @@ export default function VideoPreview() {
             </Button>
             <Button icon={<EditOutlined />} onClick={() => navigate(`/scripts/${task.script_id}?returnTask=${task.id}`)}>
               修改脚本
+            </Button>
+            <Button icon={<EditOutlined />} onClick={() => navigate(routePath.editorTask(task.id))}>
+              视频剪辑
             </Button>
             <Button
               aria-label="导出完整视频"

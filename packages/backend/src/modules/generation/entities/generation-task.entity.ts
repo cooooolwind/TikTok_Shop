@@ -54,6 +54,7 @@ interface TaskResult {
   resolution: string;
   aspect_ratio: string;
   file_size: number;
+  render_engine?: 'ffmpeg' | 'remotion';
   continuity_warning?: string;
   stitching_warning?: string;
   segments?: {
