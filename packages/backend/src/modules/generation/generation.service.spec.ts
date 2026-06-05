@@ -138,7 +138,7 @@ function makeService(options?: {
   );
 
   return { service, videoQueue, scriptsRepository, tasksRepository, videosRepository, materialsRepository, videoStitchingService, remotionRenderingService };
-
+}
 
 describe('GenerationService', () => {
   it('creates a queued video generation task for confirmed scripts', async () => {
