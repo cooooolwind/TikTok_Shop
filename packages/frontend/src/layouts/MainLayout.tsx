@@ -14,6 +14,7 @@ import {
   DesktopOutlined,
   MenuOutlined,
   CloseOutlined,
+  ScissorOutlined,
 } from '@ant-design/icons';
 import { useUIStore } from '../stores/useAppStore';
 import { ROUTES } from '../constants';
@@ -31,6 +32,7 @@ type MenuItem = Required<MenuProps>['items'][number];
  * - 素材管理
  * - 剧本工作台（子菜单：剧本列表、参考视频库、灵感模板）
  * - 创作工作室
+ * - 视频剪辑
  * - 数据看板
  */
 const menuItems: MenuItem[] = [
@@ -72,6 +74,11 @@ const menuItems: MenuItem[] = [
     label: '创作工作室',
   },
   {
+    key: ROUTES.EDITOR,
+    icon: <ScissorOutlined />,
+    label: '视频剪辑',
+  },
+  {
     key: ROUTES.ANALYTICS,
     icon: <BarChartOutlined />,
     label: '数据看板',
@@ -95,6 +102,9 @@ function deriveMenuState(pathname: string): { selectedKey: string; openKeys: str
   }
   if (pathname.startsWith('/templates')) {
     return { selectedKey: ROUTES.TEMPLATES, openKeys: ['scripts-group'] };
+  }
+  if (pathname.startsWith('/editor')) {
+    return { selectedKey: ROUTES.EDITOR, openKeys: [] };
   }
 
   const parentKey = pathToParent[pathname];
@@ -246,6 +256,7 @@ export default function MainLayout() {
               { key: ROUTES.REFERENCES, icon: <BookOutlined />, label: '参考视频' },
               { key: ROUTES.TEMPLATES, icon: <BulbOutlined />, label: '灵感模板' },
               { key: ROUTES.CREATION, icon: <VideoCameraOutlined />, label: '创作工作室' },
+              { key: ROUTES.EDITOR, icon: <ScissorOutlined />, label: '视频剪辑' },
               { key: ROUTES.ANALYTICS, icon: <BarChartOutlined />, label: '数据看板' },
             ].map((item, index) => (
               <Col span={8} className="mobile-grid-cell" key={item.key} style={{ animationDelay: `${index * 20}ms` }}>
@@ -267,7 +278,7 @@ export default function MainLayout() {
                 主题设置
               </div>
             </Col>
-            <Col span={8} className="mobile-grid-cell" style={{ animationDelay: `${7 * 20}ms` }}>
+            <Col span={8} className="mobile-grid-cell" style={{ animationDelay: `${8 * 20}ms` }}>
                 <div
                   className="mobile-grid-item"
                   onClick={() => {

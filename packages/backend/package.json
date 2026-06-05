@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@aigc/shared-types": "workspace:*",
+    "@aigc/video-renderer": "workspace:*",
     "@nestjs/bullmq": "^10.0.0",
     "@nestjs/common": "^10.3.0",
     "@nestjs/config": "^3.2.0",
