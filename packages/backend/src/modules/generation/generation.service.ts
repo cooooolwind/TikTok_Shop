@@ -1,10 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Queue } from 'bullmq';
 import { In, Repository } from 'typeorm';
 import type {
   CreateVideoRequest,
+  ExportRequest,
   GenerationListQuery,
   GenerationTask as GenerationTaskResponse,
   QuickGenerateRequest,
@@ -18,6 +19,7 @@ import { Material } from '../materials/entities/material.entity';
 import { GenerationTask } from './entities/generation-task.entity';
 import { Video } from './entities/video.entity';
 import { VideoStitchingService } from '../../tasks/services/video-stitching.service';
+import { RemotionRenderingService } from './remotion-rendering.service';
 
 const DEFAULT_PROGRESS: TaskProgress = {
   current_step: 0,
@@ -62,6 +64,8 @@ function toScriptDisplayId(createdAt?: Date) {
 
 @Injectable()
 export class GenerationService {
+  private readonly logger = new Logger(GenerationService.name);
+
   constructor(
     @InjectQueue(QUEUES.VIDEO_GENERATION) private readonly videoQueue: Queue,
     @InjectRepository(GenerationTask) private readonly tasksRepository: Repository<GenerationTask>,
@@ -69,6 +73,7 @@ export class GenerationService {
     @InjectRepository(Video) private readonly videosRepository: Repository<Video>,
     @InjectRepository(Material) private readonly materialsRepository: Repository<Material>,
     private readonly videoStitchingService: VideoStitchingService,
+    private readonly remotionRenderingService: RemotionRenderingService,
   ) {}
 
   async create(data: CreateVideoRequest): Promise<GenerationTaskResponse> {
@@ -183,11 +188,16 @@ export class GenerationService {
     return this.toTaskResponse(task);
   }
 
-  async export(taskId: string) {
+  async export(taskId: string, data: ExportRequest = { format: 'mp4', resolution: '1080x1920', quality: 'high' }) {
     const task = await this.findRawTask(taskId);
     if (task.status !== 'done' || !task.result?.video_url) {
       throw new BadRequestException('Only completed tasks can be exported');
     }
+    if (data.render_engine === 'remotion') {
+      this.logger.log(`Exporting task=${taskId} with Remotion transition renderer`);
+      return this.exportWithRemotion(task, data);
+    }
+
     let video = await this.videosRepository.findOne({ where: { taskId } });
     let downloadUrl = task.result.video_url || video?.url;
     let source: 'segment' | 'stitched' = this.isGeneratedVideoUrl(downloadUrl) ? 'stitched' : 'segment';
@@ -234,6 +244,58 @@ export class GenerationService {
       source,
       segments_count: task.result.segments?.length ?? 1,
     };
+  }
+
+  private async exportWithRemotion(task: GenerationTask, data: ExportRequest) {
+    const currentResult = task.result;
+    if (!currentResult) throw new BadRequestException('No generated video is available for export');
+
+    const segments = (currentResult.segments ?? []).filter((segment) => segment.status !== 'failed');
+    if (segments.length < 2) {
+      throw new BadRequestException('At least two video segments are required for transition export');
+    }
+
+    let video = await this.videosRepository.findOne({ where: { taskId: task.id } });
+    try {
+      const rendered = await this.remotionRenderingService.render({
+        taskId: task.id,
+        segments,
+        resolution: data.resolution ?? currentResult.resolution ?? '1080x1920',
+        transition: data.transition,
+        editProject: data.edit_project,
+      });
+
+      task.result = {
+        ...currentResult,
+        video_url: rendered.video_url,
+        file_size: rendered.file_size,
+        render_engine: 'remotion',
+        stitching_warning: undefined,
+      };
+      await this.tasksRepository.save(task);
+
+      if (video) {
+        video.url = rendered.video_url;
+        video.fileSize = rendered.file_size;
+        video = await this.videosRepository.save(video);
+      }
+
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      return {
+        download_url: rendered.video_url,
+        expires_at: expiresAt.toISOString(),
+        source: 'remotion' as const,
+        segments_count: segments.length,
+      };
+    } catch (error) {
+      throw new BadRequestException({
+        code: 'VIDEO_EXPORT_REMOTION_FAILED',
+        message: `转场视频导出失败，分段视频仍可预览：${this.toErrorMessage(error)}`,
+        retryable: true,
+        category: 'export',
+        user_action: '请稍后重试转场导出，或先使用普通导出生成完整视频。',
+      });
+    }
   }
 
   private async needsExportStitching(task: GenerationTask) {

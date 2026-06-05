@@ -1,114 +1,124 @@
 # TikTok_Shop AIGC 带货视频生成平台
 
-> **一句话核心业务价值**：围绕 TikTok Shop 素材管理、脚本生成、视频创作和数据看板，搭建一套前后端分离的 AIGC 视频生产工作台，实现带货视频的自动化、规模化产出。
+## 项目概览
 
-## 完赛项目基础信息
-
+- **项目名称**：TikTok_Shop AIGC 带货视频生成平台
 - **参赛课题**：TODO: 填写参赛课题
 - **团队名称与成员名单**：TODO: 填写团队名称与成员名单
-- **分工说明**：TODO: 填写分工说明（如小队完成，写清各模块负责人）
-- **提效形式**：TODO: 填写提效形式
+- **角色分工**：TODO: 填写成员分工，例如前端、后端、AI 工作流、部署与演示
+- **提效形式**：TODO: 填写效率提升形式
+- **一句话核心业务价值**：围绕 TikTok Shop 素材管理、脚本生成、视频生成、剪辑导出和数据看板，构建前后端分离的 AIGC 视频生产工作台，帮助商家更快规模化产出带货视频。
 
 ## 交付材料
 
-- **在线 Demo 链接**：[Demo链接](http://115.29.186.188)
-- **演示视频链接**：TODO: 填写演示视频链接（3-8 分钟）
-- **源代码仓库链接**：TODO: 填写源代码仓库链接
+- **在线 Demo 链接**：[http://115.29.186.188](http://115.29.186.188)
+- **演示视频链接**：TODO: 填写 3-8 分钟演示视频链接
+- **源码仓库链接**：TODO: 填写源码仓库链接
+- **README / 运行说明**：见本文档下方“本地运行说明”
+- **Agent Skill Package**：TODO: 如有 Agent 技能包，请填写链接
 
-## 功能说明
+## 核心功能
 
-### 核心功能清单
-1. **素材管理与理解**：支持本地文件上传、类型/状态筛选、分镜切片展示以及基于大模型的视频素材多模态分析打标。
-2. **灵感模板与脚本工作台**：提供脚本库、灵感模板，支持 AI 一键生成带货脚本与结构化分镜。
-3. **全链路自动生成**：对接火山引擎大模型与视频生成 API，支持异步队列处理，实现从脚本文案到最终成片的自动管线。
-4. **任务监控与数据看板**：使用 WebSocket 实时推送任务进度，提供统一的数据可视化看板。
-5. **分镜首帧视频生成与按需导出**：以每个分镜的 `visual_prompt` 为核心，先用 Seedream 根据商品图生成独立首帧，再将首帧作为 Seedance 视频任务的 `first_frame` 输入生成分镜片段；生成阶段默认保留分段预览，用户点击“导出完整视频”时再通过 FFmpeg 拼接完整 MP4。
+1. **素材管理与理解**：支持本地素材上传、筛选、预览、删除，以及素材多模态分析的基础流程。
+2. **脚本与灵感工作台**：提供脚本生成、灵感模板、结构化分镜输出和脚本编辑能力。
+3. **分镜视频生成**：基于分镜视觉提示生成独立视频片段，并保留尾帧用于后续片段连续性参考。
+4. **任务进度与异常恢复**：使用 BullMQ 与 WebSocket 推送任务进度，支持失败分镜重试。
+5. **剪辑工作台**：提供类剪映的桌面剪辑页，支持素材片段导入、片段裁剪、顺序调整、缩略图时间线、转场拖入、整体 Remotion 预览和导出。
+6. **数据看板与工作台入口**：提供主页概览、最近任务和创作入口。
 
-### 端到端使用流程
-TODO: 结合演示视频，用 5-8 句写清用户从进入系统到拿到结果的完整流程
+## 2026-06-01 剪辑工作台更新
+
+- 剪辑页融合到现有主页面框架中，保留全站左侧导航，剪辑内容区提供资源面板、整体预览、属性面板和底部时间线。
+- 左侧素材片段和时间线片段均优先渲染 `thumbnail_url` 缩略图，缺失时显示带片段编号的渐变占位。
+- 进入剪辑页后默认保持空时间线，左侧素材片段需要用户点击“加入”或拖入后才进入剪辑轨道。
+- 转场预设支持拖入两个片段之间的时间线间隙；新增素材只新增片段，不再默认创建 `fade` 转场。
+- 已有转场块已放大，便于点击、选中，并可在右侧属性面板精调类型、帧数或直接删除。
+- 整体预览区域已放大，继续保持 9:16 比例；拖动 playhead 时只在松手后提交一次预览 seek，避免双进度线和抖动。
+- 整体预览默认暂停，点击视频区域或按空格键才开始播放，再次点击或按空格可暂停。
+- 素材片段裁剪后按源视频 in/out 区间稳定播放，Remotion Player 子树保持稳定且视频片段开启缓冲暂停，降低整体预览中途回退或黑帧风险。
+- 剪辑页跟随全局浅色/深色主题；移动端访问剪辑页时提示用户在电脑端使用。
+- 本轮不新增后端接口，不改变 shared-types 契约，不实现上传转场素材、字幕多轨或 BGM 多轨真实渲染。
+
+## 端到端使用流程
+
+用户进入系统后，先上传商品素材或选择已有素材。系统根据素材与商品信息生成带货脚本，并输出结构化分镜。用户启动视频生成任务后，后端异步队列逐段生成分镜视频，前端实时展示进度和失败信息。任务完成后，用户可进入预览页查看各个片段，也可以进入剪辑工作台进行顺序调整、裁剪和转场配置。剪辑页使用整体预览检查最终节奏，并通过导出按钮生成成片。演示视频中应展示从素材到脚本、从脚本到分镜视频、从分镜到剪辑导出的完整链路。
 
 ## 技术说明
 
-### 核心技术栈
-- **前端**：React 18、Vite、Ant Design、Zustand、Socket.IO client、ECharts
-- **后端**：NestJS、TypeORM、BullMQ、Socket.IO、Swagger
-- **基础设施**：PostgreSQL 16 + pgvector、Redis、Docker Compose
-- **工程化**：pnpm workspace、Turborepo、TypeScript、ESLint、Prettier
+### 系统架构
 
-### 大模型 / AI 能力使用说明
-- 接入了火山引擎 (Volcano Engine) 的 API 进行大语言模型对话 (ChatCompletion) 和视频生成。
-- 使用大模型进行素材的多模态理解分析，并根据商品特征与灵感模板，自动输出 JSON Schema 格式的结构化视频脚本与分镜信息；剧本生成 Prompt 已强化为电商强转化导向，要求 3 秒 Hook、卖点分配、商品可见、购买理由和 CTA 收尾。
-- 视频生成阶段采用“商品图参考 + Seedream 分镜首帧”策略：商品图只作为 Seedream 的参考输入，每个分镜必须先生成商品锚定首帧，再把 Seedream 首帧作为 Seedance `first_frame` 生成该分镜视频；本地上传商品图会在后端转为 data URL 后提交给 Seedream，首帧图片尺寸按 Seedream 最小像素要求使用 9:16 `1600x2848`、16:9 `2848x1600`、1:1 `1920x1920`；如果 Seedream 首帧生成失败，会使用简化提示词重试 Seedream，仍失败则明确提示用户补充/调整商品图或分镜提示词，不会把原始商品图直接传给视频模型，也不会退化为纯文本视频。
-
-### 智能剪辑与视频合成
-- 后端按分镜逐段生成视频，并为每个分镜单独生成商品锚定首帧；生成任务完成时只保存分段视频，默认预览第一段并保留分段切换入口。商品图是视频生成强约束：剧本生成页支持选择素材库图片或填写商品图 URL，并会写入剧本 product_info.images；剧本详情和一键出片页会展示商品图，若缺少商品图，前端会阻止提交，后端也会返回明确错误并提示先上传或填写商品图。
-- 完整 MP4 只在用户点击“导出完整视频”时按需拼接，输出到 `packages/backend/uploads/generated/{taskId}.mp4`，并通过 `/uploads/generated/{taskId}.mp4` 提供访问；导出完成后不会跳转新页面，而是在分段列表末尾新增“完整视频”卡片供用户切换预览；如果 FFmpeg 拼接失败，任务状态和分段预览不受影响，页面会给出清晰导出失败提示。
-- 后端 Docker 镜像已安装并校验 FFmpeg；本地裸机开发如需实际拼接，请确保运行后端的环境可访问 `ffmpeg` 命令。
-
-### 关键工程难点与解决方案
-- **长耗时 AI 任务的异步处理与反馈**：AI 视频生成耗时极长，传统 HTTP 阻塞极易超时。解决方案：引入 Redis + BullMQ 搭建异步任务队列池，采用 NestJS Gateway (Socket.IO) 向前端客户端主动推送进度事件，保证用户体验的流畅性。
-- **非标视频素材的浏览器兼容性与加载优化**：不同设备录制的视频编码格式差异大（如 yuv444p），且原始码率过高导致 Web 端播放黑屏或卡顿。解决方案：后端建立**智能预处理管线**，利用 FFmpeg 强制转码为 `yuv420p` 像素格式，并基于码率密度（阈值 6Mbps）自动执行无损压缩；前端在详情页配合**首帧占位图 + 调暗滤镜 + 加载进度条**，提供无缝的处理中视觉反馈。
-- **全栈项目的类型规约与开发效率**：前后端分离项目易出现接口不对齐导致的问题。解决方案：利用 pnpm workspace 构建 Monorepo，提取统一的 `packages/shared-types` 契约层；配合 Turborepo 实现了全项目的秒级增量类型检查与构建。
-
-### 部署与访问说明
-TODO: 说明项目部署在哪里、如何访问、评委如何快速体验
-
-## 结果说明
-
-- **项目完成度**：目前已处于 **核心 MVP 阶段**（已打通 80% 核心链路任务）。工程基础设施、异步任务调度、WebSocket 实时推送以及“素材 → 剧本 → 创作”核心链路已完全闭环。详细进度见 `AGENTS/PROJECT_PROGRESS.md`。
-- **项目亮点 / 创新点**：
-  1. **极致移动端适配**：针对移动端商家场景，重构了侧边栏为“宫格悬浮菜单”，并对所有管理列表实施了 Table-to-Card 转换与无限滚动支持，确保在手机上也能流畅进行分镜编辑与素材管理。
-  2. **分镜级异步生成与断点重试**：采用分镜优先 Prompt 策略，极大降低了长视频生成的失败率；利用 BullMQ 实现分镜级任务调度，支持在单个分镜生成失败后，仅对失败分镜进行 Prompt 调整并一键断点续传。
-  3. **视觉连续性算法**：在分镜化生成的管线中，自动提取上一分镜的尾帧作为下一分镜的首帧参考，解决了 AI 视频片段拼接时的画面跳跃问题，提升了最终成片的连贯性。
-
----
-
-## 运行说明 (README)
-
-### 仓库结构
-
-```text
-TikTok_Shop/
-├── packages/
-│   ├── frontend/       # React + Vite 前端应用
-│   ├── backend/        # NestJS 后端服务
-│   └── shared-types/   # 前后端共享 TypeScript 类型
-├── docker/             # Dockerfile、Nginx、PostgreSQL 初始化脚本
-├── AGENTS/             # 架构、API、进度跟踪及 AI Agent 提示词说明
-├── docker-compose.yml
-├── docker-compose.dev.yml
-├── package.json
-├── pnpm-workspace.yaml
-└── turbo.json
+```mermaid
+flowchart LR
+  A["React + Vite 前端"] --> B["NestJS API"]
+  B --> C["PostgreSQL + pgvector"]
+  B --> D["Redis + BullMQ"]
+  D --> E["脚本生成任务"]
+  D --> F["视频生成任务"]
+  B --> G["本地 uploads 存储"]
+  A --> H["Socket.IO 任务进度"]
+  A --> I["Remotion 剪辑预览"]
+  B --> J["FFmpeg / Remotion 导出"]
 ```
 
-### 本地开发环境
+### 核心技术栈
 
-#### 环境要求
+- **前端**：React 18、Vite、Ant Design、Zustand、Socket.IO client、Remotion Player、Vitest
+- **后端**：NestJS、TypeORM、BullMQ、Socket.IO、Swagger、Jest
+- **共享契约**：TypeScript shared-types，API 响应字段使用 snake_case
+- **基础设施**：PostgreSQL 16 + pgvector、Redis 7、Docker Compose、Turborepo、pnpm workspace
+- **AI 能力**：火山引擎大模型 ChatCompletion 与视频生成 API，开发阶段支持 `MOCK_MODE=true`
 
-- Node.js == 22
-- pnpm >= 8
+### LLM / AI 能力使用
+
+- 使用大模型生成电商带货脚本、Hook、卖点、购买理由、CTA 和结构化分镜。
+- 使用大模型进行素材的多模态理解分析，并根据商品特征与灵感模板输出 JSON Schema 格式的结构化脚本与分镜信息。
+- 视频生成阶段优先使用分镜级 `visual_prompt`，降低全局叙事对单个镜头的干扰。
+- 分镜视频生成支持商品图参考首帧：先用 Seedream 根据商品图生成商品锚定首帧，再将首帧作为 Seedance `first_frame` 输入生成视频片段。
+- 失败分镜可独立重试，避免整条视频任务从头开始。
+
+### 关键工程挑战与解决方案
+
+- **长耗时 AI 任务反馈**：通过 Redis + BullMQ 解耦 HTTP 请求和生成任务，并用 Socket.IO 主动推送阶段进度。
+- **前后端类型一致性**：使用 `packages/shared-types` 作为 API 契约源，前端和后端共享请求与响应结构。
+- **分镜视频连续性**：生成任务保留上一段尾帧，并作为下一段首帧参考，减少片段拼接时的画面跳变。
+- **剪辑预览同步**：Remotion Player 仅使用每帧 `frameupdate` 驱动时间线 playhead，避免较旧的 `timeupdate` 把进度写回；有转场时整体预览总帧数会扣除转场重叠帧，保持 Player 时长与 `TransitionSeries` 实际时长一致。剪辑页整体预览默认不自动播放，点击画面或按空格才切换播放/暂停；Player 子树使用稳定 props 与 memo 隔离 playhead 高频更新，片段视频启用缓冲暂停，减少播放中途回退和黑帧。
+
+## 部署与访问说明
+
+- 在线体验地址当前记录为 [http://115.29.186.188](http://115.29.186.188)。
+- 生产环境可使用 Docker Compose 编排 PostgreSQL、Redis、backend 和 frontend。
+- 前端静态资源由 Nginx 托管，并反向代理 `/api`、`/socket.io` 和 `/uploads`。
+- 上传和生成文件由 backend 的 `UPLOAD_DIR` 管理，默认开发路径为 `packages/backend/uploads`。
+
+## 项目完成度与亮点
+
+- **完成度**：核心 MVP 阶段。工程骨架、素材管理、脚本生成、任务队列、分镜生成、预览导出和剪辑工作台已打通。
+- **亮点 1：全链路 AIGC 视频生产**：覆盖素材、脚本、分镜、视频生成、剪辑和导出，不只是单点模型调用。
+- **亮点 2：分镜级异步生成与失败恢复**：提升长任务可控性和演示稳定性。
+- **亮点 3：类剪映剪辑体验**：在 Web 端提供主题跟随、缩略图时间线、可拖入转场和整体预览同步。
+
+## 本地运行说明
+
+### 环境要求
+
+- Node.js 22
+- pnpm 8+
 - Docker / Docker Compose
 
-#### 启动步骤
+### 启动步骤
 
-1. 复制环境变量模板。
-   ```bash
-   cp .env.example .env
-   ```
-2. 安装依赖。
-   ```bash
-   pnpm install
-   ```
-3. 启动开发环境数据库和 Redis。
-   ```bash
-   docker compose -f docker-compose.dev.yml up -d postgres redis
-   ```
-4. 启动前后端开发服务。
-   ```bash
-   pnpm dev
-   ```
-也可以使用 Makefile 一键启动：`make dev`
+```bash
+cp .env.example .env
+pnpm install
+docker compose -f docker-compose.dev.yml up -d postgres redis
+pnpm dev
+```
+
+也可以使用：
+
+```bash
+make dev
+```
 
 ### 访问地址
 
@@ -124,33 +134,44 @@ TikTok_Shop/
 
 | 命令 | 说明 |
 | --- | --- |
-| `pnpm dev` | 通过 Turborepo 并行启动开发服务 |
-| `pnpm build` | 构建所有 workspace package |
+| `pnpm dev` | 启动前后端开发服务 |
 | `pnpm lint` | 运行 ESLint |
 | `pnpm typecheck` | 运行 TypeScript 类型检查 |
 | `pnpm test` | 运行测试 |
+| `pnpm build` | 构建所有 workspace package |
+| `pnpm --filter @aigc/frontend typecheck` | 只检查前端类型 |
+| `pnpm --filter @aigc/frontend test` | 只运行前端测试 |
 
-### Docker 生产部署
+### 目录结构
 
-生产/集成环境可以使用完整 Docker Compose 编排：
+```text
+TikTok_Shop/
+├── packages/
+│   ├── frontend/       # React + Vite 前端应用
+│   ├── backend/        # NestJS 后端服务
+│   ├── shared-types/   # 前后端共享 TypeScript 类型
+│   └── video-renderer/ # Remotion 渲染与 CLI
+├── docker/             # Dockerfile、Nginx、PostgreSQL 初始化脚本
+├── AGENTS/             # 架构、API、项目进度与 Agent 文档
+├── docker-compose.yml
+├── docker-compose.dev.yml
+├── package.json
+├── pnpm-workspace.yaml
+└── turbo.json
+```
 
-1. 配置 `.env`。
-2. 启动服务：`docker compose up -d`
-3. 访问前端：`http://localhost`
-
-完整 Docker 编排包含 PostgreSQL、Redis、backend 和 frontend。frontend 镜像内置 Nginx，负责托管前端静态资源，并反向代理 `/api/` 与 `/socket.io/` 到后端服务。backend 使用 `backend_uploads` volume 持久化 `/app/uploads`。
-
-### 核心环境变量 (.env)
+### 核心环境变量
 
 | 变量 | 说明 |
 | --- | --- |
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | PostgreSQL 账号和数据库 |
-| `VOLCANO_API_KEY` | 火山引擎 API Key，不要提交真实 Key |
+| `MOCK_MODE` | 开发阶段可设为 `true`，使用 AI mock 流程 |
+| `VOLCANO_API_KEY` | 火山引擎 API Key，禁止提交真实密钥 |
 | `VOLCANO_IMAGE_API_KEY` / `VOLCANO_IMAGE_ENDPOINT` / `VOLCANO_IMAGE_BASE_URL` | Seedream 首帧生成配置；未单独配置时 API Key/Base URL 可复用 `VOLCANO_API_KEY` / `VOLCANO_BASE_URL` |
-| `MOCK_MODE` | 开发阶段可设置为 `true` |
-| `JWT_SECRET` | JWT 密钥，生产环境必须替换 |
-| `UPLOAD_DIR` | 本地上传目录；相对路径会按 `packages/backend` 解析，默认 `./uploads` 即 `packages/backend/uploads` |
+| `VOLCANO_BASE_URL` | 火山引擎 API 基础地址 |
+| `JWT_SECRET` | JWT 密钥，生产环境必须更换 |
+| `UPLOAD_DIR` | 本地上传与生成文件目录 |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | PostgreSQL 配置 |
 
 ### CI 流程
 
-GitHub Actions 会在 push/PR 到 `main` 时运行：lint、typecheck、backend test、frontend test、build和deploy（到阿里云服务器）
+GitHub Actions 会在 push/PR 到 `main` 时运行 lint、typecheck、backend test、frontend test、build 和 deploy（到阿里云服务器）。

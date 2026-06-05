@@ -68,7 +68,7 @@ export class GenerationController {
 
   @Post('tasks/:taskId/export')
   @ApiOperation({ summary: '4.8 视频导出' })
-  export(@Param('taskId') taskId: string, @Body() _data: ExportRequest) {
-    return this.generationService.export(taskId);
+  export(@Param('taskId') taskId: string, @Body() data: ExportRequest) {
+    return this.generationService.export(taskId, data);
   }
 }
