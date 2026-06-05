@@ -103,9 +103,16 @@ export const useCreationStore = create<CreationState>((set, get) => ({
     }
   },
 
-  exportVideo: async (taskId, format, resolution, quality) => {
+  exportVideo: async (taskId, format, resolution, quality, options) => {
     try {
-      const result = unwrapResponse(await generationApi.export(taskId, { format: format as 'mp4' | 'webm', resolution: resolution as '1080x1920' | '1920x1080' | '720x1280', quality: quality as 'high' | 'medium' | 'low' }));
+      const result = unwrapResponse(
+        await generationApi.export(taskId, {
+          format: format as 'mp4' | 'webm',
+          resolution: resolution as '1080x1920' | '1920x1080' | '720x1280',
+          quality: quality as 'high' | 'medium' | 'low',
+          ...options,
+        }),
+      );
       useUIStore.getState().pushNotification({ type: 'success', title: '完整视频导出完成' });
       return result;
     } catch (error) {

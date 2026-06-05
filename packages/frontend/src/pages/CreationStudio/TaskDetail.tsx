@@ -13,7 +13,7 @@ import TaskProgressPanel from '../../components/creation/TaskProgressPanel';
 import StatusTag from '../../components/common/StatusTag';
 import { useCreationStore } from '../../stores/useGenerationStore';
 import { useTaskSubscription } from '../../hooks/useTaskSubscription';
-import { TASK_STATUS_LABELS } from '../../constants';
+import { TASK_STATUS_LABELS, routePath } from '../../constants';
 import { formatBeijingDateTime, formatBytes, formatDuration, formatGenerationTaskDisplayId } from '../../utils/format';
 import { openExportWindow } from '../../utils/exportWindow';
 
@@ -106,6 +106,9 @@ export default function TaskDetail() {
                   onClick={() => navigate(`/creation/tasks/${task.id}/preview`)}
                 >
                   预览
+                </Button>
+                <Button icon={<EditOutlined />} onClick={() => navigate(routePath.editorTask(task.id))}>
+                  视频剪辑
                 </Button>
                 <Button
                   aria-label="导出完整视频"

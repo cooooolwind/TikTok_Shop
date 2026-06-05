@@ -8,6 +8,7 @@ import { Video } from './entities/video.entity';
 import { Script } from '../scripts/entities/script.entity';
 import { Material } from '../materials/entities/material.entity';
 import { QUEUES } from '../../tasks/queues';
+import { RemotionRenderingService } from './remotion-rendering.service';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { QUEUES } from '../../tasks/queues';
     BullModule.registerQueue({ name: QUEUES.VIDEO_GENERATION }),
   ],
   controllers: [GenerationController],
-  providers: [GenerationService],
+  providers: [GenerationService, RemotionRenderingService],
   exports: [GenerationService],
 })
 export class GenerationModule {}
