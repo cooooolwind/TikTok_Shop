@@ -69,6 +69,7 @@ export class MaterialAnalysisProcessor extends WorkerHost {
         if (alreadyTranscoded) {
           this.logger.log(`Skipping transcoding for ${materialId}: video was already transcoded`);
         } else {
+          this.tasksGateway.emitMaterialAnalysisStep(materialId, 'transcoding');
           this.logger.log(`Transcoding video for compatibility: ${materialId}`);
           const transcodedPath = `${filePath}.transcoded.mp4`;
           try {
@@ -102,6 +103,7 @@ export class MaterialAnalysisProcessor extends WorkerHost {
         }
 
         // 1. Upload video via Files API (Robust for large files)
+        this.tasksGateway.emitMaterialAnalysisStep(materialId, 'uploading');
         this.logger.log(`Uploading video to Volcano for analysis: ${materialId}`);
         const buffer = await fs.readFile(filePath);
         fileId = await this.volcanoClient.uploadFile(buffer, filename);
@@ -123,6 +125,7 @@ export class MaterialAnalysisProcessor extends WorkerHost {
         }
         
         // 2. Prepare input for Responses API (Supports file_id correctly)
+        this.tasksGateway.emitMaterialAnalysisStep(materialId, 'analyzing');
         const input = [
           {
             role: 'system',
@@ -158,6 +161,7 @@ export class MaterialAnalysisProcessor extends WorkerHost {
         result = this.parseAiResponse(aiResponse.content);
       } else {
         // 3. Use Base64 for images (Fast and no double-hop)
+        this.tasksGateway.emitMaterialAnalysisStep(materialId, 'analyzing');
         const buffer = await fs.readFile(filePath);
         const base64Data = `data:${material.mimeType};base64,${buffer.toString('base64')}`;
         const messages = this.buildImageMessages(base64Data);
