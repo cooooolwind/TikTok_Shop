@@ -29,6 +29,9 @@ const ScriptEditor = lazy(() => import('../pages/ScriptWorkbench/ScriptEditor'))
 const ReferenceList = lazy(() => import('../pages/ScriptWorkbench/ReferenceList'));
 const ReferenceDetail = lazy(() => import('../pages/ScriptWorkbench/ReferenceDetail'));
 const TemplateManager = lazy(() => import('../pages/ScriptWorkbench/TemplateManager'));
+const TemplateMarketPage = lazy(() => import('../pages/TemplateMarket/TemplateMarketPage'));
+const TemplateUsePage = lazy(() => import('../pages/TemplateMarket/TemplateUsePage'));
+const MyVideosPage = lazy(() => import('../pages/TemplateMarket/MyVideosPage'));
 
 // ===== 创作工作室 =====
 const CreationStudioPage = lazy(() => import('../pages/CreationStudio/CreationStudioPage'));
@@ -70,6 +73,9 @@ export const router: Router = createBrowserRouter([
       { path: 'references', element: <LazyPage Component={ReferenceList} /> },
       { path: 'references/:id', element: <LazyPage Component={ReferenceDetail} /> },
       { path: 'templates', element: <LazyPage Component={TemplateManager} /> },
+      { path: 'template-market', element: <LazyPage Component={TemplateMarketPage} /> },
+      { path: 'template-market/:id/use', element: <LazyPage Component={TemplateUsePage} /> },
+      { path: 'my-videos', element: <LazyPage Component={MyVideosPage} /> },
 
       // 创作工作室
       { path: 'creation', element: <LazyPage Component={CreationStudioPage} /> },

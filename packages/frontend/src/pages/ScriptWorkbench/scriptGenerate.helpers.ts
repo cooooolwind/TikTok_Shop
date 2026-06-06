@@ -26,11 +26,12 @@ const MAX_SCRIPT_DURATION = 12;
 
 export function buildScriptGeneratePayload(values: ScriptGenerateFormValues): GenerateScriptRequest {
   const entry = values.entry ?? 'material';
+  const materialIds = values.material_ids ?? [];
   return {
     product_info: buildProductInfo(values),
     mode: entry === 'template' ? 'template' : entry === 'material' ? 'imitation' : 'free',
     template_id: entry === 'template' ? values.template_id : undefined,
-    material_ids: entry === 'material' ? values.material_ids ?? [] : undefined,
+    material_ids: materialIds.length > 0 ? materialIds : undefined,
     manual_text: entry === 'manual_text' ? values.manual_text : undefined,
     preferences: {
       duration: Math.min(values.duration ?? MAX_SCRIPT_DURATION, MAX_SCRIPT_DURATION),
@@ -45,6 +46,7 @@ export function buildManualDraftPayload(values: ScriptGenerateFormValues): Creat
   return {
     product_info: buildProductInfo(values),
     mode: 'free',
+    source_material_ids: values.material_ids?.length ? values.material_ids : undefined,
     visual_style: values.style,
     total_duration: values.duration ?? 15,
     scenes: [],

@@ -26,6 +26,12 @@ export class Template {
   @Column({ name: 'derived_from', type: 'jsonb', default: () => "'[]'" })
   derivedFrom: string[];
 
+  @Column({ type: 'text', nullable: true })
+  prompt: string | null;
+
+  @Column({ type: 'varchar', length: 16, default: 'enabled' })
+  status: 'enabled' | 'disabled';
+
   @Column({ name: 'is_builtin', default: false })
   isBuiltin: boolean;
 

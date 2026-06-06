@@ -1,4 +1,4 @@
-import { buildScriptGeneratePayload } from './scriptGenerate.helpers';
+import { buildManualDraftPayload, buildScriptGeneratePayload } from './scriptGenerate.helpers';
 
 describe('scriptGenerate helpers', () => {
   it('writes product image urls into generated script product info', () => {
@@ -18,5 +18,51 @@ describe('scriptGenerate helpers', () => {
       '/uploads/materials/dress.jpg',
       'https://example.com/manual.png',
     ]);
+  });
+
+  it('keeps selected library materials for template generation', () => {
+    const payload = buildScriptGeneratePayload({
+      entry: 'template',
+      product_name: 'Camera',
+      product_description: 'Pocket camera',
+      product_category: 'electronics',
+      selling_points: ['portable'],
+      template_id: 'template-1',
+      material_ids: ['video-1'],
+      duration: 12,
+    });
+
+    expect(payload.mode).toBe('template');
+    expect(payload.material_ids).toEqual(['video-1']);
+  });
+
+  it('keeps selected library materials for pasted text parsing', () => {
+    const payload = buildScriptGeneratePayload({
+      entry: 'manual_text',
+      product_name: 'Snack',
+      product_description: 'Crispy snack',
+      product_category: 'food',
+      selling_points: ['crispy'],
+      manual_text: 'Scene 1',
+      material_ids: ['video-1'],
+      duration: 12,
+    });
+
+    expect(payload.mode).toBe('free');
+    expect(payload.material_ids).toEqual(['video-1']);
+  });
+
+  it('stores selected library materials on manually structured drafts', () => {
+    const payload = buildManualDraftPayload({
+      entry: 'manual_structured',
+      product_name: 'Dress',
+      product_description: 'Summer dress',
+      product_category: 'fashion',
+      selling_points: ['light'],
+      material_ids: ['video-1'],
+      duration: 12,
+    });
+
+    expect(payload.source_material_ids).toEqual(['video-1']);
   });
 });

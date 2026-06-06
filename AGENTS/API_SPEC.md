@@ -935,3 +935,68 @@ Namespace: `/tasks`
 2. [订阅] task:progress            → 实时进度
 3. [等待] task:completed           → 生成完成
 ```
+## 2026-06-06 轻量级带货模板市场接口补充
+
+以下接口均带 `/api/v1` 全局前缀。模板接口保留原 `/templates`，并新增 `/inspiration-templates` 作为演示友好别名。
+
+### 获取模板列表
+
+`GET /templates`
+
+可选查询参数：`page`、`pageSize`、`keyword`、`category`、`status`。`status` 可为 `enabled` 或 `disabled`。
+
+### 使用模板生成带货视频方案
+
+`POST /templates/:id/generate`
+
+请求体：
+
+```json
+{
+  "productName": "草莓夹心饼干",
+  "category": "食品",
+  "sellingPoints": "酥脆、草莓味浓、独立包装、适合追剧",
+  "price": "19.9元",
+  "targetUser": "学生和上班族",
+  "promotion": "第二件半价",
+  "duration": "30秒",
+  "style": "开箱种草"
+}
+```
+
+响应体：
+
+```typescript
+interface TemplateGenerateResult {
+  title: string;
+  script: string;
+  storyboard: {
+    shot: number;
+    content: string;
+    videoPrompt: string;
+  }[];
+  publishCopy: string;
+  tags: string[];
+}
+```
+
+### 保存到我的作品
+
+`POST /my-videos`
+
+请求体：
+
+```typescript
+interface SaveMyVideoRequest {
+  template_id: string;
+  template_name: string;
+  product_info: TemplateGenerateRequest;
+  result: TemplateGenerateResult;
+}
+```
+
+### 查看我的作品
+
+`GET /my-videos`
+
+返回用户保存的模板生成结果列表，字段包含 `product_name`、`template_name`、`status`、`created_at` 和完整 `result`。
