@@ -3,7 +3,6 @@ import { promises as fsPromises } from 'fs';
 import { MaterialsService } from './materials.service';
 import { Material } from './entities/material.entity';
 import { VideoUtil } from '../../common/utils/video.util';
-import { EmbeddingService } from './embedding.service';
 
 const now = new Date('2026-05-23T00:00:00.000Z');
 
