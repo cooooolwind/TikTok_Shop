@@ -403,6 +403,40 @@ export class MaterialsService {
       }));
   }
 
+  async backfillEmbeddings(materialIds?: string[]): Promise<{ processed: number; failed: number; errors: string[] }> {
+    let materials: Material[];
+
+    if (materialIds && materialIds.length > 0) {
+      materials = await this.materialsRepository.findByIds(materialIds);
+    } else {
+      materials = await this.materialsRepository
+        .createQueryBuilder('material')
+        .where('material.aiEmbedding IS NULL')
+        .andWhere('material.aiDescription IS NOT NULL')
+        .getMany();
+    }
+
+    let processed = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (const material of materials) {
+      try {
+        await this.embeddingService.embedMaterial(material.id);
+        if (material.type === 'video') {
+          await this.embeddingService.embedVideoSlices(material.id);
+        }
+        processed++;
+      } catch (error) {
+        failed++;
+        const msg = error instanceof Error ? error.message : String(error);
+        errors.push(`${material.id}: ${msg}`);
+      }
+    }
+
+    return { processed, failed, errors };
+  }
+
   private async ensureMaterialExists(id: string) {
     const exists = await this.materialsRepository.exist({
       where: { id, merchantId: DEFAULT_MERCHANT_ID },
