@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import MainLayout from '../layouts/MainLayout';
 import Loading from '../components/common/Loading';
@@ -42,6 +42,9 @@ const VideoEditor = lazy(() => import('../pages/Editor/VideoEditor'));
 
 // ===== 数据看板 =====
 const AnalyticsDashboardPage = lazy(() => import('../pages/AnalyticsDashboard/AnalyticsDashboardPage'));
+const AnalyticsCostPage = lazy(() => import('../pages/AnalyticsDashboard/AnalyticsCostPage'));
+const AnalyticsConversionPage = lazy(() => import('../pages/AnalyticsDashboard/AnalyticsConversionPage'));
+const AnalyticsStrategyPage = lazy(() => import('../pages/AnalyticsDashboard/AnalyticsStrategyPage'));
 
 // ===== 404 =====
 const NotFoundPage = lazy(() => import('../pages/NotFound'));
@@ -79,7 +82,11 @@ export const router: Router = createBrowserRouter([
       { path: 'editor/:taskId', element: <LazyPage Component={VideoEditor} /> },
 
       // 数据看板
-      { path: 'analytics', element: <LazyPage Component={AnalyticsDashboardPage} /> },
+      { path: 'analytics', element: <Navigate to="/analytics/overview" replace /> },
+      { path: 'analytics/overview', element: <LazyPage Component={AnalyticsDashboardPage} /> },
+      { path: 'analytics/cost', element: <LazyPage Component={AnalyticsCostPage} /> },
+      { path: 'analytics/conversion', element: <LazyPage Component={AnalyticsConversionPage} /> },
+      { path: 'analytics/strategy', element: <LazyPage Component={AnalyticsStrategyPage} /> },
 
       // 404
       { path: '*', element: <LazyPage Component={NotFoundPage} /> },

@@ -15,6 +15,10 @@ import {
   MenuOutlined,
   CloseOutlined,
   ScissorOutlined,
+  DashboardOutlined,
+  DollarOutlined,
+  RiseOutlined,
+  ExperimentOutlined,
 } from '@ant-design/icons';
 import { useUIStore } from '../stores/useAppStore';
 import { ROUTES } from '../constants';
@@ -34,7 +38,7 @@ type MenuItem = Required<MenuProps>['items'][number];
  * - 剧本工作台（子菜单：剧本列表、参考视频库、灵感模板）
  * - 创作工作室
  * - 视频剪辑
- * - 数据看板
+ * - 数据看板（子菜单：产出总览、成本分析、转化分析、策略洞察）
  */
 const menuItems: MenuItem[] = [
   {
@@ -80,9 +84,31 @@ const menuItems: MenuItem[] = [
     label: '视频剪辑',
   },
   {
-    key: ROUTES.ANALYTICS,
+    key: 'analytics-group',
     icon: <BarChartOutlined />,
     label: '数据看板',
+    children: [
+      {
+        key: ROUTES.ANALYTICS_OVERVIEW,
+        icon: <DashboardOutlined />,
+        label: '产出总览',
+      },
+      {
+        key: ROUTES.ANALYTICS_COST,
+        icon: <DollarOutlined />,
+        label: '成本分析',
+      },
+      {
+        key: ROUTES.ANALYTICS_CONVERSION,
+        icon: <RiseOutlined />,
+        label: '转化分析',
+      },
+      {
+        key: ROUTES.ANALYTICS_STRATEGY,
+        icon: <ExperimentOutlined />,
+        label: '策略洞察',
+      },
+    ],
   },
 ];
 
@@ -95,6 +121,10 @@ function deriveMenuState(pathname: string): { selectedKey: string; openKeys: str
   const pathToParent: Record<string, string> = {
     [ROUTES.REFERENCES]: 'scripts-group',
     [ROUTES.TEMPLATES]: 'scripts-group',
+    [ROUTES.ANALYTICS_OVERVIEW]: 'analytics-group',
+    [ROUTES.ANALYTICS_COST]: 'analytics-group',
+    [ROUTES.ANALYTICS_CONVERSION]: 'analytics-group',
+    [ROUTES.ANALYTICS_STRATEGY]: 'analytics-group',
   };
 
   // 对于匹配 /references/:id 这样的路径，也需要展开父菜单
@@ -106,6 +136,11 @@ function deriveMenuState(pathname: string): { selectedKey: string; openKeys: str
   }
   if (pathname.startsWith('/editor')) {
     return { selectedKey: ROUTES.EDITOR, openKeys: [] };
+  }
+  if (pathname.startsWith('/analytics')) {
+    // 对于 /analytics/* 映射到对应的子菜单项
+    const key = pathToParent[pathname] ? pathname : ROUTES.ANALYTICS_OVERVIEW;
+    return { selectedKey: key, openKeys: ['analytics-group'] };
   }
 
   const parentKey = pathToParent[pathname];
@@ -202,7 +237,7 @@ export default function MainLayout() {
                 }}
                 onClick={({ key }) => {
                   // 跳过父菜单组
-                  if (key === 'scripts-group') return;
+                  if (key === 'scripts-group' || key === 'analytics-group') return;
                   navigate(key);
                 }}
               />
@@ -260,7 +295,10 @@ export default function MainLayout() {
               { key: ROUTES.TEMPLATES, icon: <BulbOutlined />, label: '灵感模板' },
               { key: ROUTES.CREATION, icon: <VideoCameraOutlined />, label: '创作工作室' },
               { key: ROUTES.EDITOR, icon: <ScissorOutlined />, label: '视频剪辑' },
-              { key: ROUTES.ANALYTICS, icon: <BarChartOutlined />, label: '数据看板' },
+              { key: ROUTES.ANALYTICS_OVERVIEW, icon: <DashboardOutlined />, label: '产出总览' },
+              { key: ROUTES.ANALYTICS_COST, icon: <DollarOutlined />, label: '成本分析' },
+              { key: ROUTES.ANALYTICS_CONVERSION, icon: <RiseOutlined />, label: '转化分析' },
+              { key: ROUTES.ANALYTICS_STRATEGY, icon: <ExperimentOutlined />, label: '策略洞察' },
             ].map((item, index) => (
               <Col span={8} className="mobile-grid-cell" key={item.key} style={{ animationDelay: `${index * 20}ms` }}>
                 <div
