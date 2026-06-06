@@ -139,10 +139,6 @@ function makeService(options?: {
 
   return { service, videoQueue, scriptsRepository, tasksRepository, videosRepository, materialsRepository, videoStitchingService, remotionRenderingService };
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> 94507cccb69c05fd4c8cfb91e1c17cea622e97ae
 
 describe('GenerationService', () => {
   it('creates a queued video generation task for confirmed scripts', async () => {
@@ -241,6 +237,46 @@ describe('GenerationService', () => {
         result: expect.objectContaining({
           video_url: 'https://example.com/segment-1.mp4',
           segments: [expect.objectContaining({ index: 0, status: 'succeeded' })],
+        }),
+      }),
+    );
+  });
+
+  it('preserves non-contiguous succeeded segments when retrying a parallel failed task', async () => {
+    const failedTask = makeTask({
+      status: 'failed',
+      retryCount: 1,
+      result: {
+        ...makeSegmentedVideoResult(),
+        segments: [
+          { ...makeSegmentedVideoResult().segments[0], status: 'succeeded' as const },
+          {
+            ...makeSegmentedVideoResult().segments[1],
+            index: 1,
+            video_url: '',
+            status: 'failed' as const,
+            error: { code: 'BAD_PROMPT', message: 'bad prompt', retryable: true },
+          },
+          {
+            ...makeSegmentedVideoResult().segments[1],
+            index: 2,
+            video_url: 'https://example.com/segment-3.mp4',
+            status: 'succeeded' as const,
+          },
+        ],
+      },
+    });
+    const { service, tasksRepository } = makeService({ task: failedTask });
+
+    await service.retry('task-1');
+
+    expect(tasksRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        result: expect.objectContaining({
+          segments: [
+            expect.objectContaining({ index: 0, status: 'succeeded' }),
+            expect.objectContaining({ index: 2, status: 'succeeded' }),
+          ],
         }),
       }),
     );

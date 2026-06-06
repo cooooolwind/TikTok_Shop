@@ -107,80 +107,42 @@ export class VideoGenerationProcessor extends WorkerHost {
       const segmentResults: SegmentResult[] = this.getReusableSegments(task.result?.segments, segments.length);
       const continuityWarnings: string[] = [];
       const productImageUrls = await this.collectProductImageUrls(script);
+      const segmentProgress = segments.map((segment) =>
+        segmentResults[segment.index]?.status === 'succeeded' ? 1 : 0,
+      );
 
-      for (const segment of segments) {
-        const reusable = segmentResults[segment.index];
-        if (reusable?.status === 'succeeded' && reusable.video_url) {
-          continue;
-        }
+      const generationResults = await Promise.allSettled(
+        segments.map((segment) => {
+          const reusable = segmentResults[segment.index];
+          if (reusable?.status === 'succeeded' && reusable.video_url) {
+            return Promise.resolve();
+          }
 
-        const frameInput = await this.prepareSegmentFirstFrame(
-          script,
-          segment,
-          productImageUrls,
-          continuityWarnings,
-          options?.aspect_ratio ?? this.inferAspectRatio(options?.resolution),
-        );
-
-        const submittedSegment = this.makeSegmentPlaceholder(
-          segment,
-          options,
-          frameInput.inputFrameUrl,
-          frameInput.continuitySource,
-          'submitted',
-        );
-        segmentResults[segment.index] = submittedSegment;
-        await this.persistSegmentState(task, segmentResults, options, continuityWarnings);
-        await this.updateSegmentProgress(job, segment, segments.length, 0, 'submit_segment', startedAt);
-
-        try {
-          const createdTask = await this.createVideoTaskForSegment(script, segment, {
-            ratio: options?.aspect_ratio ?? this.inferAspectRatio(options?.resolution),
-            resolution: this.toProviderResolution(options?.resolution),
-            duration: segment.duration,
-            firstFrameUrl: frameInput.firstFrameUrl,
-            inputFrameUrl: frameInput.inputFrameUrl,
-            continuitySource: frameInput.continuitySource,
-          });
-
-          segmentResults[segment.index] = {
-            ...submittedSegment,
-            status: 'running',
-            provider_task_id: createdTask.id,
-            input_frame_url: createdTask.inputFrameUrl,
-            continuity_source: createdTask.continuitySource,
-          };
-          await this.persistSegmentState(task, segmentResults, options, continuityWarnings);
-          await this.updateSegmentProgress(job, segment, segments.length, 0.1, 'generate_segment', startedAt);
-
-          const providerTask = await this.waitForProviderTask(createdTask.id, async (attempt) => {
-            const ratio = Math.min(0.1 + (attempt / Math.max(this.polling.maxAttempts, 1)) * 0.85, 0.95);
-            await this.updateSegmentProgress(job, segment, segments.length, ratio, 'generate_segment', startedAt);
-          });
-          const segmentStartedAt = segmentResults[segment.index]?.started_at;
-          const segmentResult = this.toSegmentResult(
-            providerTask,
-            options,
+          return this.runIndependentSegmentPipeline({
+            job,
+            task,
+            script,
             segment,
-            createdTask.inputFrameUrl,
-            createdTask.continuitySource,
-            createdTask.id,
-            segmentStartedAt,
-          );
-          segmentResults[segment.index] = segmentResult;
-          await this.persistSegmentState(task, segmentResults, options, continuityWarnings);
-          await this.updateSegmentProgress(job, segment, segments.length, 1, 'generate_segment', startedAt);
-        } catch (error) {
-          const taskError = this.toTaskError(error, segment.index);
-          segmentResults[segment.index] = {
-            ...segmentResults[segment.index],
-            status: 'failed',
-            error: taskError,
-            completed_at: new Date().toISOString(),
-          };
-          await this.persistSegmentState(task, segmentResults, options, continuityWarnings);
-          throw error;
-        }
+            segments,
+            segmentResults,
+            segmentProgress,
+            options,
+            productImageUrls,
+            continuityWarnings,
+            startedAt,
+          });
+        }),
+      );
+
+      const firstFailedSegment = segmentResults
+        .filter((segment) => segment?.status === 'failed')
+        .sort((a, b) => a.index - b.index)[0];
+      const rejected = generationResults.find((result) => result.status === 'rejected');
+      if (firstFailedSegment?.error) {
+        throw this.toSegmentFailureError(firstFailedSegment);
+      }
+      if (rejected?.status === 'rejected') {
+        throw rejected.reason;
       }
 
       const completedSegments = segmentResults.filter((segment) => segment?.status === 'succeeded');
@@ -225,6 +187,144 @@ export class VideoGenerationProcessor extends WorkerHost {
       return { status: 'done', taskId: task.id, result };
     } catch (error) {
       await this.markFailed(taskId, error);
+      throw error;
+    }
+  }
+
+  private async runIndependentSegmentPipeline(input: {
+    job: Job<VideoGenerationJob>;
+    task: GenerationTask;
+    script: Script;
+    segment: VideoSegmentPlan;
+    segments: VideoSegmentPlan[];
+    segmentResults: SegmentResult[];
+    segmentProgress: number[];
+    options?: VideoOptions;
+    productImageUrls: string[];
+    continuityWarnings: string[];
+    startedAt: number;
+  }) {
+    const {
+      job,
+      task,
+      script,
+      segment,
+      segments,
+      segmentResults,
+      segmentProgress,
+      options,
+      productImageUrls,
+      continuityWarnings,
+      startedAt,
+    } = input;
+
+    try {
+      const frameInput = await this.prepareSegmentFirstFrame(
+        script,
+        segment,
+        productImageUrls,
+        continuityWarnings,
+        options?.aspect_ratio ?? this.inferAspectRatio(options?.resolution),
+      );
+
+      const submittedSegment = this.makeSegmentPlaceholder(
+        segment,
+        options,
+        frameInput.inputFrameUrl,
+        frameInput.continuitySource,
+        'submitted',
+      );
+      segmentResults[segment.index] = submittedSegment;
+      segmentProgress[segment.index] = 0;
+      await this.persistSegmentState(task, segmentResults, options, continuityWarnings);
+      await this.updateParallelSegmentProgress(
+        job,
+        segment,
+        segments.length,
+        segmentProgress,
+        'submit_segment',
+        startedAt,
+      );
+
+      const createdTask = await this.createVideoTaskForSegment(script, segment, {
+        ratio: options?.aspect_ratio ?? this.inferAspectRatio(options?.resolution),
+        resolution: this.toProviderResolution(options?.resolution),
+        duration: segment.duration,
+        firstFrameUrl: frameInput.firstFrameUrl,
+        inputFrameUrl: frameInput.inputFrameUrl,
+        continuitySource: frameInput.continuitySource,
+      });
+
+      segmentResults[segment.index] = {
+        ...submittedSegment,
+        status: 'running',
+        provider_task_id: createdTask.id,
+        input_frame_url: createdTask.inputFrameUrl,
+        continuity_source: createdTask.continuitySource,
+      };
+      segmentProgress[segment.index] = 0.1;
+      await this.persistSegmentState(task, segmentResults, options, continuityWarnings);
+      await this.updateParallelSegmentProgress(
+        job,
+        segment,
+        segments.length,
+        segmentProgress,
+        'generate_segment',
+        startedAt,
+      );
+
+      const providerTask = await this.waitForProviderTask(createdTask.id, async (attempt) => {
+        segmentProgress[segment.index] = Math.min(
+          0.1 + (attempt / Math.max(this.polling.maxAttempts, 1)) * 0.85,
+          0.95,
+        );
+        await this.updateParallelSegmentProgress(
+          job,
+          segment,
+          segments.length,
+          segmentProgress,
+          'generate_segment',
+          startedAt,
+        );
+      });
+      const segmentStartedAt = segmentResults[segment.index]?.started_at;
+      segmentResults[segment.index] = this.toSegmentResult(
+        providerTask,
+        options,
+        segment,
+        createdTask.inputFrameUrl,
+        createdTask.continuitySource,
+        createdTask.id,
+        segmentStartedAt,
+      );
+      segmentProgress[segment.index] = 1;
+      await this.persistSegmentState(task, segmentResults, options, continuityWarnings);
+      await this.updateParallelSegmentProgress(
+        job,
+        segment,
+        segments.length,
+        segmentProgress,
+        'generate_segment',
+        startedAt,
+      );
+    } catch (error) {
+      const taskError = this.toTaskError(error, segment.index);
+      segmentResults[segment.index] = {
+        ...(segmentResults[segment.index] ?? this.makeFailedSegmentPlaceholder(segment, options)),
+        status: 'failed',
+        error: taskError,
+        completed_at: new Date().toISOString(),
+      };
+      segmentProgress[segment.index] = 1;
+      await this.persistSegmentState(task, segmentResults, options, continuityWarnings);
+      await this.updateParallelSegmentProgress(
+        job,
+        segment,
+        segments.length,
+        segmentProgress,
+        'generate_segment',
+        startedAt,
+      );
       throw error;
     }
   }
@@ -605,8 +705,9 @@ export class VideoGenerationProcessor extends WorkerHost {
     const reusable: SegmentResult[] = [];
     for (let index = 0; index < expectedCount; index += 1) {
       const segment = segments?.find((item) => item.index === index);
-      if (!segment || segment.status !== 'succeeded' || !segment.video_url) break;
-      reusable[index] = segment;
+      if (segment?.status === 'succeeded' && segment.video_url) {
+        reusable[index] = segment;
+      }
     }
     return reusable;
   }
@@ -631,6 +732,34 @@ export class VideoGenerationProcessor extends WorkerHost {
       status,
       started_at: new Date().toISOString(),
     };
+  }
+
+  private makeFailedSegmentPlaceholder(
+    segment: VideoSegmentPlan,
+    options: VideoOptions | undefined,
+  ): SegmentResult {
+    return {
+      index: segment.index,
+      video_url: '',
+      thumbnail_url: '',
+      duration: segment.duration,
+      resolution: options?.resolution ?? this.fromProviderResolution(),
+      aspect_ratio: options?.aspect_ratio ?? this.inferAspectRatio(options?.resolution),
+      scene_orders: segment.scenes.map((scene) => scene.order),
+      status: 'failed',
+      started_at: new Date().toISOString(),
+    };
+  }
+
+  private toSegmentFailureError(segment: SegmentResult) {
+    const taskError = segment.error;
+    const error = new Error(taskError?.message || 'Video generation failed');
+    Object.assign(error, {
+      code: taskError?.code || 'VIDEO_GENERATION_FAILED',
+      retryable: taskError?.retryable,
+      segmentIndex: segment.index,
+    });
+    return error;
   }
 
   private async persistSegmentState(
@@ -726,30 +855,6 @@ export class VideoGenerationProcessor extends WorkerHost {
     return 'unknown';
   }
 
-  private async updateSegmentProgress(
-    job: Job<VideoGenerationJob>,
-    segment: VideoSegmentPlan,
-    segmentTotal: number,
-    segmentRatio: number,
-    phase: ProgressPhase,
-    startedAt: number,
-  ) {
-    const segmentSpan = (SEGMENT_PROGRESS_END - SEGMENT_PROGRESS_START) / Math.max(segmentTotal, 1);
-    const percentage = Math.round(
-      SEGMENT_PROGRESS_START + segmentSpan * segment.index + segmentSpan * Math.min(Math.max(segmentRatio, 0), 1),
-    );
-    const segmentIndex = segment.index + 1;
-    const verb = phase === 'submit_segment' ? '正在提交' : '正在生成';
-    await this.updateProgress(job, {
-      phase,
-      percentage,
-      message: `${verb}第 ${segmentIndex}/${segmentTotal} 个镜头...`,
-      segmentIndex,
-      segmentTotal,
-      elapsedSeconds: this.elapsedSeconds(startedAt),
-    });
-  }
-
   private async updateProgress(
     job: Job<VideoGenerationJob>,
     input: {
@@ -771,6 +876,31 @@ export class VideoGenerationProcessor extends WorkerHost {
     }
     this.tasksGateway.emitTaskProgress(job.data.taskId, progress);
     this.logger.log(`[${progress.percentage}%] ${input.message}`);
+  }
+
+  private async updateParallelSegmentProgress(
+    job: Job<VideoGenerationJob>,
+    segment: VideoSegmentPlan,
+    segmentTotal: number,
+    segmentProgress: number[],
+    phase: ProgressPhase,
+    startedAt: number,
+  ) {
+    const completedCount = segmentProgress.filter((ratio) => ratio >= 1).length;
+    const averageRatio =
+      segmentProgress.reduce((sum, ratio) => sum + Math.min(Math.max(ratio || 0, 0), 1), 0) /
+      Math.max(segmentTotal, 1);
+    const percentage = Math.round(
+      SEGMENT_PROGRESS_START + (SEGMENT_PROGRESS_END - SEGMENT_PROGRESS_START) * averageRatio,
+    );
+    await this.updateProgress(job, {
+      phase,
+      percentage,
+      message: `正在并行生成 ${segmentTotal} 个镜头，已完成 ${completedCount}/${segmentTotal}`,
+      segmentIndex: segment.index + 1,
+      segmentTotal,
+      elapsedSeconds: this.elapsedSeconds(startedAt),
+    });
   }
 
   private makeProgress(input: {

@@ -6,6 +6,22 @@ import { promises as fsPromises } from 'fs';
 
 const now = new Date('2026-05-25T00:00:00.000Z');
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+async function flushPromises(times = 5) {
+  for (let index = 0; index < times; index += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+}
+
 function makeScript(overrides: Partial<Script> = {}): Script {
   return {
     id: 'script-1',
@@ -236,6 +252,49 @@ describe('VideoGenerationProcessor', () => {
         firstFrameUrl: 'https://example.com/first-frame-3.png',
       }),
     );
+  });
+
+  it('starts all independent segment pipelines before waiting for earlier first frames', async () => {
+    const { processor, volcanoClient, scriptsRepository, job } = makeProcessor('succeeded');
+    scriptsRepository.findOne.mockResolvedValue(
+      makeScript({
+        scenes: [
+          makeScene({ id: 'scene-1', order: 1, duration: 4 }),
+          makeScene({ id: 'scene-2', order: 2, duration: 4 }),
+          makeScene({ id: 'scene-3', order: 3, duration: 4 }),
+        ],
+      }),
+    );
+    const firstFrames = [
+      deferred<{ url: string; prompt: string }>(),
+      deferred<{ url: string; prompt: string }>(),
+      deferred<{ url: string; prompt: string }>(),
+    ];
+    volcanoClient.generateFirstFrame.mockImplementation((input: { prompt: string }) => {
+      const next = firstFrames[volcanoClient.generateFirstFrame.mock.calls.length - 1];
+      return next.promise.then((result) => ({ ...result, prompt: input.prompt }));
+    });
+    volcanoClient.createVideoTask.mockImplementation(async () => ({
+      id: `volcano-task-${volcanoClient.createVideoTask.mock.calls.length}`,
+    }));
+    volcanoClient.getVideoTask.mockImplementation(async ({ id }: { id?: string } = {} as never) => ({
+      id: id ?? 'volcano-task',
+      status: 'succeeded',
+      content: { video_url: `https://example.com/${id ?? 'video'}.mp4`, last_frame_url: 'https://example.com/thumb.png' },
+      duration: 4,
+      resolution: '1080p',
+      ratio: '9:16',
+    }));
+
+    const processPromise = processor.process(job as never);
+    await flushPromises();
+
+    expect(volcanoClient.generateFirstFrame).toHaveBeenCalledTimes(3);
+
+    firstFrames.forEach((item, index) => {
+      item.resolve({ url: `https://example.com/first-frame-${index + 1}.png`, prompt: 'first frame' });
+    });
+    await expect(processPromise).resolves.toEqual(expect.objectContaining({ status: 'done' }));
   });
 
   it('uses Seedream image sizes that satisfy the provider minimum pixel count', async () => {
@@ -634,6 +693,62 @@ describe('VideoGenerationProcessor', () => {
       expect.objectContaining({
         imageUrls: ['https://example.com/product.png'],
       }),
+    );
+  });
+
+  it('keeps successful parallel segments when another segment fails', async () => {
+    const { processor, volcanoClient, scriptsRepository, tasksRepository, tasksGateway, job, task } =
+      makeProcessor('succeeded');
+    scriptsRepository.findOne.mockResolvedValue(
+      makeScript({
+        scenes: [
+          makeScene({ id: 'scene-1', order: 1, duration: 4 }),
+          makeScene({ id: 'scene-2', order: 2, duration: 4 }),
+          makeScene({ id: 'scene-3', order: 3, duration: 4 }),
+        ],
+      }),
+    );
+    volcanoClient.createVideoTask.mockImplementation(async () => ({
+      id: `volcano-task-${volcanoClient.createVideoTask.mock.calls.length}`,
+    }));
+    volcanoClient.getVideoTask.mockImplementation(async (...args: unknown[]) => {
+      const providerTaskId = args[0] as string;
+      if (providerTaskId === 'volcano-task-2') {
+        return {
+          id: providerTaskId,
+          status: 'failed',
+          error: { code: 'BAD_PROMPT', message: 'bad prompt' },
+        };
+      }
+      return {
+        id: providerTaskId,
+        status: 'succeeded',
+        content: {
+          video_url: `https://example.com/${providerTaskId}.mp4`,
+          last_frame_url: `https://example.com/${providerTaskId}.png`,
+        },
+        duration: 4,
+        resolution: '1080p',
+        ratio: '9:16',
+      };
+    });
+
+    await expect(processor.process(job as never)).rejects.toThrow('bad prompt');
+
+    expect(task.result?.segments).toEqual([
+      expect.objectContaining({ index: 0, status: 'succeeded', video_url: 'https://example.com/volcano-task-1.mp4' }),
+      expect.objectContaining({ index: 1, status: 'failed', error: expect.objectContaining({ code: 'BAD_PROMPT' }) }),
+      expect.objectContaining({ index: 2, status: 'succeeded', video_url: 'https://example.com/volcano-task-3.mp4' }),
+    ]);
+    expect(tasksRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'failed',
+        error: expect.objectContaining({ code: 'BAD_PROMPT', segment_index: 2 }),
+      }),
+    );
+    expect(tasksGateway.emitTaskFailed).toHaveBeenCalledWith(
+      'task-1',
+      expect.objectContaining({ code: 'BAD_PROMPT', segment_index: 2 }),
     );
   });
 
