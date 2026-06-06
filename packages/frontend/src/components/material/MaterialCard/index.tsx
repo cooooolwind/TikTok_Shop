@@ -152,6 +152,11 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
             <Text type="secondary" style={{ fontSize: 12 }}>{formatBytes(material.size)}</Text>
             <div>
               <StatusTag status={material.status} labels={MATERIAL_STATUS_LABELS} />
+              {material.has_embedding ? (
+                <Tag color="green" style={{ marginLeft: 4 }}>可语义搜索</Tag>
+              ) : (
+                <Tag color="default" style={{ marginLeft: 4 }}>不可语义搜索</Tag>
+              )}
             </div>
             {material.category && (
               <Tag>{material.category}</Tag>
