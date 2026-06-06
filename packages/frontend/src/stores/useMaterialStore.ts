@@ -15,6 +15,9 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
   uploadVisible: false,
   uploading: false,
   uploadProgress: 0,
+  semanticResults: [],
+  semanticLoading: false,
+  semanticQuery: '',
 
   fetchList: async (params, append = false) => {
     set({ loading: true });
@@ -191,10 +194,23 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
     useUIStore.getState().pushNotification({ type: 'error', title: '素材分析失败', message: error });
   },
 
-  similarSearch: async (query, type, limit, threshold) => {
-    const results = await materialsApi.searchSimilar({ query, type, limit, threshold });
+  similarSearch: async (query, type, limit, threshold, mode) => {
+    const results = await materialsApi.searchSimilar({ query, type, limit, threshold, mode });
     return results;
   },
+
+  semanticSearch: async (query, type) => {
+    set({ semanticLoading: true, semanticQuery: query });
+    try {
+      const results = await materialsApi.searchSimilar({ query, type, mode: 'semantic', limit: 20 });
+      set({ semanticResults: results, semanticLoading: false });
+    } catch {
+      set({ semanticLoading: false });
+      useUIStore.getState().pushNotification({ type: 'error', title: '语义搜索失败' });
+    }
+  },
+
+  clearSemanticSearch: () => set({ semanticResults: [], semanticQuery: '' }),
 
   setFilters: (filters) => set((s) => ({ filters: { ...s.filters, ...filters } })),
   setUploadVisible: (visible) => set({ uploadVisible: visible }),
