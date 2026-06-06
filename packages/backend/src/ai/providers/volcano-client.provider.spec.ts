@@ -491,7 +491,7 @@ describe('VolcanoClientProvider generateEmbedding', () => {
 
     const mockEmbedding = Array.from({ length: 2048 }, (_, i) => i * 0.001);
     const mockResponse = {
-      data: [{ embedding: mockEmbedding, object: 'embedding', index: 0 }],
+      data: { embedding: mockEmbedding, object: 'embedding' },
     };
     jest.spyOn(global, 'fetch').mockResolvedValueOnce(
       new Response(JSON.stringify(mockResponse), { status: 200 }),
