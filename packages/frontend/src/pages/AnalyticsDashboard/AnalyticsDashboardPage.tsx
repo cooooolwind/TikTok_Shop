@@ -3,7 +3,11 @@ import { Card, Col, DatePicker, Row, Select, Space } from 'antd';
 import ReactECharts from 'echarts-for-react';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import type { AttributionData, DurationDistribution, TrendData } from '@aigc/shared-types';
+import type {
+  AttributionData,
+  DurationDistribution,
+  TrendData,
+} from '@aigc/shared-types';
 import PageHeader from '../../components/common/PageHeader';
 import StatCard from '../../components/analytics/StatCard';
 import { useAnalyticsStore } from '../../stores/useAnalyticsStore';
@@ -18,6 +22,7 @@ export default function AnalyticsDashboardPage() {
     trends,
     attribution,
     durationDistribution,
+    materialDistribution,
     overviewLoading,
     dateRange,
     granularity,
@@ -27,6 +32,7 @@ export default function AnalyticsDashboardPage() {
     fetchTrends,
     fetchAttribution,
     fetchDurationDistribution,
+    fetchMaterialDistribution,
   } = useAnalyticsStore();
 
   const [dates, setDates] = useState<[Dayjs, Dayjs]>([
@@ -47,6 +53,7 @@ export default function AnalyticsDashboardPage() {
       fetchTrends();
       fetchAttribution();
       fetchDurationDistribution();
+      fetchMaterialDistribution();
     }
   }, [dateRange, granularity]);
 
@@ -62,9 +69,12 @@ export default function AnalyticsDashboardPage() {
   return (
     <div>
       <PageHeader
-        title="数据看板"
+        title="产出总览"
         extra={
-          <Space direction={isMobile ? 'vertical' : 'horizontal'} style={{ width: isMobile ? '100%' : 'auto', alignItems: isMobile ? 'flex-start' : 'center' }}>
+          <Space
+            direction={isMobile ? 'vertical' : 'horizontal'}
+            style={{ width: isMobile ? '100%' : 'auto', alignItems: isMobile ? 'flex-start' : 'center' }}
+          >
             <Select
               value={granularity}
               onChange={setGranularity}
@@ -75,7 +85,11 @@ export default function AnalyticsDashboardPage() {
                 { label: '按月', value: 'month' },
               ]}
             />
-            <RangePicker value={dates} onChange={handleDateChange} style={{ width: isMobile ? '100%' : 'auto' }} />
+            <RangePicker
+              value={dates}
+              onChange={handleDateChange}
+              style={{ width: isMobile ? '100%' : 'auto' }}
+            />
           </Space>
         }
       />
@@ -122,8 +136,8 @@ export default function AnalyticsDashboardPage() {
         </Col>
       </Row>
 
-      <Card title="生成趋势" style={{ marginBottom: 24 }}>
-        <TrendChart data={trends} />
+      <Card title="产出热力图" style={{ marginBottom: 24 }}>
+        <CalendarHeatmap data={trends} />
       </Card>
 
       <Row gutter={24} style={{ marginBottom: 24 }}>
@@ -138,54 +152,126 @@ export default function AnalyticsDashboardPage() {
           </Card>
         </Col>
       </Row>
+
+      {materialDistribution && (
+        <Row gutter={24} style={{ marginBottom: 24 }}>
+          <Col xs={24} md={12}>
+            <Card title="素材类型分布">
+              <ReactECharts
+                option={pieOption(
+                  materialDistribution.type_distribution.map((d) => ({
+                    name: d.type === 'image' ? '图片' : '视频',
+                    value: d.count,
+                  })),
+                )}
+                style={{ height: 280 }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} md={12}>
+            <Card title="素材品类分布">
+              <ReactECharts
+                option={pieOption(
+                  materialDistribution.category_distribution.map((d) => {
+                    const labelMap: Record<string, string> = {
+                      product: '商品图',
+                      scene: '场景素材',
+                      model: '模特视频',
+                      other: '其他',
+                    };
+                    return { name: labelMap[d.category] ?? d.category, value: d.count };
+                  }),
+                )}
+                style={{ height: 280 }}
+              />
+            </Card>
+          </Col>
+        </Row>
+      )}
     </div>
   );
 }
 
-function TrendChart({ data }: { data: TrendData[] }) {
-  const rows = Array.isArray(data) ? data : [];
-  const option = {
-    tooltip: { trigger: 'axis' },
-    legend: { data: ['生成数', '成功', '失败'], bottom: 0 },
-    grid: { left: 50, right: 20, top: 20, bottom: 30 },
-    xAxis: {
-      type: 'category',
-      data: rows.map((item) => item.date),
-      axisLabel: { rotate: 45, fontSize: 11 },
-    },
-    yAxis: { type: 'value' },
+function pieOption(data: { name: string; value: number }[]) {
+  return {
+    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+    legend: { bottom: 0 },
     series: [
       {
-        name: '生成数',
-        type: 'bar',
-        data: rows.map((item) => item.generated_count),
-        itemStyle: { color: '#1677ff' },
+        type: 'pie',
+        radius: ['45%', '70%'],
+        avoidLabelOverlap: false,
+        itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+        label: { show: true, formatter: '{b}\n{d}%' },
+        data,
       },
-      {
-        name: '成功',
-        type: 'line',
-        data: rows.map((item) => item.success_count),
-        itemStyle: { color: '#52c41a' },
-        smooth: true,
+    ],
+  };
+}
+
+function CalendarHeatmap({ data }: { data: TrendData[] }) {
+  const rows = Array.isArray(data) ? data : [];
+  if (rows.length === 0) return <div style={{ height: 200, textAlign: 'center', lineHeight: '200px', color: '#999' }}>暂无数据</div>;
+
+  const maxVal = Math.max(...rows.map((r) => Math.max(r.generated_count, 1)), 1);
+  const firstDate = dayjs(rows[0].date);
+  const lastDate = dayjs(rows[rows.length - 1].date);
+  const dayCount = lastDate.diff(firstDate, 'day') + 1;
+
+  const option = {
+    tooltip: {
+      formatter: (p: { data: [string, number] }) =>
+        `${p.data[0]}<br/>生成: ${p.data[1]} 个`,
+    },
+    visualMap: {
+      min: 0,
+      max: maxVal,
+      type: 'piecewise',
+      orient: 'horizontal',
+      left: 'center',
+      bottom: 0,
+      pieces: [
+        { min: maxVal * 0.7, color: '#1a3a5c' },
+        { min: maxVal * 0.4, max: maxVal * 0.7, color: '#2e6b9e' },
+        { min: maxVal * 0.15, max: maxVal * 0.4, color: '#5ba0d0' },
+        { min: 1, max: maxVal * 0.15, color: '#b8d8f0' },
+        { value: 0, color: '#f0f0f0' },
+      ],
+    },
+    calendar: {
+      top: 20,
+      left: 30,
+      right: 30,
+      cellSize: ['auto', 20],
+      range: [rows[0].date, rows[rows.length - 1].date],
+      itemStyle: {
+        borderWidth: 3,
+        borderColor: '#fff',
+        borderRadius: 4,
       },
+      yearLabel: { show: true },
+      dayLabel: { firstDay: 1 },
+      monthLabel: { show: true },
+    },
+    series: [
       {
-        name: '失败',
-        type: 'line',
-        data: rows.map((item) => item.failed_count),
-        itemStyle: { color: '#ff4d4f' },
-        smooth: true,
+        type: 'heatmap',
+        coordinateSystem: 'calendar',
+        data: rows.map((r) => [r.date, r.generated_count]),
       },
     ],
   };
 
-  return <ReactECharts option={option} style={{ height: 320 }} />;
+  return <ReactECharts option={option} style={{ height: Math.max(200, Math.ceil(dayCount / 7) * 24 + 80) }} />;
 }
 
 function AttributionChart({ data }: { data: AttributionData[] }) {
   const rows = Array.isArray(data) ? data : [];
+  if (rows.length === 0) return <div style={{ height: 280, textAlign: 'center', lineHeight: '280px', color: '#999' }}>暂无归因数据</div>;
+
   const option = {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    grid: { left: 120, right: 30, top: 10, bottom: 20 },
+    grid: { left: 120, right: 50, top: 10, bottom: 20 },
     xAxis: { type: 'value' },
     yAxis: {
       type: 'category',
