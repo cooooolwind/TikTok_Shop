@@ -9,6 +9,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
   trends: [],
   attribution: [],
   durationDistribution: [],
+  materialDistribution: null,
   dateRange: { start_date: '', end_date: '' },
   granularity: 'day',
   loading: false,
@@ -59,11 +60,20 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
   fetchDurationDistribution: async () => {
     set({ loading: true });
     try {
-      const durationDistribution = await analyticsApi.durationDistribution();
+      const durationDistribution = await analyticsApi.durationDistribution(get().dateRange);
       set({ durationDistribution: asArray(durationDistribution), loading: false });
     } catch {
       set({ loading: false });
       useUIStore.getState().pushNotification({ type: 'error', title: '加载耗时分布失败' });
+    }
+  },
+
+  fetchMaterialDistribution: async () => {
+    try {
+      const materialDistribution = await analyticsApi.materialDistribution();
+      set({ materialDistribution });
+    } catch {
+      // silent
     }
   },
 }));
