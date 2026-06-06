@@ -256,11 +256,12 @@ export class VolcanoClientProvider {
       }
 
       const result: any = await response.json();
-      if (!result.data?.[0]?.embedding) {
+      const embedding = result.data?.embedding;
+      if (!embedding || !Array.isArray(embedding)) {
         throw new Error(`Unexpected embedding response format: ${JSON.stringify(Object.keys(result))}`);
       }
 
-      return result.data[0].embedding as number[];
+      return embedding as number[];
     } catch (error: any) {
       this.logger.error(`Failed to generate embedding: ${error.message}${(error as any).cause ? `; cause=${(error as any).cause.message}` : ''}`);
       throw error;
