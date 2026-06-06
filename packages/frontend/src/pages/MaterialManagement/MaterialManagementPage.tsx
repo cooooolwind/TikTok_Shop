@@ -5,12 +5,13 @@ import {
 } from 'antd';
 import {
   UploadOutlined, SearchOutlined, DeleteOutlined,
-  InboxOutlined,
+  InboxOutlined, ThunderboltOutlined,
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import PageHeader from '../../components/common/PageHeader';
 import MaterialCard from '../../components/material/MaterialCard';
 import EmptyState from '../../components/common/EmptyState';
+import SemanticSearchModal from '../../components/material/SemanticSearchModal';
 import { useMaterialStore } from '../../stores/useMaterialStore';
 import { useDebouncedSearch } from '../../hooks/useDebouncedSearch';
 import { usePagination } from '../../hooks/usePagination';
@@ -36,6 +37,7 @@ export default function MaterialManagementPage() {
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [mobilePage, setMobilePage] = useState(1);
+  const [semanticSearchVisible, setSemanticSearchVisible] = useState(false);
 
   // 初始加载 + 筛选变化时重新加载
   useEffect(() => {
@@ -148,6 +150,16 @@ export default function MaterialManagementPage() {
                 { label: '视频', value: 'video' },
               ]}
             />
+          </Col>
+          <Col xs={8} sm={5} md={3}>
+            <Button
+              type="primary"
+              ghost
+              icon={<ThunderboltOutlined />}
+              onClick={() => setSemanticSearchVisible(true)}
+            >
+              语义搜索
+            </Button>
           </Col>
           <Col xs={8} sm={5} md={3}>
             <Select
@@ -265,6 +277,11 @@ export default function MaterialManagementPage() {
           onCancel={() => setUploadVisible(false)}
         />
       </Modal>
+
+      <SemanticSearchModal
+        open={semanticSearchVisible}
+        onClose={() => setSemanticSearchVisible(false)}
+      />
     </div>
   );
 }
