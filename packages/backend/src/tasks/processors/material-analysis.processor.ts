@@ -11,6 +11,7 @@ import { Material } from '../../modules/materials/entities/material.entity';
 import { VideoSlice } from '../../modules/materials/entities/video-slice.entity';
 import { TasksGateway } from '../../websocket/tasks.gateway';
 import { VideoUtil } from '../../common/utils/video.util';
+import { EmbeddingService } from '../../modules/materials/embedding.service';
 import { QUEUES } from '../queues';
 
 interface MaterialAnalysisJob {
@@ -42,6 +43,7 @@ export class MaterialAnalysisProcessor extends WorkerHost {
     private readonly volcanoClient: VolcanoClientProvider,
     private readonly tasksGateway: TasksGateway,
     private readonly configService: ConfigService,
+    private readonly embeddingService: EmbeddingService,
   ) {
     super();
   }
@@ -191,6 +193,19 @@ export class MaterialAnalysisProcessor extends WorkerHost {
         this.tasksGateway.emitMaterialAnalysisFailed(material.id, result.description);
       } else {
         this.tasksGateway.emitMaterialAnalyzed(material.id, material.aiTags, material.aiDescription);
+      }
+
+      // 8. Generate embeddings (material description + slice descriptions)
+      if (!isFallback) {
+        try {
+          await this.embeddingService.embedMaterial(material.id);
+          if (isVideo) {
+            await this.embeddingService.embedVideoSlices(material.id);
+          }
+        } catch (embedError) {
+          const embedMsg = embedError instanceof Error ? embedError.message : String(embedError);
+          this.logger.warn(`Embedding generation failed for ${materialId}: ${embedMsg}. Material is still usable without vector search.`);
+        }
       }
 
       this.logger.log(`Completed analysis for material: ${materialId}`);

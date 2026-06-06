@@ -5,6 +5,7 @@ import { MaterialAnalysisProcessor } from './material-analysis.processor';
 import { Material } from '../../modules/materials/entities/material.entity';
 import { VideoSlice } from '../../modules/materials/entities/video-slice.entity';
 import { VolcanoClientProvider } from '../../ai/providers/volcano-client.provider';
+import { EmbeddingService } from '../../modules/materials/embedding.service';
 import { TasksGateway } from '../../websocket/tasks.gateway';
 import { Job } from 'bullmq';
 import { promises as fs } from 'fs';
@@ -18,6 +19,7 @@ describe('MaterialAnalysisProcessor', () => {
   let volcanoClient: any;
   let tasksGateway: any;
   let configService: any;
+  let embeddingService: any;
 
   beforeEach(async () => {
     materialsRepository = {
@@ -44,6 +46,11 @@ describe('MaterialAnalysisProcessor', () => {
       emitMaterialAnalyzed: jest.fn(),
       emitMaterialAnalysisFailed: jest.fn(),
       emitMaterialAnalysisStep: jest.fn(),
+    };
+
+    embeddingService = {
+      embedMaterial: jest.fn().mockResolvedValue(undefined),
+      embedVideoSlices: jest.fn().mockResolvedValue(undefined),
     };
 
     configService = {
@@ -75,6 +82,10 @@ describe('MaterialAnalysisProcessor', () => {
         {
           provide: ConfigService,
           useValue: configService,
+        },
+        {
+          provide: EmbeddingService,
+          useValue: embeddingService,
         },
       ],
     }).compile();
@@ -123,6 +134,7 @@ describe('MaterialAnalysisProcessor', () => {
         status: 'ready',
       }),
     );
+    expect(embeddingService.embedMaterial).toHaveBeenCalledWith(materialId);
   });
 
   it('should analyze video material using Files API and perform semantic slicing', async () => {
@@ -164,6 +176,8 @@ describe('MaterialAnalysisProcessor', () => {
     expect(materialsRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'ready' }),
     );
+    expect(embeddingService.embedMaterial).toHaveBeenCalledWith(materialId);
+    expect(embeddingService.embedVideoSlices).toHaveBeenCalledWith(materialId);
   });
 
   it('should handle malformed AI response gracefully', async () => {
