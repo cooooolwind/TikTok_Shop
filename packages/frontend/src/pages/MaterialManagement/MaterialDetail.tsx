@@ -56,6 +56,7 @@ export default function MaterialDetail() {
     triggerAnalysis,
     clearSelection,
     similarSearch,
+    reEmbedMaterial,
   } = useMaterialStore();
 
   const [similarMaterials, setSimilarMaterials] = useState<{ material: Material; score: number }[]>([]);
@@ -111,14 +112,16 @@ export default function MaterialDetail() {
   const showVideoOverlay = isVideo && isTranscoding;
 
   const getAnalysisStepLabel = () => {
-    if (!isAnalyzing) return null;
+    if (!isAnalyzing && analysisStep !== 'embedding') return null;
     if (isVideo) {
       if (analysisStep === 'transcoding') return '转码中';
       if (analysisStep === 'uploading') return '上传处理中';
       if (analysisStep === 'analyzing') return 'AI 分析中';
+      if (analysisStep === 'embedding') return '向量化中';
       return '处理中';
     }
     if (analysisStep === 'analyzing') return 'AI 分析中';
+    if (analysisStep === 'embedding') return '向量化中';
     return '分析中';
   };
 
@@ -169,6 +172,12 @@ export default function MaterialDetail() {
     }
   };
 
+  const handleReEmbed = () => {
+    reEmbedMaterial(material.id);
+  };
+
+  const needsEmbedding = (material.ai_tags?.length > 0 || !!material.ai_description) && !material.has_embedding;
+
   return (
     <div>
       <PageHeader
@@ -192,6 +201,14 @@ export default function MaterialDetail() {
             >
               {isAnalyzing ? '分析中...' : '重新分析'}
             </Button>
+            {needsEmbedding && (
+              <Button
+                onClick={handleReEmbed}
+                disabled={isAnalyzing}
+              >
+                仅重新语义分析
+              </Button>
+            )}
             <Button danger icon={<DeleteOutlined />} onClick={handleDelete}>
               删除
             </Button>
@@ -274,6 +291,15 @@ export default function MaterialDetail() {
                   </Tag>
                 ) : (
                   <StatusTag status={material.status} labels={MATERIAL_STATUS_LABELS} />
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="可语义搜索">
+                {isAnalyzing && analysisStep === 'embedding' ? (
+                  <Tag color="processing" icon={<LoadingOutlined spin />}>向量化中</Tag>
+                ) : material.has_embedding ? (
+                  <Tag color="green">是</Tag>
+                ) : (
+                  <Tag color="default">否</Tag>
                 )}
               </Descriptions.Item>
               <Descriptions.Item label="分类">

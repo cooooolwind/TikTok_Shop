@@ -33,6 +33,7 @@ export interface Material {
   source_declaration: SourceDeclaration;
   ai_tags: string[];
   ai_description: string;
+  has_embedding: boolean;
   duration?: number;
   resolution?: { width: number; height: number };
   status: MaterialStatus;

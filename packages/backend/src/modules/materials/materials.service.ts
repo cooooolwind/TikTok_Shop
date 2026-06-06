@@ -35,6 +35,7 @@ type MaterialResponse = {
   source_declaration: string;
   ai_tags: string[];
   ai_description: string;
+  has_embedding: boolean;
   duration?: number;
   resolution?: { width: number; height: number };
   status: string;
@@ -279,6 +280,28 @@ export class MaterialsService {
     const job = await this.analysisQueue.add('analyze', { materialId: material.id });
 
     return { task_id: job.id, status: 'queued' as const };
+  }
+
+  async reEmbedMaterial(id: string) {
+    const material = await this.materialsRepository.findOne({
+      where: { id, merchantId: DEFAULT_MERCHANT_ID },
+      relations: { slices: true },
+    });
+    if (!material) {
+      throw new NotFoundException('material not found');
+    }
+
+    try {
+      await this.embeddingService.embedMaterial(id);
+      if (material.type === 'video') {
+        await this.embeddingService.embedVideoSlices(id);
+      }
+      return { id, has_embedding: true };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Re-embed failed for ${id}: ${msg}`);
+      return { id, has_embedding: false, error: msg };
+    }
   }
 
   async findSlices(id: string) {
@@ -537,6 +560,7 @@ export class MaterialsService {
       source_declaration: material.sourceDeclaration,
       ai_tags: material.aiTags ?? [],
       ai_description: material.aiDescription ?? '',
+      has_embedding: Array.isArray(material.aiEmbedding) && material.aiEmbedding.length > 0,
       duration: typeof metadata.duration === 'number' ? metadata.duration : undefined,
       resolution: this.getResolution(metadata),
       status: material.status,

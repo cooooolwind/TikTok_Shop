@@ -74,6 +74,12 @@ export class MaterialsController {
     return this.materialsService.analyze(id);
   }
 
+  @Post(':id/re-embed')
+  @ApiOperation({ summary: '仅重新语义向量化（不重新 AI 分析）' })
+  reEmbed(@Param('id') id: string) {
+    return this.materialsService.reEmbedMaterial(id);
+  }
+
   @Get(':id/slices')
   @ApiOperation({ summary: '视频切片列表' })
   findSlices(@Param('id') id: string) {
