@@ -14,8 +14,11 @@ export type {
   MaterialDetail,
   MaterialUploadResponse,
   AnalyzeResponse,
+  SimilarSearchMode,
   SimilarSearchRequest,
   SimilarSearchResult,
+  EmbeddingBackfillRequest,
+  EmbeddingBackfillResponse,
   MaterialListQuery,
 } from './material';
 

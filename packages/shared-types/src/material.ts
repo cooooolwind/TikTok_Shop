@@ -69,16 +69,30 @@ export interface AnalyzeResponse {
   status: 'queued';
 }
 
+export type SimilarSearchMode = 'semantic' | 'text';
+
 export interface SimilarSearchRequest {
   query: string;
   type?: MaterialType;
   limit?: number;
   threshold?: number;
+  mode?: SimilarSearchMode;
 }
 
 export interface SimilarSearchResult {
   material: Material;
   score: number;
+}
+
+export interface EmbeddingBackfillRequest {
+  materialIds?: string[];
+  all?: boolean;
+}
+
+export interface EmbeddingBackfillResponse {
+  processed: number;
+  failed: number;
+  errors: string[];
 }
 
 export interface MaterialListQuery extends PaginationQuery {

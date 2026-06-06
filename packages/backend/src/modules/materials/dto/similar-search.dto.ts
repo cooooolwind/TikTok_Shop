@@ -21,5 +21,9 @@ export class SimilarSearchDto {
   @IsNumber()
   @Min(0)
   @Max(1)
-  threshold?: number = 0;
+  threshold?: number;
+
+  @IsOptional()
+  @IsIn(['semantic', 'text'])
+  mode?: 'semantic' | 'text';
 }
