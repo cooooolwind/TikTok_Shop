@@ -69,6 +69,7 @@ export class MaterialAnalysisProcessor extends WorkerHost {
         if (alreadyTranscoded) {
           this.logger.log(`Skipping transcoding for ${materialId}: video was already transcoded`);
         } else {
+          this.tasksGateway.emitMaterialAnalysisStep(materialId, 'transcoding');
           this.logger.log(`Transcoding video for compatibility: ${materialId}`);
           const transcodedPath = `${filePath}.transcoded.mp4`;
           try {
@@ -102,6 +103,7 @@ export class MaterialAnalysisProcessor extends WorkerHost {
         }
 
         // 1. Upload video via Files API (Robust for large files)
+        this.tasksGateway.emitMaterialAnalysisStep(materialId, 'uploading');
         this.logger.log(`Uploading video to Volcano for analysis: ${materialId}`);
         const buffer = await fs.readFile(filePath);
         fileId = await this.volcanoClient.uploadFile(buffer, filename);
@@ -123,6 +125,7 @@ export class MaterialAnalysisProcessor extends WorkerHost {
         }
         
         // 2. Prepare input for Responses API (Supports file_id correctly)
+        this.tasksGateway.emitMaterialAnalysisStep(materialId, 'analyzing');
         const input = [
           {
             role: 'system',
@@ -154,9 +157,11 @@ export class MaterialAnalysisProcessor extends WorkerHost {
         const aiResponse = await this.volcanoClient.createResponse(input, {
           text: { format: { type: 'json_object' } },
         });
+        this.logger.debug(`Responses API raw content length: ${aiResponse.content?.length ?? 0}`);
         result = this.parseAiResponse(aiResponse.content);
       } else {
         // 3. Use Base64 for images (Fast and no double-hop)
+        this.tasksGateway.emitMaterialAnalysisStep(materialId, 'analyzing');
         const buffer = await fs.readFile(filePath);
         const base64Data = `data:${material.mimeType};base64,${buffer.toString('base64')}`;
         const messages = this.buildImageMessages(base64Data);
@@ -164,13 +169,15 @@ export class MaterialAnalysisProcessor extends WorkerHost {
         const aiResponse = await this.volcanoClient.chatCompletion(messages, {
           response_format: { type: 'json_object' },
         });
+        this.logger.debug(`Chat API raw content length: ${aiResponse.content?.length ?? 0}`);
         result = this.parseAiResponse(aiResponse.content);
       }
 
       // 4. Update Material
       material.aiTags = result.tags;
       material.aiDescription = result.description;
-      material.status = 'ready';
+      const isFallback = result.tags.length === 1 && result.tags[0] === 'auto-tagged';
+      material.status = isFallback ? 'failed' : 'ready';
       await this.materialsRepository.save(material);
 
       // 6. Handle Video Slices (Option C: Semantic Slicing)
@@ -180,7 +187,11 @@ export class MaterialAnalysisProcessor extends WorkerHost {
       }
 
       // 7. Notify via WebSocket
-      this.tasksGateway.emitMaterialAnalyzed(material.id, material.aiTags, material.aiDescription);
+      if (isFallback) {
+        this.tasksGateway.emitMaterialAnalysisFailed(material.id, result.description);
+      } else {
+        this.tasksGateway.emitMaterialAnalyzed(material.id, material.aiTags, material.aiDescription);
+      }
 
       this.logger.log(`Completed analysis for material: ${materialId}`);
       return result;

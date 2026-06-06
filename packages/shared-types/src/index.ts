@@ -111,5 +111,7 @@ export {
   type TaskFailedEvent,
   type MaterialAnalyzedEvent,
   type MaterialAnalysisFailedEvent,
+  type MaterialAnalysisStepEvent,
+  type MaterialAnalysisStep,
   type ScriptGeneratedEvent,
 } from './websocket';

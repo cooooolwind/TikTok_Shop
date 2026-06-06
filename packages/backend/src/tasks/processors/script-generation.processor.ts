@@ -56,21 +56,21 @@ export class ScriptGenerationProcessor extends WorkerHost {
   async process(job: Job<ScriptGenerationJob>): Promise<{ script_id: string; status: 'draft' }> {
     const { taskId, scriptId } = job.data;
     try {
-      await this.updateProgress(job, 1, 4, 'prepare', '姝ｅ湪鏁寸悊鍓ф湰鐢熸垚涓婁笅鏂?..');
+      await this.updateProgress(job, 1, 4, 'prepare', '正在整理剧本生成上下文...');
       const script = await this.scriptsRepository.findOne({ where: { id: scriptId }, relations: { scenes: true } });
       if (!script) throw new Error(`Script ${scriptId} not found`);
 
-      await this.updateProgress(job, 2, 4, 'ai_generate', '姝ｅ湪璋冪敤 AI 鐢熸垚鍓ф湰...');
+      await this.updateProgress(job, 2, 4, 'ai_generate', '正在调用 AI 生成剧本...');
       const aiResponse = await this.volcanoClient.chatCompletion(this.buildMessages(job.data), {
         temperature: 0.7,
         response_format: { type: 'json_object' },
       });
       const parsed = this.parseAiResponse(aiResponse.content);
 
-      await this.updateProgress(job, 3, 4, 'persist', '姝ｅ湪淇濆瓨鍒嗛暅...');
+      await this.updateProgress(job, 3, 4, 'persist', '正在保存分镜...');
       await this.persistResult(script, parsed);
 
-      await this.updateProgress(job, 4, 4, 'done', '鍓ф湰鐢熸垚瀹屾垚');
+      await this.updateProgress(job, 4, 4, 'done', '剧本生成完成');
       this.tasksGateway.emitScriptGenerated(script.id);
       return { script_id: script.id, status: 'draft' };
     } catch (error) {

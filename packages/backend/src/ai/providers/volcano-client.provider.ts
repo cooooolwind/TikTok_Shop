@@ -171,9 +171,33 @@ export class VolcanoClientProvider {
       }
 
       const result: any = await response.json();
+      this.logger.debug(`Responses API response keys: ${Object.keys(result).join(',')}, has output: ${Array.isArray(result.output)}, output length: ${result.output?.length ?? 'N/A'}`);
+
+      // Responses API uses different format: output[].content[].text
+      let content = '';
+      if (Array.isArray(result.output)) {
+        for (const item of result.output) {
+          if (item.type === 'message' && Array.isArray(item.content)) {
+            for (const block of item.content) {
+              if (block.type === 'output_text' && typeof block.text === 'string') {
+                content += block.text;
+              }
+            }
+          }
+        }
+      }
+      // Fallback to Chat Completions format if Responses API format yielded nothing
+      if (!content && result.choices?.[0]?.message?.content) {
+        content = result.choices[0].message.content;
+      }
+
+      if (!content) {
+        this.logger.warn(`No content extracted from Responses API. Response structure: ${JSON.stringify(Object.keys(result))}`);
+      }
+
       return {
         ...result,
-        content: result.choices?.[0]?.message?.content || '',
+        content,
       };
     } catch (error: any) {
       this.logger.error(`Failed to create response: ${error.message}${(error as any).cause ? `; cause=${(error as any).cause.message}` : ''}`);

@@ -17,7 +17,7 @@ import {
   Tag,
   Typography,
 } from 'antd';
-import { DeleteOutlined, EditOutlined, ReloadOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, LoadingOutlined, ReloadOutlined } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
 import StatusTag from '../../components/common/StatusTag';
 import { useMaterialStore } from '../../stores/useMaterialStore';
@@ -47,6 +47,7 @@ export default function MaterialDetail() {
     selectedMaterial,
     loading,
     analyzingIds,
+    analysisStepById,
     fetchDetail,
     updateMaterial,
     remove,
@@ -54,10 +55,19 @@ export default function MaterialDetail() {
     clearSelection,
   } = useMaterialStore();
 
+  const analysisStep = id ? analysisStepById[id] : undefined;
+
   useEffect(() => {
     if (id) fetchDetail(id);
     return () => clearSelection();
   }, [id, fetchDetail, clearSelection]);
+
+  // Refresh detail when analysis step changes past transcoding — video URL may now be available
+  useEffect(() => {
+    if (id && analysisStep && analysisStep !== 'transcoding') {
+      fetchDetail(id);
+    }
+  }, [analysisStep]);
 
   if (loading || !selectedMaterial) {
     return (
@@ -72,6 +82,21 @@ export default function MaterialDetail() {
   const isVideo = material.type === 'video';
   const { aiTags, slices } = getMaterialDetailCollections(material);
   const metadata = material.metadata;
+
+  const isTranscoding = isVideo && isAnalyzing && analysisStep === 'transcoding';
+  const showVideoOverlay = isVideo && isTranscoding;
+
+  const getAnalysisStepLabel = () => {
+    if (!isAnalyzing) return null;
+    if (isVideo) {
+      if (analysisStep === 'transcoding') return '转码中';
+      if (analysisStep === 'uploading') return '上传处理中';
+      if (analysisStep === 'analyzing') return 'AI 分析中';
+      return '处理中';
+    }
+    if (analysisStep === 'analyzing') return 'AI 分析中';
+    return '分析中';
+  };
 
   const handleRename = () => {
     let newName = material.name;
@@ -155,7 +180,7 @@ export default function MaterialDetail() {
           <Card title="预览" style={{ marginBottom: 24 }}>
             {isVideo ? (
               <div style={{ position: 'relative', width: '100%', borderRadius: 8, overflow: 'hidden', background: '#000' }}>
-                {material.status === 'processing' ? (
+                {showVideoOverlay ? (
                   <>
                     <img
                       src={material.thumbnail_url}
@@ -185,7 +210,7 @@ export default function MaterialDetail() {
                         showInfo={false}
                       />
                       <div style={{ marginTop: 8, fontSize: 14, fontWeight: 'bold', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                        视频智能转码与压缩中...
+                        视频转码与压缩中...
                       </div>
                     </div>
                   </>
@@ -219,7 +244,13 @@ export default function MaterialDetail() {
               </Descriptions.Item>
               <Descriptions.Item label="文件大小">{formatBytes(material.size)}</Descriptions.Item>
               <Descriptions.Item label="状态">
-                <StatusTag status={material.status} labels={MATERIAL_STATUS_LABELS} />
+                {isAnalyzing && getAnalysisStepLabel() ? (
+                  <Tag color="processing" icon={<LoadingOutlined spin />}>
+                    {getAnalysisStepLabel()}
+                  </Tag>
+                ) : (
+                  <StatusTag status={material.status} labels={MATERIAL_STATUS_LABELS} />
+                )}
               </Descriptions.Item>
               <Descriptions.Item label="分类">
                 {MATERIAL_CATEGORY_LABELS[material.category] ?? material.category}
