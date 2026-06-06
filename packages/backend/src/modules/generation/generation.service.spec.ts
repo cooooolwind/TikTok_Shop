@@ -138,6 +138,7 @@ function makeService(options?: {
   );
 
   return { service, videoQueue, scriptsRepository, tasksRepository, videosRepository, materialsRepository, videoStitchingService, remotionRenderingService };
+}
 
 
 describe('GenerationService', () => {
