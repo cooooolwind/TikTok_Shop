@@ -285,22 +285,22 @@ export default function MaterialDetail() {
               </Descriptions.Item>
               <Descriptions.Item label="文件大小">{formatBytes(material.size)}</Descriptions.Item>
               <Descriptions.Item label="状态">
-                {isAnalyzing && getAnalysisStepLabel() ? (
-                  <Tag color="processing" icon={<LoadingOutlined spin />}>
-                    {getAnalysisStepLabel()}
-                  </Tag>
-                ) : (
-                  <StatusTag status={material.status} labels={MATERIAL_STATUS_LABELS} />
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label="可语义搜索">
-                {isAnalyzing && analysisStep === 'embedding' ? (
-                  <Tag color="processing" icon={<LoadingOutlined spin />}>向量化中</Tag>
-                ) : material.has_embedding ? (
-                  <Tag color="green">是</Tag>
-                ) : (
-                  <Tag color="default">否</Tag>
-                )}
+                <Space>
+                  {isAnalyzing && getAnalysisStepLabel() ? (
+                    <Tag color="processing" icon={<LoadingOutlined spin />}>
+                      {getAnalysisStepLabel()}
+                    </Tag>
+                  ) : (
+                    <StatusTag status={material.status} labels={MATERIAL_STATUS_LABELS} />
+                  )}
+                  {isAnalyzing && analysisStep === 'embedding' ? (
+                    <Tag color="processing" icon={<LoadingOutlined spin />}>可语义搜索</Tag>
+                  ) : material.has_embedding ? (
+                    <Tag color="green">可语义搜索</Tag>
+                  ) : (
+                    <Tag color="default">不可语义搜索</Tag>
+                  )}
+                </Space>
               </Descriptions.Item>
               <Descriptions.Item label="分类">
                 {MATERIAL_CATEGORY_LABELS[material.category] ?? material.category}
