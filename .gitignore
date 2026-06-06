@@ -38,6 +38,7 @@ coverage/
 .nyc_output/
 test/prompt-ab/output/
 test/vedio/
+test.py
 
 # Uploads
 packages/backend/uploads/

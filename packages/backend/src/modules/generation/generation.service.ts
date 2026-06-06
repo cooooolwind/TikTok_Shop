@@ -311,11 +311,9 @@ export class GenerationService {
 
   private prepareResultForRetry(result: TaskResult | null): TaskResult | null {
     if (!result?.segments?.length) return null;
-    const preservedSegments = [];
-    for (const segment of result.segments) {
-      if (segment.status !== 'succeeded' || !segment.video_url) break;
-      preservedSegments.push(segment);
-    }
+    const preservedSegments = result.segments
+      .filter((segment) => segment.status === 'succeeded' && segment.video_url)
+      .sort((a, b) => a.index - b.index);
     if (preservedSegments.length === 0) return null;
     const first = preservedSegments[0];
     return {
