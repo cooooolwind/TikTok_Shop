@@ -38,6 +38,11 @@ export type {
   CreateTemplateRequest,
   UpdateTemplateRequest,
   TemplateListQuery,
+  TemplateGenerateRequest,
+  TemplateStoryboardShot,
+  TemplateGenerateResult,
+  MyVideo,
+  SaveMyVideoRequest,
 } from './template';
 
 // 剧本

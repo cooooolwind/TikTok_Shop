@@ -19,6 +19,7 @@ import {
   DollarOutlined,
   RiseOutlined,
   ExperimentOutlined,
+  ShopOutlined,
 } from '@ant-design/icons';
 import { useUIStore } from '../stores/useAppStore';
 import { ROUTES } from '../constants';
@@ -79,6 +80,11 @@ const menuItems: MenuItem[] = [
     label: '创作工作室',
   },
   {
+    key: ROUTES.TEMPLATE_MARKET,
+    icon: <ShopOutlined />,
+    label: '模板广场',
+  },
+  {
     key: ROUTES.EDITOR,
     icon: <ScissorOutlined />,
     label: '视频剪辑',
@@ -133,6 +139,9 @@ function deriveMenuState(pathname: string): { selectedKey: string; openKeys: str
   }
   if (pathname.startsWith('/templates')) {
     return { selectedKey: ROUTES.TEMPLATES, openKeys: ['scripts-group'] };
+  }
+  if (pathname.startsWith('/template-market')) {
+    return { selectedKey: ROUTES.TEMPLATE_MARKET, openKeys: [] };
   }
   if (pathname.startsWith('/editor')) {
     return { selectedKey: ROUTES.EDITOR, openKeys: [] };
@@ -294,6 +303,7 @@ export default function MainLayout() {
               { key: ROUTES.REFERENCES, icon: <BookOutlined />, label: '参考视频' },
               { key: ROUTES.TEMPLATES, icon: <BulbOutlined />, label: '灵感模板' },
               { key: ROUTES.CREATION, icon: <VideoCameraOutlined />, label: '创作工作室' },
+              { key: ROUTES.TEMPLATE_MARKET, icon: <ShopOutlined />, label: '模板广场' },
               { key: ROUTES.EDITOR, icon: <ScissorOutlined />, label: '视频剪辑' },
               { key: ROUTES.ANALYTICS_OVERVIEW, icon: <DashboardOutlined />, label: '产出总览' },
               { key: ROUTES.ANALYTICS_COST, icon: <DollarOutlined />, label: '成本分析' },

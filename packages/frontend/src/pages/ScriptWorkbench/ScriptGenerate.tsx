@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Col, Divider, Form, Input, Row, Select, Slider, Space, Typography } from 'antd';
+import { Button, Card, Col, Divider, Form, Input, Row, Select, Slider, Space, Tag, Typography } from 'antd';
 import { EditOutlined, FileTextOutlined, PictureOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import type { Material } from '@aigc/shared-types';
 import PageHeader from '../../components/common/PageHeader';
 import { useMaterialStore } from '../../stores/useMaterialStore';
 import { useScriptStore } from '../../stores/useScriptStore';
@@ -21,7 +22,11 @@ const ENTRY_OPTIONS = [
   { label: '剧本模板生成', value: 'template', icon: <FileTextOutlined /> },
   { label: '粘贴文本解析', value: 'manual_text', icon: <ThunderboltOutlined /> },
   { label: '自己写剧本', value: 'manual_structured', icon: <EditOutlined /> },
-];
+] as const;
+
+function materialTypeLabel(type: Material['type']) {
+  return type === 'video' ? '视频' : '图片';
+}
 
 export default function ScriptGenerate() {
   const navigate = useNavigate();
@@ -36,6 +41,22 @@ export default function ScriptGenerate() {
     fetchMaterials({ pageSize: 100 });
   }, [fetchTemplates, fetchMaterials]);
 
+  const materialOptions = useMemo(
+    () =>
+      materials
+        .filter((material) => material.type === 'image' || material.type === 'video')
+        .sort((a, b) => {
+          const typeRank = (material: Material) => (material.type === 'video' ? 0 : 1);
+          const categoryRank = (material: Material) => (material.category === 'product' ? 0 : 1);
+          return typeRank(a) - typeRank(b) || categoryRank(a) - categoryRank(b);
+        })
+        .map((material) => ({
+          label: `${material.name} · ${materialTypeLabel(material.type)} · ${material.category} · ${material.status}`,
+          value: material.id,
+        })),
+    [materials],
+  );
+
   const handleSubmit = async (values: ScriptGenerateFormValues) => {
     const selectedImageUrls =
       values.material_ids
@@ -43,6 +64,7 @@ export default function ScriptGenerate() {
         .filter((material) => material?.type === 'image' && Boolean(material.url))
         .map((material) => material!.url) ?? [];
     const payload = { ...values, entry, product_image_urls: selectedImageUrls };
+
     if (entry === 'manual_structured') {
       const script = await create(buildManualDraftPayload(payload));
       navigate(`/scripts/${script.id}`);
@@ -58,12 +80,12 @@ export default function ScriptGenerate() {
       <PageHeader
         title="生成剧本"
         breadcrumbs={[
-          { title: '剧本工作台', path: '/scripts' },
+          { title: '脚本工作台', path: '/scripts' },
           { title: '新建剧本' },
         ]}
       />
 
-      <Row gutter={24}>
+      <Row gutter={[24, 24]}>
         <Col xs={24} lg={15}>
           <Card>
             <Form
@@ -77,7 +99,10 @@ export default function ScriptGenerate() {
               <Form.Item name="entry">
                 <Select
                   value={entry}
-                  onChange={(value) => setEntry(value)}
+                  onChange={(value) => {
+                    setEntry(value);
+                    form.setFieldsValue({ entry: value });
+                  }}
                   options={ENTRY_OPTIONS.map((option) => ({
                     label: (
                       <Space>
@@ -118,7 +143,7 @@ export default function ScriptGenerate() {
                 </Col>
                 <Col xs={24} md={12}>
                   <Form.Item name="price" label="价格">
-                    <Input placeholder="例如：$29.99" />
+                    <Input placeholder="例如：29.99" />
                   </Form.Item>
                 </Col>
               </Row>
@@ -128,40 +153,33 @@ export default function ScriptGenerate() {
               <Form.Item
                 name="product_image_url"
                 label="商品图 URL"
-                rules={[
-                  {
-                    required: entry !== 'material',
-                    message: '请填写商品图 URL，或切换到素材模式选择商品图',
-                  },
-                  { type: 'url', warningOnly: true, message: '建议填写可访问的图片 URL' },
-                ]}
-                extra="商品图会作为 Seedream 首帧生成参考，不会直接传给视频模型。"
+                rules={[{ type: 'url', warningOnly: true, message: '建议填写可访问的图片 URL' }]}
+                extra="可手动填写商品图，也可以从素材库选择图片；选择视频素材时会作为脚本生成的视频参考上下文。"
               >
                 <Input placeholder="https://example.com/product.jpg" />
               </Form.Item>
 
-              {entry === 'material' && (
-                <>
-                  <Text strong>素材选择</Text>
-                  <Divider />
-                  <Form.Item name="material_ids" label="选择商品图素材" rules={[{ required: true, message: '请选择至少一张图片素材' }]}>
-                    <Select
-                      mode="multiple"
-                      showSearch
-                      placeholder="请选择图片素材，商品类素材会优先用于首帧"
-                      optionFilterProp="label"
-                      options={materials
-                        .filter((material) => material.type === 'image')
-                        .sort((a, b) => (a.category === 'product' ? 0 : 1) - (b.category === 'product' ? 0 : 1))
-                        .map((material) => ({
-                          label: `${material.name} · ${material.category} · ${material.status}`,
-                          value: material.id,
-                        }))}
-
-                    />
-                  </Form.Item>
-                </>
-              )}
+              <Text strong>素材库素材</Text>
+              <Divider />
+              <Form.Item
+                name="material_ids"
+                label="选择图片或视频素材"
+                rules={[
+                  {
+                    required: entry === 'material',
+                    message: '请选择至少一个图片或视频素材',
+                  },
+                ]}
+                extra="四种入口都可以选择素材库视频；图片素材会额外作为商品图参考，视频素材会传入生成链路作为参考上下文。"
+              >
+                <Select
+                  mode="multiple"
+                  showSearch
+                  placeholder="请选择素材库中的图片或视频"
+                  optionFilterProp="label"
+                  options={materialOptions}
+                />
+              </Form.Item>
 
               {entry === 'template' && (
                 <>
@@ -186,7 +204,7 @@ export default function ScriptGenerate() {
                   <Text strong>已有剧本文本</Text>
                   <Divider />
                   <Form.Item name="manual_text" label="粘贴完整剧本" rules={[{ required: true, message: '请输入剧本文本' }]}>
-                    <TextArea rows={8} placeholder="粘贴已有脚本，AI 会解析为结构化分镜" />
+                    <TextArea rows={8} placeholder="粘贴已有脚本，AI 会结合商品信息和素材库视频解析为结构化分镜" />
                   </Form.Item>
                 </>
               )}
@@ -199,12 +217,20 @@ export default function ScriptGenerate() {
               <Row gutter={16}>
                 <Col xs={24} md={8}>
                   <Form.Item name="style" label="视觉风格">
-                    <Select allowClear placeholder="不限" options={['时尚', '简约', '科技', '生活化'].map((v) => ({ label: v, value: v }))} />
+                    <Select
+                      allowClear
+                      placeholder="不限"
+                      options={['时尚', '简约', '科技', '生活化'].map((value) => ({ label: value, value }))}
+                    />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={8}>
                   <Form.Item name="tone" label="语气风格">
-                    <Select allowClear placeholder="不限" options={['热情', '专业', '幽默', '克制'].map((v) => ({ label: v, value: v }))} />
+                    <Select
+                      allowClear
+                      placeholder="不限"
+                      options={['热情', '专业', '幽默', '克制'].map((value) => ({ label: value, value }))}
+                    />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={8}>
@@ -224,10 +250,14 @@ export default function ScriptGenerate() {
         <Col xs={24} lg={9}>
           <Card title="生成说明">
             <Space direction="vertical" size={12}>
-              <Text>素材生成会把所选素材的文件名、分类、标签和 AI 描述作为上下文。</Text>
-              <Text>模板生成会使用模板的策略、因子和约束控制输出结构。</Text>
-              <Text>粘贴文本会通过 AI 解析成分镜；自己写剧本会直接创建空白草稿。</Text>
-              <Text type="secondary">提交后剧本会出现在列表中，状态为生成中；失败后可进入详情页重试。</Text>
+              <Text>四种入口都可以从素材库选择图片或视频，所选素材会随请求一起传入后端。</Text>
+              <Text>图片素材会补充到商品图参考中，视频素材会作为参考媒体和上下文参与脚本生成。</Text>
+              <Text>模板生成会使用模板策略、因子和约束；粘贴文本会解析为结构化分镜；自己写剧本会创建空白草稿并保留所选素材。</Text>
+              <Space wrap>
+                <Tag color="blue">图片素材</Tag>
+                <Tag color="purple">视频素材</Tag>
+                <Tag color="green">四种入口通用</Tag>
+              </Space>
             </Space>
           </Card>
         </Col>
