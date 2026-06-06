@@ -463,11 +463,24 @@ export class VolcanoClientProvider {
   }
 
   private mapVideoTaskResult(result: any): GetVideoTaskResult {
+    const providerError =
+      result.error ||
+      result.last_error ||
+      result.failure_reason ||
+      result.reason ||
+      result.message;
     const statusMap: Record<string, GetVideoTaskResult['status']> = {
       pending: 'pending',
+      queued: 'pending',
+      queueing: 'pending',
+      scheduled: 'pending',
       running: 'running',
+      processing: 'running',
+      in_progress: 'running',
       succeeded: 'succeeded',
       failed: 'failed',
+      expired: 'expired',
+      cancelled: 'cancelled',
     };
 
     return {
@@ -476,8 +489,11 @@ export class VolcanoClientProvider {
       status: statusMap[result.status] || 'failed',
       video_url: result.result?.video_url || result.content?.video_url,
       video_thumbnail_url: result.result?.video_thumbnail_url || result.content?.last_frame_url,
-      error_code: result.error?.code,
-      error_message: result.error?.message,
+      error_code: typeof providerError === 'object' ? providerError?.code : undefined,
+      error_message:
+        typeof providerError === 'object'
+          ? providerError?.message || JSON.stringify(providerError)
+          : providerError,
     } as any;
   }
 

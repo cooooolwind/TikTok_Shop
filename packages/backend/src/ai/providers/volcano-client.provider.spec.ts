@@ -177,6 +177,27 @@ describe('VolcanoClientProvider video generation', () => {
     );
   });
 
+  it('maps queued video provider tasks to pending instead of failed', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          id: 'cgt-queued',
+          status: 'queued',
+        }),
+        { status: 200 },
+      ),
+    );
+    const { provider } = makeProvider({
+      'volcano.mockMode': false,
+      'volcano.videoApiKey': 'key',
+      'volcano.videoBaseUrl': 'https://ark.cn-beijing.volces.com/api/v3',
+    });
+
+    const result = await provider.getVideoTask('cgt-queued');
+
+    expect(result).toEqual(expect.objectContaining({ id: 'cgt-queued', status: 'pending' }));
+  });
+
   it('serializes first-frame and reference images for image-to-video continuity', async () => {
     const fetchMock = jest
       .spyOn(global, 'fetch')
