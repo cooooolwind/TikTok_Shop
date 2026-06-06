@@ -51,4 +51,10 @@ export const materialsApi = {
         materialIds,
       }),
     ),
+  reEmbed: async (id: string) =>
+    unwrapResponse<{ id: string; has_embedding: boolean; error?: string }>(
+      await client.post<unknown, { id: string; has_embedding: boolean; error?: string } | ApiResponse<{ id: string; has_embedding: boolean; error?: string }>>(
+        `${BASE}/${id}/re-embed`,
+      ),
+    ),
 };

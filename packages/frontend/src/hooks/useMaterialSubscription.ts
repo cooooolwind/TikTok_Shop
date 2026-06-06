@@ -6,10 +6,12 @@ import { useMaterialStore } from '../stores/useMaterialStore';
  * 监听素材分析完成和失败的全局订阅
  */
 export function useMaterialSubscription() {
-  const { onMaterialAnalyzed, onMaterialAnalysisFailed, onMaterialAnalysisStep } = useSocket();
+  const { onMaterialAnalyzed, onMaterialAnalysisFailed, onMaterialAnalysisStep, onMaterialEmbeddingComplete, onMaterialEmbeddingFailed } = useSocket();
   const setMaterialAnalyzed = useMaterialStore((s) => s.setMaterialAnalyzed);
   const setMaterialAnalysisFailed = useMaterialStore((s) => s.setMaterialAnalysisFailed);
   const setMaterialAnalysisStep = useMaterialStore((s) => s.setMaterialAnalysisStep);
+  const setMaterialEmbeddingComplete = useMaterialStore((s) => s.setMaterialEmbeddingComplete);
+  const setMaterialEmbeddingFailed = useMaterialStore((s) => s.setMaterialEmbeddingFailed);
 
   useEffect(() => {
     const unsub1 = onMaterialAnalyzed((data) => {
@@ -30,10 +32,24 @@ export function useMaterialSubscription() {
       }
     });
 
+    const unsub4 = onMaterialEmbeddingComplete((data) => {
+      if (data.material_id) {
+        setMaterialEmbeddingComplete(data.material_id);
+      }
+    });
+
+    const unsub5 = onMaterialEmbeddingFailed((data) => {
+      if (data.material_id) {
+        setMaterialEmbeddingFailed(data.material_id, data.error);
+      }
+    });
+
     return () => {
       unsub1();
       unsub2();
       unsub3();
+      unsub4();
+      unsub5();
     };
-  }, [onMaterialAnalyzed, onMaterialAnalysisFailed, onMaterialAnalysisStep, setMaterialAnalyzed, setMaterialAnalysisFailed, setMaterialAnalysisStep]);
+  }, [onMaterialAnalyzed, onMaterialAnalysisFailed, onMaterialAnalysisStep, onMaterialEmbeddingComplete, onMaterialEmbeddingFailed, setMaterialAnalyzed, setMaterialAnalysisFailed, setMaterialAnalysisStep, setMaterialEmbeddingComplete, setMaterialEmbeddingFailed]);
 }

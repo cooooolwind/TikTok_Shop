@@ -46,6 +46,8 @@ describe('MaterialAnalysisProcessor', () => {
       emitMaterialAnalyzed: jest.fn(),
       emitMaterialAnalysisFailed: jest.fn(),
       emitMaterialAnalysisStep: jest.fn(),
+      emitMaterialEmbeddingComplete: jest.fn(),
+      emitMaterialEmbeddingFailed: jest.fn(),
     };
 
     embeddingService = {
@@ -135,6 +137,8 @@ describe('MaterialAnalysisProcessor', () => {
       }),
     );
     expect(embeddingService.embedMaterial).toHaveBeenCalledWith(materialId);
+    expect(tasksGateway.emitMaterialAnalysisStep).toHaveBeenCalledWith(materialId, 'embedding');
+    expect(tasksGateway.emitMaterialEmbeddingComplete).toHaveBeenCalledWith(materialId);
   });
 
   it('should analyze video material using Files API and perform semantic slicing', async () => {
@@ -178,6 +182,8 @@ describe('MaterialAnalysisProcessor', () => {
     );
     expect(embeddingService.embedMaterial).toHaveBeenCalledWith(materialId);
     expect(embeddingService.embedVideoSlices).toHaveBeenCalledWith(materialId);
+    expect(tasksGateway.emitMaterialAnalysisStep).toHaveBeenCalledWith(materialId, 'embedding');
+    expect(tasksGateway.emitMaterialEmbeddingComplete).toHaveBeenCalledWith(materialId);
   });
 
   it('should handle malformed AI response gracefully', async () => {
@@ -204,6 +210,8 @@ describe('MaterialAnalysisProcessor', () => {
 
     expect(result.tags).toEqual(['auto-tagged']);
     expect(materialsRepository.save).toHaveBeenCalled();
+    expect(embeddingService.embedMaterial).not.toHaveBeenCalled();
+    expect(tasksGateway.emitMaterialEmbeddingComplete).toHaveBeenCalledWith(materialId);
   });
 
   it('should preserve previous aiTags and aiDescription on analysis failure', async () => {

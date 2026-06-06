@@ -129,36 +129,25 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
 
   setMaterialAnalyzed: (id, tags, description) => {
     set((s) => {
-      const newIds = new Set(s.analyzingIds);
-      newIds.delete(id);
-
       const updateDetail = (m: MaterialDetail | null) => {
         if (m?.id !== id) return m;
-        return { ...m, ai_tags: tags, ai_description: description, status: 'ready' as const };
+        return { ...m, ai_tags: tags, ai_description: description, status: 'processing' as const };
       };
 
       const updateItem = (m: Material) => {
         if (m.id !== id) return m;
-        return { ...m, ai_tags: tags, ai_description: description, status: 'ready' as const };
+        return { ...m, ai_tags: tags, ai_description: description, status: 'processing' as const };
       };
 
-      const newSteps = { ...s.analysisStepById };
-      delete newSteps[id];
-
       return {
-        analyzingIds: newIds,
-        analysisStepById: newSteps,
         selectedMaterial: updateDetail(s.selectedMaterial),
         items: s.items.map(updateItem),
       };
     });
-    
-    // 如果当前正在查看该素材详情，刷新以获取最新的分镜切片等完整信息
+
     if (get().selectedMaterial?.id === id) {
       get().fetchDetail(id);
     }
-
-    useUIStore.getState().pushNotification({ type: 'success', title: '素材分析完成' });
   },
 
   setMaterialAnalysisFailed: (id, error) => {
@@ -218,5 +207,78 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
 
   setMaterialAnalysisStep: (id, step) => {
     set((s) => ({ analysisStepById: { ...s.analysisStepById, [id]: step } }));
+  },
+
+  setMaterialEmbeddingComplete: (id) => {
+    set((s) => {
+      const newIds = new Set(s.analyzingIds);
+      newIds.delete(id);
+
+      const updateDetail = (m: MaterialDetail | null) => {
+        if (m?.id !== id) return m;
+        return { ...m, has_embedding: true, status: 'ready' as const };
+      };
+
+      const updateItem = (m: Material) => {
+        if (m.id !== id) return m;
+        return { ...m, has_embedding: true, status: 'ready' as const };
+      };
+
+      const newSteps = { ...s.analysisStepById };
+      delete newSteps[id];
+
+      return {
+        analyzingIds: newIds,
+        analysisStepById: newSteps,
+        selectedMaterial: updateDetail(s.selectedMaterial),
+        items: s.items.map(updateItem),
+      };
+    });
+
+    useUIStore.getState().pushNotification({ type: 'success', title: '素材分析完成' });
+  },
+
+  setMaterialEmbeddingFailed: (id, error) => {
+    set((s) => {
+      const newIds = new Set(s.analyzingIds);
+      newIds.delete(id);
+
+      const updateDetail = (m: MaterialDetail | null) => {
+        if (m?.id !== id) return m;
+        return { ...m, has_embedding: false, status: 'ready' as const };
+      };
+
+      const updateItem = (m: Material) => {
+        if (m.id !== id) return m;
+        return { ...m, has_embedding: false, status: 'ready' as const };
+      };
+
+      const newSteps = { ...s.analysisStepById };
+      delete newSteps[id];
+
+      return {
+        analyzingIds: newIds,
+        analysisStepById: newSteps,
+        selectedMaterial: updateDetail(s.selectedMaterial),
+        items: s.items.map(updateItem),
+      };
+    });
+
+    useUIStore.getState().pushNotification({ type: 'warning', title: '语义向量化失败', message: error ?? 'AI 标签已更新，但不可语义搜索，可稍后重试' });
+  },
+
+  reEmbedMaterial: async (id) => {
+    try {
+      const res = await materialsApi.reEmbed(id);
+      if (res.has_embedding) {
+        useUIStore.getState().pushNotification({ type: 'success', title: '语义向量化完成' });
+      } else {
+        useUIStore.getState().pushNotification({ type: 'warning', title: '语义向量化失败', message: res.error });
+      }
+      get().fetchDetail(id);
+    } catch {
+      useUIStore.getState().pushNotification({ type: 'error', title: '语义向量化请求失败' });
+      get().fetchDetail(id);
+    }
   },
 }));

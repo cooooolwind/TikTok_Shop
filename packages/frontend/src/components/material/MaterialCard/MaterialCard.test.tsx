@@ -32,6 +32,7 @@ const mockMaterial: Material = {
   source_declaration: 'owned',
   ai_tags: [],
   ai_description: '',
+  has_embedding: false,
   created_at: '2024-05-30T00:00:00Z',
   updated_at: '2024-05-30T00:00:00Z',
 };

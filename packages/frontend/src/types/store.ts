@@ -40,6 +40,9 @@ export interface MaterialState {
   setMaterialAnalyzed: (id: string, tags: string[], description: string) => void;
   setMaterialAnalysisFailed: (id: string, error: string) => void;
   setMaterialAnalysisStep: (id: string, step: MaterialAnalysisStep) => void;
+  setMaterialEmbeddingComplete: (id: string) => void;
+  setMaterialEmbeddingFailed: (id: string, error?: string) => void;
+  reEmbedMaterial: (id: string) => Promise<void>;
   similarSearch: (query: string, type?: MaterialType, limit?: number, threshold?: number, mode?: 'semantic' | 'text') => Promise<{ material: Material; score: number }[]>;
   semanticResults: { material: Material; score: number }[];
   semanticLoading: boolean;
