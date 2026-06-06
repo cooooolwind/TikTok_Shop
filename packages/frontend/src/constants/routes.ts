@@ -15,6 +15,10 @@ export const ROUTES = {
   CREATION_PREVIEW: '/creation/tasks/:taskId/preview',
   CREATION_EDITOR: '/creation/tasks/:taskId/editor',
   ANALYTICS: '/analytics',
+  ANALYTICS_OVERVIEW: '/analytics/overview',
+  ANALYTICS_COST: '/analytics/cost',
+  ANALYTICS_CONVERSION: '/analytics/conversion',
+  ANALYTICS_STRATEGY: '/analytics/strategy',
   EDITOR: '/editor',
   EDITOR_TASK: '/editor/:taskId',
 } as const;
