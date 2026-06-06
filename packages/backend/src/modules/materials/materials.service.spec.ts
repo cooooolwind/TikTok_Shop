@@ -100,14 +100,21 @@ function makeService(options?: {
     add: jest.fn().mockResolvedValue({ id: 'job-1' }),
   };
 
+  const embeddingService = {
+    textToVector: jest.fn().mockResolvedValue(Array.from({ length: 2048 }, (_, i) => i * 0.001)),
+    embedMaterial: jest.fn(),
+    embedVideoSlices: jest.fn(),
+  };
+
   const service = new MaterialsService(
     materialsRepository as never,
     videoSlicesRepository as never,
     analysisQueue as never,
     configService as never,
+    embeddingService as never,
   );
 
-  return { service, materialsRepository, videoSlicesRepository, queryBuilder, tasksGateway, analysisQueue };
+  return { service, materialsRepository, videoSlicesRepository, queryBuilder, tasksGateway, analysisQueue, embeddingService };
 }
 
 describe('MaterialsService', () => {
@@ -258,12 +265,24 @@ describe('MaterialsService', () => {
     expect(result).toEqual({ task_id: 'job-1', status: 'queued' });
   });
 
-  it('searches similar materials with text fallback', async () => {
+  it('searches similar materials with text search', async () => {
     const { service } = makeService({
       materials: [makeMaterial({ filename: 'red shoe.jpg', aiDescription: 'comfortable shoe' })],
     });
 
-    const result = await service.searchSimilar({ query: 'shoe', limit: 10, threshold: 0.1 });
+    const result = await service.searchSimilar({ query: 'shoe', limit: 10, threshold: 0.1, mode: 'text' });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].score).toBeGreaterThan(0);
+  });
+
+  it('falls back to text search when semantic search fails', async () => {
+    const { service, embeddingService } = makeService({
+      materials: [makeMaterial({ filename: 'red shoe.jpg', aiDescription: 'comfortable shoe' })],
+    });
+    embeddingService.textToVector.mockRejectedValue(new Error('API error'));
+
+    const result = await service.searchSimilar({ query: 'shoe', limit: 10, mode: 'semantic' });
 
     expect(result).toHaveLength(1);
     expect(result[0].score).toBeGreaterThan(0);

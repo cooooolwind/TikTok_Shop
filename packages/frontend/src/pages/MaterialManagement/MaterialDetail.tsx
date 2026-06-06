@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
@@ -27,6 +27,8 @@ import {
   SOURCE_DECLARATION_LABELS,
 } from '../../constants';
 import { formatBeijingDateTime, formatBytes, formatDuration } from '../../utils/format';
+import type { Material } from '@aigc/shared-types';
+import { routePath } from '../../constants';
 
 const { Text, Paragraph } = Typography;
 
@@ -53,7 +55,12 @@ export default function MaterialDetail() {
     remove,
     triggerAnalysis,
     clearSelection,
+    similarSearch,
+    reEmbedMaterial,
   } = useMaterialStore();
+
+  const [similarMaterials, setSimilarMaterials] = useState<{ material: Material; score: number }[]>([]);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
 
   const analysisStep = id ? analysisStepById[id] : undefined;
 
@@ -68,6 +75,24 @@ export default function MaterialDetail() {
       fetchDetail(id);
     }
   }, [analysisStep]);
+
+  // Load similar materials when detail is available
+  useEffect(() => {
+    if (selectedMaterial?.id && (selectedMaterial.ai_description || (selectedMaterial.ai_tags ?? []).length > 0)) {
+      const desc = selectedMaterial.ai_description ?? '';
+      const tags = (selectedMaterial.ai_tags ?? []).join(' ');
+      const query = [desc, tags].filter(Boolean).join(' ').substring(0, 200);
+      if (query) {
+        setLoadingSimilar(true);
+        similarSearch(query, selectedMaterial.type, 6, undefined, 'semantic')
+          .then((results) => {
+            setSimilarMaterials(results.filter((r) => r.material.id !== selectedMaterial.id));
+          })
+          .catch(() => {})
+          .finally(() => setLoadingSimilar(false));
+      }
+    }
+  }, [selectedMaterial?.id]);
 
   if (loading || !selectedMaterial) {
     return (
@@ -87,14 +112,16 @@ export default function MaterialDetail() {
   const showVideoOverlay = isVideo && isTranscoding;
 
   const getAnalysisStepLabel = () => {
-    if (!isAnalyzing) return null;
+    if (!isAnalyzing && analysisStep !== 'embedding') return null;
     if (isVideo) {
       if (analysisStep === 'transcoding') return '转码中';
       if (analysisStep === 'uploading') return '上传处理中';
       if (analysisStep === 'analyzing') return 'AI 分析中';
+      if (analysisStep === 'embedding') return '向量化中';
       return '处理中';
     }
     if (analysisStep === 'analyzing') return 'AI 分析中';
+    if (analysisStep === 'embedding') return '向量化中';
     return '分析中';
   };
 
@@ -145,6 +172,12 @@ export default function MaterialDetail() {
     }
   };
 
+  const handleReEmbed = () => {
+    reEmbedMaterial(material.id);
+  };
+
+  const needsEmbedding = (material.ai_tags?.length > 0 || !!material.ai_description) && !material.has_embedding;
+
   return (
     <div>
       <PageHeader
@@ -168,6 +201,14 @@ export default function MaterialDetail() {
             >
               {isAnalyzing ? '分析中...' : '重新分析'}
             </Button>
+            {needsEmbedding && (
+              <Button
+                onClick={handleReEmbed}
+                disabled={isAnalyzing}
+              >
+                仅重新语义分析
+              </Button>
+            )}
             <Button danger icon={<DeleteOutlined />} onClick={handleDelete}>
               删除
             </Button>
@@ -244,13 +285,22 @@ export default function MaterialDetail() {
               </Descriptions.Item>
               <Descriptions.Item label="文件大小">{formatBytes(material.size)}</Descriptions.Item>
               <Descriptions.Item label="状态">
-                {isAnalyzing && getAnalysisStepLabel() ? (
-                  <Tag color="processing" icon={<LoadingOutlined spin />}>
-                    {getAnalysisStepLabel()}
-                  </Tag>
-                ) : (
-                  <StatusTag status={material.status} labels={MATERIAL_STATUS_LABELS} />
-                )}
+                <Space>
+                  {isAnalyzing && getAnalysisStepLabel() ? (
+                    <Tag color="processing" icon={<LoadingOutlined spin />}>
+                      {getAnalysisStepLabel()}
+                    </Tag>
+                  ) : (
+                    <StatusTag status={material.status} labels={MATERIAL_STATUS_LABELS} />
+                  )}
+                  {isAnalyzing && analysisStep === 'embedding' ? (
+                    <Tag color="processing" icon={<LoadingOutlined spin />}>可语义搜索</Tag>
+                  ) : material.has_embedding ? (
+                    <Tag color="green">可语义搜索</Tag>
+                  ) : (
+                    <Tag color="default">不可语义搜索</Tag>
+                  )}
+                </Space>
               </Descriptions.Item>
               <Descriptions.Item label="分类">
                 {MATERIAL_CATEGORY_LABELS[material.category] ?? material.category}
@@ -320,7 +370,7 @@ export default function MaterialDetail() {
         <Card title="视频切片" style={{ marginBottom: 24 }}>
           <List
             dataSource={slices}
-            renderItem={(slice) => (
+renderItem={(slice) => (
               <List.Item>
                 <List.Item.Meta
                   avatar={
@@ -345,6 +395,48 @@ export default function MaterialDetail() {
               </List.Item>
             )}
           />
+        </Card>
+      )}
+
+      {(selectedMaterial.ai_description || (selectedMaterial.ai_tags ?? []).length > 0) && (
+        <Card title="相似素材" style={{ marginBottom: 24 }}>
+          {loadingSimilar ? (
+            <div style={{ textAlign: 'center', padding: 20 }}><Spin /></div>
+          ) : similarMaterials.length === 0 ? (
+            <Text type="secondary">暂无相似素材</Text>
+          ) : (
+            <Row gutter={[16, 16]}>
+              {similarMaterials.map(({ material: m, score }) => (
+                <Col xs={12} sm={8} md={6} key={m.id}>
+                  <Card
+                    hoverable
+                    size="small"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => navigate(routePath.materialDetail(m.id))}
+                    cover={
+                      m.type === 'video' ? (
+                        <div style={{ position: 'relative' }}>
+                          <img src={m.thumbnail_url} alt={m.name} style={{ width: '100%', height: 100, objectFit: 'cover' }} />
+                          <Tag color="blue" style={{ position: 'absolute', top: 4, right: 4, fontSize: 10 }}>视频</Tag>
+                        </div>
+                      ) : (
+                        <img src={m.url} alt={m.name} style={{ width: '100%', height: 100, objectFit: 'cover' }} />
+                      )
+                    }
+                  >
+                    <Card.Meta
+                      title={<Text ellipsis style={{ fontSize: 12 }}>{m.name}</Text>}
+                      description={
+                        <Tag color={score >= 0.8 ? 'green' : score >= 0.5 ? 'blue' : 'default'} style={{ fontSize: 10 }}>
+                          {(score * 100).toFixed(0)}% 匹配
+                        </Tag>
+                      }
+                    />
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          )}
         </Card>
       )}
     </div>

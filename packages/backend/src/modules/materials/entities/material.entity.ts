@@ -60,7 +60,7 @@ export class Material {
   @Column({ name: 'ai_description', type: 'text', nullable: true })
   aiDescription: string;
 
-  @Column({ name: 'ai_embedding', type: 'vector', length: 1536, nullable: true })
+  @Column({ name: 'ai_embedding', type: 'vector', length: 2048, nullable: true })
   aiEmbedding: number[];
 
   @Column({

@@ -468,3 +468,63 @@ describe('VolcanoClientProvider video generation', () => {
     expect(result.content).toBe('chat response');
   });
 });
+
+describe('VolcanoClientProvider generateEmbedding', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('returns mock vector in mock mode', async () => {
+    const { provider } = makeProvider({ 'volcano.mockMode': true, 'volcano.embeddingDimensions': 2048 });
+    const result = await provider.generateEmbedding([{ type: 'text', text: 'test' }]);
+    expect(result).toHaveLength(2048);
+  });
+
+  it('calls the multimodal embedding API with correct payload', async () => {
+    const { provider } = makeProvider({
+      'volcano.mockMode': false,
+      'volcano.embeddingApiKey': 'emb-key',
+      'volcano.embeddingBaseUrl': 'https://ark.cn-beijing.volces.com/api/v3',
+      'volcano.embeddingEndpoint': 'ep-embedding-test',
+      'volcano.videoFetchTimeoutMs': 60000,
+    });
+
+    const mockEmbedding = Array.from({ length: 2048 }, (_, i) => i * 0.001);
+    const mockResponse = {
+      data: { embedding: mockEmbedding, object: 'embedding' },
+    };
+    jest.spyOn(global, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify(mockResponse), { status: 200 }),
+    );
+
+    const result = await provider.generateEmbedding([{ type: 'text', text: 'hello world' }], { dimensions: 2048 });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://ark.cn-beijing.volces.com/api/v3/embeddings/multimodal',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer emb-key',
+        }),
+      }),
+    );
+
+    const callBody = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
+    expect(callBody.model).toBe('ep-embedding-test');
+    expect(callBody.input).toEqual([{ type: 'text', text: 'hello world' }]);
+    expect(callBody.dimensions).toBe(2048);
+    expect(result).toEqual(mockEmbedding);
+  });
+
+  it('throws when API key or endpoint missing', async () => {
+    const { provider } = makeProvider({
+      'volcano.mockMode': false,
+      'volcano.embeddingApiKey': '',
+      'volcano.embeddingEndpoint': '',
+    });
+
+    await expect(provider.generateEmbedding([{ type: 'text', text: 'test' }])).rejects.toThrow(
+      'VOLCANO_EMBEDDING_API_KEY and VOLCANO_EMBEDDING_ENDPOINT are required',
+    );
+  });
+});

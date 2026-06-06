@@ -205,6 +205,69 @@ export class VolcanoClientProvider {
     }
   }
 
+  async generateEmbedding(
+    inputs: Array<{ type: 'text'; text: string } | { type: 'image_url'; url: string } | { type: 'video_url'; url: string }>,
+    options?: { dimensions?: number },
+  ): Promise<number[]> {
+    if (this.configService.get<boolean>('volcano.mockMode')) {
+      this.logger.log('Mock mode: returning simulated embedding vector');
+      const dim = options?.dimensions ?? this.configService.get<number>('volcano.embeddingDimensions') ?? 2048;
+      return Array.from({ length: dim }, () => Math.random() * 0.01);
+    }
+
+    const apiKey = this.configService.get<string>('volcano.embeddingApiKey') ?? '';
+    const baseUrl = this.configService.get<string>('volcano.embeddingBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
+    const model = this.configService.get<string>('volcano.embeddingEndpoint') ?? '';
+
+    if (!apiKey || !model) {
+      throw new Error('VOLCANO_EMBEDDING_API_KEY and VOLCANO_EMBEDDING_ENDPOINT are required for embedding generation');
+    }
+
+    const dimensions = options?.dimensions ?? this.configService.get<number>('volcano.embeddingDimensions') ?? 2048;
+
+    const body: Record<string, unknown> = {
+      model,
+      input: inputs.map((input) => {
+        if (input.type === 'text') {
+          return { type: 'text', text: input.text };
+        }
+        if (input.type === 'image_url') {
+          return { type: 'image_url', image_url: { url: input.url } };
+        }
+        return { type: 'video_url', video_url: { url: (input as { type: 'video_url'; url: string }).url } };
+      }),
+      dimensions,
+    };
+
+    try {
+      const response = await fetch(`${baseUrl.replace(/\/$/, '')}/embeddings/multimodal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(this.getVideoFetchTimeoutMs()),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Volcano Embedding API error: ${JSON.stringify(error)}`);
+      }
+
+      const result: any = await response.json();
+      const embedding = result.data?.embedding;
+      if (!embedding || !Array.isArray(embedding)) {
+        throw new Error(`Unexpected embedding response format: ${JSON.stringify(Object.keys(result))}`);
+      }
+
+      return embedding as number[];
+    } catch (error: any) {
+      this.logger.error(`Failed to generate embedding: ${error.message}${(error as any).cause ? `; cause=${(error as any).cause.message}` : ''}`);
+      throw error;
+    }
+  }
+
   async uploadFile(fileBuffer: Buffer, filename: string): Promise<string> {
     if (this.configService.get<boolean>('volcano.mockMode')) {
       this.logger.log('Mock mode: returning simulated file upload ID');

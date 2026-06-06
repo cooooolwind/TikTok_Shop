@@ -19,6 +19,7 @@ import { MaterialListQueryDto } from './dto/material-list-query.dto';
 import { SimilarSearchDto } from './dto/similar-search.dto';
 import { UploadMaterialDto } from './dto/upload-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
+import { EmbeddingService } from './embedding.service';
 import { QUEUES } from '../../tasks/queues';
 
 type MaterialResponse = {
@@ -34,6 +35,7 @@ type MaterialResponse = {
   source_declaration: string;
   ai_tags: string[];
   ai_description: string;
+  has_embedding: boolean;
   duration?: number;
   resolution?: { width: number; height: number };
   status: string;
@@ -69,6 +71,7 @@ export class MaterialsService {
     @InjectQueue(QUEUES.MATERIAL_ANALYSIS)
     private readonly analysisQueue: Queue,
     private readonly configService: ConfigService,
+    private readonly embeddingService: EmbeddingService,
   ) {}
 
   async upload(file: Express.Multer.File | undefined, dto: UploadMaterialDto) {
@@ -279,6 +282,28 @@ export class MaterialsService {
     return { task_id: job.id, status: 'queued' as const };
   }
 
+  async reEmbedMaterial(id: string) {
+    const material = await this.materialsRepository.findOne({
+      where: { id, merchantId: DEFAULT_MERCHANT_ID },
+      relations: { slices: true },
+    });
+    if (!material) {
+      throw new NotFoundException('material not found');
+    }
+
+    try {
+      await this.embeddingService.embedMaterial(id);
+      if (material.type === 'video') {
+        await this.embeddingService.embedVideoSlices(id);
+      }
+      return { id, has_embedding: true };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Re-embed failed for ${id}: ${msg}`);
+      return { id, has_embedding: false, error: msg };
+    }
+  }
+
   async findSlices(id: string) {
     await this.ensureMaterialExists(id);
     const slices = await this.videoSlicesRepository.find({
@@ -289,29 +314,150 @@ export class MaterialsService {
   }
 
   async searchSimilar(dto: SimilarSearchDto) {
-    const query = dto.query.trim().toLowerCase();
+    const query = dto.query.trim();
+    if (!query) return [];
+
     const limit = dto.limit ?? 10;
+    const merchantId = DEFAULT_MERCHANT_ID;
+    const mode = dto.mode ?? 'semantic';
+
+    if (mode === 'semantic') {
+      return this.semanticSearch(query, dto.type, limit, dto.threshold, merchantId);
+    }
+    return this.textSearch(query, dto.type, limit, dto.threshold, merchantId);
+  }
+
+  private async semanticSearch(
+    query: string,
+    type: 'image' | 'video' | undefined,
+    limit: number,
+    threshold: number | undefined,
+    merchantId: string,
+  ) {
+    try {
+      const queryVector = await this.embeddingService.textToVector(query);
+
+      const qb = this.materialsRepository
+        .createQueryBuilder('material')
+        .where('material.merchantId = :merchantId', { merchantId })
+        .andWhere('material.aiEmbedding IS NOT NULL');
+
+      if (type) {
+        qb.andWhere('material.type = :type', { type });
+      }
+
+      const rawResults = await qb
+        .select([
+          'material.id',
+          'material.merchantId',
+          'material.type',
+          'material.url',
+          'material.thumbnailUrl',
+          'material.name',
+          'material.filename',
+          'material.size',
+          'material.mimeType',
+          'material.category',
+          'material.tags',
+          'material.sourceDeclaration',
+          'material.aiTags',
+          'material.aiDescription',
+          'material.status',
+          'material.metadata',
+          'material.createdAt',
+          'material.updatedAt',
+          '1 - (material.aiEmbedding <=> :embedding) AS score',
+        ])
+        .setParameter('embedding', JSON.stringify(queryVector))
+        .orderBy('material.aiEmbedding <=> :embedding', 'ASC')
+        .limit(limit)
+        .getRawAndEntities();
+
+      const scoreThreshold = threshold ?? 0.3;
+      const results: Array<{ material: Material; score: number }> = [];
+
+      for (let i = 0; i < rawResults.entities.length; i++) {
+        const rawScore = rawResults.raw[i]?.score;
+        const score = typeof rawScore === 'number' ? rawScore : 0;
+        if (score >= scoreThreshold) {
+          results.push({ material: rawResults.entities[i], score });
+        }
+      }
+
+      return results.map((r) => ({
+        material: this.toMaterialResponse(r.material),
+        score: Number(r.score.toFixed(4)),
+      }));
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Semantic search failed, falling back to text search: ${msg}`);
+      return this.textSearch(query, type, limit, threshold, merchantId);
+    }
+  }
+
+  private async textSearch(
+    query: string,
+    type: 'image' | 'video' | undefined,
+    limit: number,
+    threshold: number | undefined,
+    merchantId: string,
+  ) {
+    const lowerQuery = query.toLowerCase();
     const qb = this.materialsRepository
       .createQueryBuilder('material')
-      .where('material.merchantId = :merchantId', { merchantId: DEFAULT_MERCHANT_ID });
+      .where('material.merchantId = :merchantId', { merchantId });
 
-    if (dto.type) {
-      qb.andWhere('material.type = :type', { type: dto.type });
+    if (type) {
+      qb.andWhere('material.type = :type', { type });
     }
 
     const candidates = await qb.orderBy('material.createdAt', 'DESC').take(200).getMany();
     return candidates
       .map((material) => ({
         material,
-        score: this.calculateTextScore(material, query),
+        score: this.calculateTextScore(material, lowerQuery),
       }))
-      .filter((result) => result.score >= (dto.threshold ?? 0))
+      .filter((result) => result.score >= (threshold ?? 0))
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
       .map((result) => ({
         material: this.toMaterialResponse(result.material),
         score: result.score,
       }));
+  }
+
+  async backfillEmbeddings(materialIds?: string[]): Promise<{ processed: number; failed: number; errors: string[] }> {
+    let materials: Material[];
+
+    if (materialIds && materialIds.length > 0) {
+      materials = await this.materialsRepository.findByIds(materialIds);
+    } else {
+      materials = await this.materialsRepository
+        .createQueryBuilder('material')
+        .where('material.aiEmbedding IS NULL')
+        .andWhere('material.aiDescription IS NOT NULL')
+        .getMany();
+    }
+
+    let processed = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (const material of materials) {
+      try {
+        await this.embeddingService.embedMaterial(material.id);
+        if (material.type === 'video') {
+          await this.embeddingService.embedVideoSlices(material.id);
+        }
+        processed++;
+      } catch (error) {
+        failed++;
+        const msg = error instanceof Error ? error.message : String(error);
+        errors.push(`${material.id}: ${msg}`);
+      }
+    }
+
+    return { processed, failed, errors };
   }
 
   private async ensureMaterialExists(id: string) {
@@ -414,6 +560,7 @@ export class MaterialsService {
       source_declaration: material.sourceDeclaration,
       ai_tags: material.aiTags ?? [],
       ai_description: material.aiDescription ?? '',
+      has_embedding: Array.isArray(material.aiEmbedding) && material.aiEmbedding.length > 0,
       duration: typeof metadata.duration === 'number' ? metadata.duration : undefined,
       resolution: this.getResolution(metadata),
       status: material.status,

@@ -7,6 +7,7 @@ import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { MaterialsController } from './materials.controller';
 import { MaterialsService } from './materials.service';
+import { EmbeddingService } from './embedding.service';
 import { Material } from './entities/material.entity';
 import { VideoSlice } from './entities/video-slice.entity';
 import { WebsocketModule } from '../../websocket/websocket.module';
@@ -40,8 +41,8 @@ import { WebsocketModule } from '../../websocket/websocket.module';
     }),
   ],
   controllers: [MaterialsController],
-  providers: [MaterialsService],
-  exports: [MaterialsService],
+  providers: [MaterialsService, EmbeddingService],
+  exports: [MaterialsService, EmbeddingService],
 })
 export class MaterialsModule implements OnModuleInit {
   constructor(private readonly configService: ConfigService) {}
