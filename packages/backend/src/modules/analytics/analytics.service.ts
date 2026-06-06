@@ -35,6 +35,7 @@ import type {
 
 @Injectable()
 export class AnalyticsService {
+  private seedCache = new Map<string, Promise<AnalyticsSeed>>();
   private mockGenerator: AnalyticsMockGenerator | null = null;
 
   constructor(
@@ -48,7 +49,19 @@ export class AnalyticsService {
     private readonly templatesRepository: Repository<Template>,
   ) {}
 
-  private async buildSeed(
+  private buildSeed(
+    startDate: string,
+    endDate: string,
+    granularity: 'day' | 'week' | 'month' = 'day',
+  ): Promise<AnalyticsSeed> {
+    const key = `${startDate}|${endDate}|${granularity}`;
+    if (!this.seedCache.has(key)) {
+      this.seedCache.set(key, this.doBuildSeed(startDate, endDate, granularity));
+    }
+    return this.seedCache.get(key)!;
+  }
+
+  private async doBuildSeed(
     startDate: string,
     endDate: string,
     granularity: 'day' | 'week' | 'month' = 'day',
@@ -106,7 +119,6 @@ export class AnalyticsService {
 
     const templateRows = await this.scriptsRepository
       .createQueryBuilder('script')
-      .leftJoin('script.templateId', 'template')
       .select('script.templateId', 'templateId')
       .addSelect('COUNT(*)', 'count')
       .where('script.templateId IS NOT NULL')
@@ -114,7 +126,7 @@ export class AnalyticsService {
       .getRawMany<{ templateId: string; count: string }>();
     const templateIds = templateRows.map((r) => r.templateId);
     const templates = templateIds.length > 0
-      ? await this.templatesRepository.findByIds(templateIds)
+      ? await this.templatesRepository.createQueryBuilder('t').where('t.id IN (:...ids)', { ids: templateIds }).getMany()
       : [];
     const templateMap = new Map(templates.map((t) => [t.id, t]));
     const templateUsage = templateRows.map((r) => {
