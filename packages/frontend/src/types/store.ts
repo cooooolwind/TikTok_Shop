@@ -9,6 +9,7 @@ import type {
   Voice, BGM, BGMListQuery,
   OverviewData, TrendData, AttributionData, DurationDistribution,
   AnalyticsQuery, TrendsQuery,
+  MaterialAnalysisStep,
 } from '@aigc/shared-types';
 
 // ==============================
@@ -22,6 +23,7 @@ export interface MaterialState {
   selectedMaterial: MaterialDetail | null;
   filters: MaterialListQuery;
   analyzingIds: Set<string>;
+  analysisStepById: Record<string, MaterialAnalysisStep>;
 
   // 上传
   uploadVisible: boolean;
@@ -37,6 +39,7 @@ export interface MaterialState {
   triggerAnalysis: (id: string) => Promise<void>;
   setMaterialAnalyzed: (id: string, tags: string[], description: string) => void;
   setMaterialAnalysisFailed: (id: string, error: string) => void;
+  setMaterialAnalysisStep: (id: string, step: MaterialAnalysisStep) => void;
   similarSearch: (query: string, type?: MaterialType, limit?: number, threshold?: number) => Promise<{ material: Material; score: number }[]>;
   setFilters: (filters: Partial<MaterialListQuery>) => void;
   setUploadVisible: (visible: boolean) => void;

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Material, MaterialDetail, MaterialListQuery, MaterialType } from '@aigc/shared-types';
+import type { Material, MaterialDetail, MaterialListQuery, MaterialType, MaterialAnalysisStep } from '@aigc/shared-types';
 import type { MaterialState } from '../types';
 import { materialsApi } from '../services/materials.api';
 import { useUIStore } from './useAppStore';
@@ -11,6 +11,7 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
   selectedMaterial: null,
   filters: { page: 1, pageSize: 20 },
   analyzingIds: new Set(),
+  analysisStepById: {},
   uploadVisible: false,
   uploading: false,
   uploadProgress: 0,
@@ -138,8 +139,12 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
         return { ...m, ai_tags: tags, ai_description: description, status: 'ready' as const };
       };
 
+      const newSteps = { ...s.analysisStepById };
+      delete newSteps[id];
+
       return {
         analyzingIds: newIds,
+        analysisStepById: newSteps,
         selectedMaterial: updateDetail(s.selectedMaterial),
         items: s.items.map(updateItem),
       };
@@ -168,8 +173,12 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
         return { ...m, status: 'failed' as const };
       };
 
+      const newSteps = { ...s.analysisStepById };
+      delete newSteps[id];
+
       return {
         analyzingIds: newIds,
+        analysisStepById: newSteps,
         selectedMaterial: updateDetail(s.selectedMaterial),
         items: s.items.map(updateItem),
       };
@@ -190,4 +199,8 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
   setFilters: (filters) => set((s) => ({ filters: { ...s.filters, ...filters } })),
   setUploadVisible: (visible) => set({ uploadVisible: visible }),
   clearSelection: () => set({ selectedMaterial: null }),
+
+  setMaterialAnalysisStep: (id, step) => {
+    set((s) => ({ analysisStepById: { ...s.analysisStepById, [id]: step } }));
+  },
 }));

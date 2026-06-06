@@ -43,6 +43,7 @@ describe('MaterialAnalysisProcessor', () => {
     tasksGateway = {
       emitMaterialAnalyzed: jest.fn(),
       emitMaterialAnalysisFailed: jest.fn(),
+      emitMaterialAnalysisStep: jest.fn(),
     };
 
     configService = {

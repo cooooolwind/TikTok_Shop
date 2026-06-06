@@ -9,6 +9,7 @@ import {
 import type {
   MaterialAnalyzedEvent,
   MaterialAnalysisFailedEvent,
+  MaterialAnalysisStepEvent,
   ScriptGeneratedEvent,
   TaskCompletedEvent,
   TaskFailedEvent,
@@ -24,6 +25,7 @@ const WsEvent = {
   TASK_FAILED: 'task:failed',
   MATERIAL_ANALYZED: 'material:analyzed',
   MATERIAL_ANALYSIS_FAILED: 'material:analysis_failed',
+  MATERIAL_ANALYSIS_STEP: 'material:analysis_step',
   SCRIPT_GENERATED: 'script:generated',
 } as const;
 
@@ -86,6 +88,14 @@ export class TasksGateway implements OnGatewayConnection, OnGatewayDisconnect {
       error,
     };
     this.server.emit(WsEvent.MATERIAL_ANALYSIS_FAILED, payload);
+  }
+
+  emitMaterialAnalysisStep(materialId: string, step: MaterialAnalysisStepEvent['step']) {
+    const payload: MaterialAnalysisStepEvent = {
+      material_id: materialId,
+      step,
+    };
+    this.server.emit(WsEvent.MATERIAL_ANALYSIS_STEP, payload);
   }
 
   emitScriptGenerated(scriptId: string) {

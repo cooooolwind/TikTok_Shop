@@ -7,6 +7,7 @@ import type {
   TaskFailedEvent,
   MaterialAnalyzedEvent,
   MaterialAnalysisFailedEvent,
+  MaterialAnalysisStepEvent,
   ScriptGeneratedEvent,
 } from '@aigc/shared-types';
 
@@ -19,6 +20,7 @@ export interface UseSocketReturn {
   onFailed: (cb: (data: TaskFailedEvent) => void) => () => void;
   onMaterialAnalyzed: (cb: (data: MaterialAnalyzedEvent) => void) => () => void;
   onMaterialAnalysisFailed: (cb: (data: MaterialAnalysisFailedEvent) => void) => () => void;
+  onMaterialAnalysisStep: (cb: (data: MaterialAnalysisStepEvent) => void) => () => void;
   onScriptGenerated: (cb: (data: ScriptGeneratedEvent) => void) => () => void;
 }
 
@@ -85,6 +87,11 @@ export function useSocket(): UseSocketReturn {
     return () => { socketRef.current?.off(WsEvent.MATERIAL_ANALYSIS_FAILED, cb); };
   }, []);
 
+  const onMaterialAnalysisStep = useCallback((cb: (data: MaterialAnalysisStepEvent) => void) => {
+    socketRef.current?.on(WsEvent.MATERIAL_ANALYSIS_STEP, cb);
+    return () => { socketRef.current?.off(WsEvent.MATERIAL_ANALYSIS_STEP, cb); };
+  }, []);
+
   const onScriptGenerated = useCallback((cb: (data: ScriptGeneratedEvent) => void) => {
     socketRef.current?.on(WsEvent.SCRIPT_GENERATED, cb);
     return () => { socketRef.current?.off(WsEvent.SCRIPT_GENERATED, cb); };
@@ -99,6 +106,7 @@ export function useSocket(): UseSocketReturn {
     onFailed,
     onMaterialAnalyzed,
     onMaterialAnalysisFailed,
+    onMaterialAnalysisStep,
     onScriptGenerated,
   };
 }
