@@ -14,12 +14,14 @@ export const WsEvent = {
   MATERIAL_ANALYZED: 'material:analyzed',
   MATERIAL_ANALYSIS_FAILED: 'material:analysis_failed',
   MATERIAL_ANALYSIS_STEP: 'material:analysis_step',
+  MATERIAL_EMBEDDING_COMPLETE: 'material:embedding_complete',
+  MATERIAL_EMBEDDING_FAILED: 'material:embedding_failed',
   SCRIPT_GENERATED: 'script:generated',
 } as const;
 
 // ===== 素材分析步骤 =====
 
-export type MaterialAnalysisStep = 'transcoding' | 'uploading' | 'analyzing';
+export type MaterialAnalysisStep = 'transcoding' | 'uploading' | 'analyzing' | 'embedding';
 
 // ===== 事件负载类型 =====
 
@@ -60,6 +62,15 @@ export interface MaterialAnalysisFailedEvent {
 export interface MaterialAnalysisStepEvent {
   material_id: string;
   step: MaterialAnalysisStep;
+}
+
+export interface MaterialEmbeddingCompleteEvent {
+  material_id: string;
+}
+
+export interface MaterialEmbeddingFailedEvent {
+  material_id: string;
+  error?: string;
 }
 
 export interface ScriptGeneratedEvent {

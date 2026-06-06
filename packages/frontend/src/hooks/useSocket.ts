@@ -8,6 +8,8 @@ import type {
   MaterialAnalyzedEvent,
   MaterialAnalysisFailedEvent,
   MaterialAnalysisStepEvent,
+  MaterialEmbeddingCompleteEvent,
+  MaterialEmbeddingFailedEvent,
   ScriptGeneratedEvent,
 } from '@aigc/shared-types';
 
@@ -21,6 +23,8 @@ export interface UseSocketReturn {
   onMaterialAnalyzed: (cb: (data: MaterialAnalyzedEvent) => void) => () => void;
   onMaterialAnalysisFailed: (cb: (data: MaterialAnalysisFailedEvent) => void) => () => void;
   onMaterialAnalysisStep: (cb: (data: MaterialAnalysisStepEvent) => void) => () => void;
+  onMaterialEmbeddingComplete: (cb: (data: MaterialEmbeddingCompleteEvent) => void) => () => void;
+  onMaterialEmbeddingFailed: (cb: (data: MaterialEmbeddingFailedEvent) => void) => () => void;
   onScriptGenerated: (cb: (data: ScriptGeneratedEvent) => void) => () => void;
 }
 
@@ -92,6 +96,16 @@ export function useSocket(): UseSocketReturn {
     return () => { socketRef.current?.off(WsEvent.MATERIAL_ANALYSIS_STEP, cb); };
   }, []);
 
+  const onMaterialEmbeddingComplete = useCallback((cb: (data: MaterialEmbeddingCompleteEvent) => void) => {
+    socketRef.current?.on(WsEvent.MATERIAL_EMBEDDING_COMPLETE, cb);
+    return () => { socketRef.current?.off(WsEvent.MATERIAL_EMBEDDING_COMPLETE, cb); };
+  }, []);
+
+  const onMaterialEmbeddingFailed = useCallback((cb: (data: MaterialEmbeddingFailedEvent) => void) => {
+    socketRef.current?.on(WsEvent.MATERIAL_EMBEDDING_FAILED, cb);
+    return () => { socketRef.current?.off(WsEvent.MATERIAL_EMBEDDING_FAILED, cb); };
+  }, []);
+
   const onScriptGenerated = useCallback((cb: (data: ScriptGeneratedEvent) => void) => {
     socketRef.current?.on(WsEvent.SCRIPT_GENERATED, cb);
     return () => { socketRef.current?.off(WsEvent.SCRIPT_GENERATED, cb); };
@@ -107,6 +121,8 @@ export function useSocket(): UseSocketReturn {
     onMaterialAnalyzed,
     onMaterialAnalysisFailed,
     onMaterialAnalysisStep,
+    onMaterialEmbeddingComplete,
+    onMaterialEmbeddingFailed,
     onScriptGenerated,
   };
 }

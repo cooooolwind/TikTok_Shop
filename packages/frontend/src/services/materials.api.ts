@@ -8,6 +8,7 @@ import type {
   MaterialUploadResponse,
   SimilarSearchRequest,
   SimilarSearchResult,
+  EmbeddingBackfillResponse,
 } from '@aigc/shared-types';
 import { unwrapResponse } from './response';
 
@@ -43,5 +44,17 @@ export const materialsApi = {
   searchSimilar: async (data: SimilarSearchRequest) =>
     unwrapResponse<SimilarSearchResult[]>(
       await client.post<unknown, SimilarSearchResult[] | ApiResponse<SimilarSearchResult[]>>(`${BASE}/search/similar`, data),
+    ),
+  backfillEmbeddings: async (materialIds?: string[]) =>
+    unwrapResponse<EmbeddingBackfillResponse>(
+      await client.post<unknown, EmbeddingBackfillResponse | ApiResponse<EmbeddingBackfillResponse>>(`${BASE}/search/backfill`, {
+        materialIds,
+      }),
+    ),
+  reEmbed: async (id: string) =>
+    unwrapResponse<{ id: string; has_embedding: boolean; error?: string }>(
+      await client.post<unknown, { id: string; has_embedding: boolean; error?: string } | ApiResponse<{ id: string; has_embedding: boolean; error?: string }>>(
+        `${BASE}/${id}/re-embed`,
+      ),
     ),
 };

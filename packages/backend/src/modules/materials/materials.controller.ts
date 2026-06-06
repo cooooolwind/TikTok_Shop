@@ -50,6 +50,12 @@ export class MaterialsController {
     return this.materialsService.searchSimilar(body);
   }
 
+  @Post('search/backfill')
+  @ApiOperation({ summary: '回填向量嵌入（批量）' })
+  backfillEmbeddings(@Body() body: { materialIds?: string[] }) {
+    return this.materialsService.backfillEmbeddings(body.materialIds);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: '素材详情' })
   findOne(@Param('id') id: string) {
@@ -66,6 +72,12 @@ export class MaterialsController {
   @ApiOperation({ summary: '触发 AI 打标' })
   analyze(@Param('id') id: string) {
     return this.materialsService.analyze(id);
+  }
+
+  @Post(':id/re-embed')
+  @ApiOperation({ summary: '仅重新语义向量化（不重新 AI 分析）' })
+  reEmbed(@Param('id') id: string) {
+    return this.materialsService.reEmbedMaterial(id);
   }
 
   @Get(':id/slices')

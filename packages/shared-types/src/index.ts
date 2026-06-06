@@ -14,8 +14,11 @@ export type {
   MaterialDetail,
   MaterialUploadResponse,
   AnalyzeResponse,
+  SimilarSearchMode,
   SimilarSearchRequest,
   SimilarSearchResult,
+  EmbeddingBackfillRequest,
+  EmbeddingBackfillResponse,
   MaterialListQuery,
 } from './material';
 
@@ -112,6 +115,8 @@ export {
   type MaterialAnalyzedEvent,
   type MaterialAnalysisFailedEvent,
   type MaterialAnalysisStepEvent,
+  type MaterialEmbeddingCompleteEvent,
+  type MaterialEmbeddingFailedEvent,
   type MaterialAnalysisStep,
   type ScriptGeneratedEvent,
 } from './websocket';
