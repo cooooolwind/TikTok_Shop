@@ -50,6 +50,12 @@ export class MaterialsController {
     return this.materialsService.searchSimilar(body);
   }
 
+  @Post('search/backfill')
+  @ApiOperation({ summary: '回填向量嵌入（批量）' })
+  backfillEmbeddings(@Body() body: { materialIds?: string[] }) {
+    return this.materialsService.backfillEmbeddings(body.materialIds);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: '素材详情' })
   findOne(@Param('id') id: string) {
