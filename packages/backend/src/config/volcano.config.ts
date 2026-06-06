@@ -19,6 +19,12 @@ export default registerAs('volcano', () => ({
   videoBaseUrl: process.env.VOLCANO_VIDEO_BASE_URL || process.env.VOLCANO_BASE_URL || '',
   videoEndpoint: process.env.VOLCANO_VIDEO_ENDPOINT || 'ep-20260514120705-pqv86',
 
+  // 向量化模型 (Embedding)
+  embeddingApiKey: process.env.VOLCANO_EMBEDDING_API_KEY || process.env.VOLCANO_API_KEY || '',
+  embeddingBaseUrl: process.env.VOLCANO_EMBEDDING_BASE_URL || process.env.VOLCANO_BASE_URL || '',
+  embeddingEndpoint: process.env.VOLCANO_EMBEDDING_ENDPOINT || '',
+  embeddingDimensions: Number(process.env.VOLCANO_EMBEDDING_DIMENSIONS || '2048'),
+
   // 视频生成控制
   videoMaxDuration: Number(process.env.VOLCANO_VIDEO_MAX_DURATION || '12'),
   videoPollingMaxAttempts: Number(process.env.VOLCANO_VIDEO_POLLING_MAX_ATTEMPTS || '120'),
