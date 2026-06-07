@@ -81,7 +81,7 @@ export default function TaskDetail() {
           { title: `任务 ${formatGenerationTaskDisplayId(task)}` },
         ]}
         extra={
-          <Space>
+          <Space wrap>
             {task.status === 'failed' && task.error?.retryable && (
               <Button icon={<ReloadOutlined />} onClick={handleRetry}>
                 从失败镜头继续

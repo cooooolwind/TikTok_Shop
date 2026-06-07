@@ -106,7 +106,7 @@ export default function VideoPreview() {
           { title: '视频预览' },
         ]}
         extra={
-          <Space>
+          <Space wrap>
             <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/creation/tasks/${task.id}`)}>
               返回任务
             </Button>
