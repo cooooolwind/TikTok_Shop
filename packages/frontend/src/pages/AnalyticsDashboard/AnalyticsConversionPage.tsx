@@ -138,7 +138,7 @@ export default function AnalyticsConversionPage() {
         <Col xs={12} sm={6}>
           <StatCard
             title="GMV 环比"
-            value={overview?.period_comparison?.gmv_change ?? 0}
+            value={(overview?.period_comparison?.gmv_change ?? 0).toFixed(1)}
             suffix="%"
             change={overview?.period_comparison?.gmv_change}
             loading={loading}
@@ -147,7 +147,7 @@ export default function AnalyticsConversionPage() {
         <Col xs={12} sm={6}>
           <StatCard
             title="ROI 环比"
-            value={overview?.period_comparison?.roi_change ?? 0}
+            value={(overview?.period_comparison?.roi_change ?? 0).toFixed(1)}
             suffix="%"
             change={overview?.period_comparison?.roi_change}
             loading={loading}
