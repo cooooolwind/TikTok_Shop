@@ -203,6 +203,9 @@ export class AnalyticsMockGenerator {
   // ===== 转化 =====
 
   generateConversionOverview(): ConversionOverview {
+    if (this.seed.totalVideos === 0) {
+      return { total_exposure: 0, ctr: 0, cvr: 0, gmv: 0, roi: 0, period_comparison: { gmv_change: 0, roi_change: 0 } };
+    }
     const avgExposurePerVideo = this.rng.int(500, 5000);
     const totalExposure = this.seed.totalVideos * avgExposurePerVideo;
     const ctr = this.rng.range(0.02, 0.05);
@@ -228,6 +231,9 @@ export class AnalyticsMockGenerator {
   }
 
   generateConversionTrends(dates: string[]): ConversionTrend[] {
+    if (this.seed.totalVideos === 0) {
+      return dates.map(date => ({ date, exposure: 0, click: 0, order: 0, gmv: 0 }));
+    }
     return dates.map((date) => {
       const exposure = this.rng.int(3000, 20000);
       const ctr = this.rng.range(0.02, 0.05);
@@ -240,6 +246,7 @@ export class AnalyticsMockGenerator {
   }
 
   generateCategoryConversion(): CategoryConversion[] {
+    if (this.seed.totalVideos === 0) return [];
     return CATEGORIES.map((cat) => {
       const videoCount = this.rng.int(5, Math.max(6, Math.ceil(this.seed.totalVideos / 3)));
       const ctr = this.rng.range(0.02, 0.05);
@@ -262,6 +269,7 @@ export class AnalyticsMockGenerator {
   }
 
   generateFunnel(): FunnelStage[] {
+    if (this.seed.totalVideos === 0) return [];
     const exposure = this.rng.int(80000, 200000);
     const ctr = 0.032;
     const click = Math.round(exposure * ctr);
@@ -279,6 +287,7 @@ export class AnalyticsMockGenerator {
   }
 
   generateDurationCVR(): DurationCVR[] {
+    if (this.seed.totalVideos === 0) return [];
     return [
       { range: '< 9s', video_count: this.rng.int(5, 20), cvr: Math.round(this.rng.range(0.012, 0.018) * 10000) / 10000 },
       { range: '9-15s', video_count: this.rng.int(20, 60), cvr: Math.round(this.rng.range(0.02, 0.028) * 10000) / 10000 },
@@ -290,6 +299,7 @@ export class AnalyticsMockGenerator {
   // ===== 策略 =====
 
   generateStrategyFactors(): StrategyFactor[] {
+    if (this.seed.totalVideos === 0) return [];
     return [
       { type: 'pain_point', label: '痛点提问', icon: 'question', ctr: Number((this.rng.range(3.2, 4.2)).toFixed(2)), usage_pct: this.rng.int(25, 35) },
       { type: 'comparison', label: '效果对比', icon: 'swap', ctr: Number((this.rng.range(3.0, 3.8)).toFixed(2)), usage_pct: this.rng.int(20, 30) },
@@ -301,6 +311,7 @@ export class AnalyticsMockGenerator {
   }
 
   generateStrategyFormula(): StrategyFormula {
+    if (this.seed.totalVideos === 0) return { features: [] };
     return {
       features: [
         { name: '快节奏剪辑 (<2s/镜)', score: 92, description: '提升完播率的关键因素' },
@@ -314,6 +325,7 @@ export class AnalyticsMockGenerator {
   }
 
   generateABComparison(): ABComparison {
+    if (this.seed.totalVideos === 0) return { version_a_name: '', version_b_name: '', metrics: [] };
     return {
       version_a_name: '痛点Hook版',
       version_b_name: '效果对比版',
@@ -327,6 +339,7 @@ export class AnalyticsMockGenerator {
   }
 
   generateRhythmCompleteness(): RhythmCompleteness[] {
+    if (this.seed.totalVideos === 0) return [];
     return [
       { rhythm: '快切(<2s)', completion_rate: Math.round(this.rng.range(65, 78)) },
       { rhythm: '中速(2-4s)', completion_rate: Math.round(this.rng.range(55, 68)) },
@@ -335,6 +348,7 @@ export class AnalyticsMockGenerator {
   }
 
   generateSubtitleStrategy(): SubtitleStrategy[] {
+    if (this.seed.totalVideos === 0) return [];
     return [
       { strategy: '全程字幕', cvr: Number((this.rng.range(1.8, 2.4)).toFixed(1)) },
       { strategy: '关键字幕', cvr: Number((this.rng.range(1.5, 2.0)).toFixed(1)) },
@@ -343,6 +357,7 @@ export class AnalyticsMockGenerator {
   }
 
   generateCTAPosition(): CTAPosition[] {
+    if (this.seed.totalVideos === 0) return [];
     return [
       { position: '视频末尾', ctr: Number((this.rng.range(3.2, 4.2)).toFixed(1)) },
       { position: '视频中部', ctr: Number((this.rng.range(2.5, 3.5)).toFixed(1)) },
@@ -351,6 +366,7 @@ export class AnalyticsMockGenerator {
   }
 
   generateBGMEffect(): BGMEffect[] {
+    if (this.seed.totalVideos === 0) return [];
     return [
       { style: '快节奏', completion_rate: Math.round(this.rng.range(62, 75)) },
       { style: '舒缓', completion_rate: Math.round(this.rng.range(50, 62)) },
