@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Typography, Breadcrumb } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import { useMediaQuery } from '../../../hooks/useMediaQuery';
 
 const { Title } = Typography;
 
@@ -17,6 +18,7 @@ interface PageHeaderProps {
 
 export default function PageHeader({ title, breadcrumbs, extra }: PageHeaderProps) {
   const navigate = useNavigate();
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   return (
     <div style={{ marginBottom: 24 }}>
@@ -32,9 +34,17 @@ export default function PageHeader({ title, breadcrumbs, extra }: PageHeaderProp
           }))}
         />
       )}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div 
+        style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: isMobile ? 'flex-start' : 'center',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? 12 : 0
+        }}
+      >
         <Title level={3} style={{ margin: 0 }}>{title}</Title>
-        {extra && <div>{extra}</div>}
+        {extra && <div style={{ width: isMobile ? '100%' : 'auto' }}>{extra}</div>}
       </div>
     </div>
   );

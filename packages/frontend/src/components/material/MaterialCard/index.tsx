@@ -55,7 +55,9 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
                 alt={material.name}
                 preview={false}
                 onClick={handlePreview}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                width="100%"
+                height="100%"
+                style={{ objectFit: 'cover', cursor: 'pointer' }}
                 fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
               />
               {!isVideo && previewSrc && (
@@ -150,14 +152,14 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
         description={
           <Space direction="vertical" size={4} style={{ width: '100%' }}>
             <Text type="secondary" style={{ fontSize: 12 }}>{formatBytes(material.size)}</Text>
-            <div>
+            <Space wrap size={[4, 4]}>
               <StatusTag status={material.status} labels={MATERIAL_STATUS_LABELS} />
               {material.has_embedding ? (
-                <Tag color="green" style={{ marginLeft: 4 }}>可语义搜索</Tag>
+                <Tag color="green" style={{ margin: 0 }}>可语义搜索</Tag>
               ) : (
-                <Tag color="default" style={{ marginLeft: 4 }}>不可语义搜索</Tag>
+                <Tag color="default" style={{ margin: 0 }}>不可语义搜索</Tag>
               )}
-            </div>
+            </Space>
             {material.category && (
               <Tag>{material.category}</Tag>
             )}

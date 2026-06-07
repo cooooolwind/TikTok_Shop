@@ -296,23 +296,25 @@ export default function VideoEditor() {
 
   if (isMobile) {
     return (
-      <section className={styles.mobilePrompt}>
-        <div className={styles.mobilePromptCard}>
-          <Title level={3}>剪辑工作台建议在电脑端使用</Title>
-          <Text type="secondary">
-            视频剪辑需要更大的屏幕完成素材拖拽、片段裁剪、多轨时间线和导出检查。请在电脑端打开当前任务继续编辑。
-          </Text>
-          <Space wrap className={styles.mobilePromptActions}>
-            <Button
-              type="primary"
-              onClick={() => navigate(routePath.creationTask(taskId ?? currentTask.id))}
-            >
-              返回任务详情
-            </Button>
-            <Button onClick={() => navigate('/creation')}>返回创作工作台</Button>
-          </Space>
-        </div>
-      </section>
+      <div className={styles.editorShell} style={{ display: 'block', minHeight: 'calc(100vh - 160px)' }}>
+        <section className={styles.mobilePrompt}>
+          <div className={styles.mobilePromptCard}>
+            <Title level={3}>剪辑工作台建议在电脑端使用</Title>
+            <Text type="secondary">
+              视频剪辑需要更大的屏幕完成素材拖拽、片段裁剪、多轨时间线和导出检查。请在电脑端打开当前任务继续编辑。
+            </Text>
+            <Space wrap className={styles.mobilePromptActions}>
+              <Button
+                type="primary"
+                onClick={() => navigate(routePath.creationTask(taskId ?? currentTask.id))}
+              >
+                返回任务详情
+              </Button>
+              <Button onClick={() => navigate('/creation')}>返回创作工作台</Button>
+            </Space>
+          </div>
+        </section>
+      </div>
     );
   }
 
