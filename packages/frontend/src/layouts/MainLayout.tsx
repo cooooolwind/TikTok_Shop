@@ -295,52 +295,65 @@ export default function MainLayout() {
       <div id="mobile-grid-menu" className={mobileDrawerOpen ? 'show' : ''}>
         <div className="mobile-grid-menu-inner">
           <Row justify="center" style={{ width: '100%', maxWidth: '400px', margin: '0 auto', padding: '0 16px' }}>
-            {/* 提取有效导航项并展平显示 */}
+            {/* 提取有效导航项并分组显示 */}
             {[
+              { type: 'header', label: '核心功能', isFirst: true },
               { key: ROUTES.HOME, icon: <HomeOutlined />, label: '首页' },
+              { key: ROUTES.CREATION, icon: <VideoCameraOutlined />, label: '创作工作室' },
+              { key: ROUTES.EDITOR, icon: <ScissorOutlined />, label: '视频剪辑' },
+              
+              { type: 'header', label: '资源与工具' },
               { key: ROUTES.MATERIALS, icon: <PictureOutlined />, label: '素材管理' },
               { key: ROUTES.SCRIPTS, icon: <FileTextOutlined />, label: '剧本列表' },
+              { key: ROUTES.TEMPLATE_MARKET, icon: <ShopOutlined />, label: '模板广场' },
               { key: ROUTES.REFERENCES, icon: <BookOutlined />, label: '参考视频' },
               { key: ROUTES.TEMPLATES, icon: <BulbOutlined />, label: '灵感模板' },
-              { key: ROUTES.CREATION, icon: <VideoCameraOutlined />, label: '创作工作室' },
-              { key: ROUTES.TEMPLATE_MARKET, icon: <ShopOutlined />, label: '模板广场' },
-              { key: ROUTES.EDITOR, icon: <ScissorOutlined />, label: '视频剪辑' },
+              
+              { type: 'header', label: '数据看板' },
               { key: ROUTES.ANALYTICS_OVERVIEW, icon: <DashboardOutlined />, label: '产出总览' },
               { key: ROUTES.ANALYTICS_COST, icon: <DollarOutlined />, label: '成本分析' },
               { key: ROUTES.ANALYTICS_CONVERSION, icon: <RiseOutlined />, label: '转化分析' },
               { key: ROUTES.ANALYTICS_STRATEGY, icon: <ExperimentOutlined />, label: '策略洞察' },
-            ].map((item, index) => (
-              <Col span={8} className="mobile-grid-cell" key={item.key} style={{ animationDelay: `${index * 20}ms` }}>
-                <div
-                  className="mobile-grid-item"
-                  onClick={() => {
-                    navigate(item.key);
-                    setMobileDrawerOpen(false);
-                  }}
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
-                </div>
-              </Col>
-            ))}
-            
-            <Col span={24}>
-              <div className="mobile-grid-group-header" style={{ marginTop: '1rem', borderTop: '1px solid rgba(128,128,128,0.2)', paddingTop: '1rem', paddingBottom: '0.5rem', opacity: 0.6, fontSize: '0.8rem', textAlign: 'center' }}>
-                主题设置
-              </div>
-            </Col>
-            <Col span={8} className="mobile-grid-cell" style={{ animationDelay: `${8 * 20}ms` }}>
-                <div
-                  className="mobile-grid-item"
-                  onClick={() => {
-                    setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
-                    setMobileDrawerOpen(false);
-                  }}
-                >
-                  {themeMode === 'dark' ? <SunOutlined /> : <MoonOutlined />}
-                  <span>{themeMode === 'dark' ? '开灯' : '关灯'}</span>
-                </div>
-              </Col>
+
+              { type: 'header', label: '主题设置' },
+              { key: 'THEME_TOGGLE', icon: themeMode === 'dark' ? <SunOutlined /> : <MoonOutlined />, label: themeMode === 'dark' ? '开灯' : '关灯' },
+            ].map((item, index) => {
+              if (item.type === 'header') {
+                return (
+                  <Col span={24} key={item.label}>
+                    <div className="mobile-grid-group-header" style={{ 
+                      marginTop: item.isFirst ? '0.5rem' : '1.5rem', 
+                      paddingTop: item.isFirst ? 0 : '1rem', 
+                      borderTop: item.isFirst ? 'none' : '1px solid rgba(128,128,128,0.2)', 
+                      paddingBottom: '0.5rem', 
+                      opacity: 0.6, 
+                      fontSize: '0.8rem', 
+                      textAlign: 'center' 
+                    }}>
+                      {item.label}
+                    </div>
+                  </Col>
+                );
+              }
+              return (
+                <Col span={8} className="mobile-grid-cell" key={item.key} style={{ animationDelay: `${index * 20}ms` }}>
+                  <div
+                    className="mobile-grid-item"
+                    onClick={() => {
+                      if (item.key === 'THEME_TOGGLE') {
+                        setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
+                      } else if (item.key) {
+                        navigate(item.key);
+                      }
+                      setMobileDrawerOpen(false);
+                    }}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </div>
+                </Col>
+              );
+            })}
           </Row>
         </div>
       </div>
