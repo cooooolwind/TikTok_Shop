@@ -191,8 +191,9 @@ function pieOption(data: { name: string; value: number }[]) {
     series: [
       {
         type: 'pie',
-        radius: ['45%', '70%'],
-        avoidLabelOverlap: false,
+        radius: ['40%', '55%'],
+        center: ['50%', '40%'],
+        avoidLabelOverlap: true,
         itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
         label: { show: true, formatter: '{b}\n{d}%' },
         data,
@@ -207,7 +208,7 @@ function AttributionChart({ data }: { data: AttributionData[] }) {
 
   const option = {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    grid: { left: 120, right: 50, top: 10, bottom: 20 },
+    grid: { left: 120, right: 50, top: 10, bottom: 40 },
     xAxis: { type: 'value' },
     yAxis: {
       type: 'category',
@@ -236,8 +237,9 @@ function DurationChart({ data }: { data: DurationDistribution[] }) {
     series: [
       {
         type: 'pie',
-        radius: ['45%', '70%'],
-        avoidLabelOverlap: false,
+        radius: ['40%', '55%'],
+        center: ['50%', '40%'],
+        avoidLabelOverlap: true,
         itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
         label: { show: true, formatter: '{b}\n{d}%' },
         data: rows.map((item) => ({

@@ -68,25 +68,34 @@ export class AnalyticsService {
   ): Promise<AnalyticsSeed> {
     const tasks = await this.tasksRepository
       .createQueryBuilder('task')
-      .where('task.created_at >= :start', { start: new Date(startDate) })
-      .andWhere('task.created_at <= :end', { end: new Date(endDate) })
+      .where('task.created_at >= :start', { start: new Date(`${startDate}T00:00:00.000Z`) })
+      .andWhere('task.created_at <= :end', { end: new Date(`${endDate}T23:59:59.999Z`) })
       .getMany();
 
-    const materials = await this.materialsRepository.count();
-    const scripts = await this.scriptsRepository.count();
+    const isMock = process.env.MOCK_DASHBOARD !== 'false';
+    const BASE_TOTAL_VIDEOS = isMock ? 125 : 0;
+    const BASE_DONE_COUNT = isMock ? 118 : 0;
+    const BASE_FAILED_COUNT = isMock ? 7 : 0;
+    const BASE_MATERIALS = isMock ? 200 : 0;
+    const BASE_SCRIPTS = isMock ? 150 : 0;
 
-    const doneCount = tasks.filter((t) => t.status === 'done').length;
-    const failedCount = tasks.filter((t) => t.status === 'failed').length;
-    const totalVideos = tasks.length;
+    const materials = await this.materialsRepository.count() + BASE_MATERIALS;
+    const scripts = await this.scriptsRepository.count() + BASE_SCRIPTS;
+
+    const doneCount = tasks.filter((t) => t.status === 'done').length + BASE_DONE_COUNT;
+    const failedCount = tasks.filter((t) => t.status === 'failed').length + BASE_FAILED_COUNT;
+    const totalVideos = tasks.length + BASE_TOTAL_VIDEOS;
     const successRate = totalVideos > 0 ? doneCount / totalVideos : 0;
 
     const doneTasks = tasks.filter((t) => t.status === 'done' && t.completedAt);
+    const mockAvgDuration = 24.5;
+    const totalRealDuration = doneTasks.reduce(
+      (sum, t) => sum + (t.completedAt!.getTime() - t.createdAt.getTime()) / 1000,
+      0,
+    );
     const avgDuration =
-      doneTasks.length > 0
-        ? doneTasks.reduce(
-            (sum, t) => sum + (t.completedAt!.getTime() - t.createdAt.getTime()) / 1000,
-            0,
-          ) / doneTasks.length
+      totalVideos > 0
+        ? (totalRealDuration + (BASE_DONE_COUNT * mockAvgDuration)) / doneCount
         : 0;
 
     const dates = AnalyticsMockGenerator.generateDateRange(startDate, endDate, granularity);
@@ -94,19 +103,23 @@ export class AnalyticsService {
       const dayTasks = tasks.filter(
         (t) => t.createdAt.toISOString().split('T')[0] === date,
       );
+      const seedVal = date.split('-').reduce((a, b) => a + parseInt(b, 10), 0);
+      const mockTotal = isMock ? 3 + (seedVal % 3) : 0;
+      const mockDone = isMock ? Math.floor(mockTotal * 0.94) : 0;
+      const mockFailed = mockTotal - mockDone;
       return {
         date,
-        done: dayTasks.filter((t) => t.status === 'done').length,
-        failed: dayTasks.filter((t) => t.status === 'failed').length,
-        total: dayTasks.length,
+        done: dayTasks.filter((t) => t.status === 'done').length + mockDone,
+        failed: dayTasks.filter((t) => t.status === 'failed').length + mockFailed,
+        total: dayTasks.length + mockTotal,
       };
     });
 
     const categoryDistribution = [
-      { category: 'product', count: await this.materialsRepository.count({ where: { category: 'product' } }) },
-      { category: 'scene', count: await this.materialsRepository.count({ where: { category: 'scene' } }) },
-      { category: 'model', count: await this.materialsRepository.count({ where: { category: 'model' } }) },
-      { category: 'other', count: await this.materialsRepository.count({ where: { category: 'other' } }) },
+      { category: 'product', count: await this.materialsRepository.count({ where: { category: 'product' } }) + Math.floor(BASE_MATERIALS * 0.4) },
+      { category: 'scene', count: await this.materialsRepository.count({ where: { category: 'scene' } }) + Math.floor(BASE_MATERIALS * 0.3) },
+      { category: 'model', count: await this.materialsRepository.count({ where: { category: 'model' } }) + Math.floor(BASE_MATERIALS * 0.2) },
+      { category: 'other', count: await this.materialsRepository.count({ where: { category: 'other' } }) + Math.floor(BASE_MATERIALS * 0.1) },
     ].filter((c) => c.count > 0);
 
     const modeCounts = await this.scriptsRepository
@@ -244,21 +257,55 @@ export class AnalyticsService {
   ): Promise<DurationDistribution[]> {
     const tasks = await this.tasksRepository
       .createQueryBuilder('task')
-      .where('task.created_at >= :start', { start: new Date(query.start_date) })
-      .andWhere('task.created_at <= :end', { end: new Date(query.end_date) })
+      .where('task.created_at >= :start', { start: new Date(`${query.start_date}T00:00:00.000Z`) })
+      .andWhere('task.created_at <= :end', { end: new Date(`${query.end_date}T23:59:59.999Z`) })
       .andWhere('task.status = :status', { status: 'done' })
       .getMany();
 
-    const buckets = [
-      { range: '< 10s', min: 0, max: 10, count: 0 },
-      { range: '10s - 30s', min: 10, max: 30, count: 0 },
-      { range: '30s - 60s', min: 30, max: 60, count: 0 },
-      { range: '> 60s', min: 60, max: Infinity, count: 0 },
-    ];
+    const durations = tasks
+      .filter((t) => t.completedAt)
+      .map((t) => (t.completedAt!.getTime() - t.createdAt.getTime()) / 1000);
 
-    for (const task of tasks) {
-      if (!task.completedAt) continue;
-      const duration = (task.completedAt.getTime() - task.createdAt.getTime()) / 1000;
+    let buckets: { range: string; min: number; max: number; count: number }[] = [];
+
+    if (durations.length === 0) {
+      buckets = [
+        { range: '< 10s', min: 0, max: 10, count: 0 },
+        { range: '10s - 30s', min: 10, max: 30, count: 0 },
+        { range: '30s - 60s', min: 30, max: 60, count: 0 },
+        { range: '> 60s', min: 60, max: Infinity, count: 0 },
+      ];
+    } else {
+      const minD = Math.floor(Math.min(...durations));
+      const maxD = Math.ceil(Math.max(...durations));
+      
+      let diff = maxD - minD;
+      if (diff === 0) diff = 10;
+      
+      let step = diff / 4;
+      if (step < 1) {
+        step = 1;
+      } else {
+        const mag = Math.pow(10, Math.floor(Math.log10(step)));
+        const normalized = step / mag;
+        if (normalized <= 1) step = 1 * mag;
+        else if (normalized <= 2) step = 2 * mag;
+        else if (normalized <= 5) step = 5 * mag;
+        else step = 10 * mag;
+      }
+      step = Math.ceil(step);
+      
+      const start = Math.floor(minD / step) * step;
+      
+      buckets = [
+        { range: `${start}s - ${start + step}s`, min: start, max: start + step, count: 0 },
+        { range: `${start + step}s - ${start + 2 * step}s`, min: start + step, max: start + 2 * step, count: 0 },
+        { range: `${start + 2 * step}s - ${start + 3 * step}s`, min: start + 2 * step, max: start + 3 * step, count: 0 },
+        { range: `> ${start + 3 * step}s`, min: start + 3 * step, max: Infinity, count: 0 },
+      ];
+    }
+
+    for (const duration of durations) {
       for (const bucket of buckets) {
         if (duration >= bucket.min && duration < bucket.max) {
           bucket.count++;
@@ -380,12 +427,23 @@ export class AnalyticsService {
   // ===== Home =====
 
   async getHomeStats(): Promise<HomeStats> {
-    const [totalVideos, totalMaterials, totalScripts] = await Promise.all([
+    const isMock = process.env.MOCK_DASHBOARD !== 'false';
+    const BASE_TOTAL_VIDEOS = isMock ? 125 : 0;
+    const BASE_MATERIALS = isMock ? 200 : 0;
+    const BASE_SCRIPTS = isMock ? 150 : 0;
+    const BASE_DONE_COUNT = isMock ? 118 : 0;
+
+    const [totalVideosDb, totalMaterialsDb, totalScriptsDb] = await Promise.all([
       this.tasksRepository.count(),
       this.materialsRepository.count(),
       this.scriptsRepository.count(),
     ]);
-    const doneCount = await this.tasksRepository.count({ where: { status: 'done' } });
+    const doneCountDb = await this.tasksRepository.count({ where: { status: 'done' } });
+
+    const totalVideos = totalVideosDb + BASE_TOTAL_VIDEOS;
+    const totalMaterials = totalMaterialsDb + BASE_MATERIALS;
+    const totalScripts = totalScriptsDb + BASE_SCRIPTS;
+    const doneCount = doneCountDb + BASE_DONE_COUNT;
     const successRate = totalVideos > 0 ? Math.round((doneCount / totalVideos) * 100) / 100 : 0;
 
     return { total_videos: totalVideos, total_materials: totalMaterials, total_scripts: totalScripts, success_rate: successRate };

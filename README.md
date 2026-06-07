@@ -166,6 +166,8 @@ TikTok_Shop/
 | 变量 | 说明 |
 | --- | --- |
 | `MOCK_MODE` | 开发阶段可设为 `true`，使用 AI mock 流程 |
+| `MOCK_DASHBOARD` | 是否为数据看板使用 Mock 数据，设为 `false` 时将请求外部统计系统 |
+| `STATISTIC_API_URL` | 外部统计系统的 API 基础地址 (当 MOCK_DASHBOARD=false 时必填) |
 | `VOLCANO_API_KEY` | 火山引擎 API Key，禁止提交真实密钥 |
 | `VOLCANO_IMAGE_API_KEY` / `VOLCANO_IMAGE_ENDPOINT` / `VOLCANO_IMAGE_BASE_URL` | Seedream 首帧生成配置；未单独配置时 API Key/Base URL 可复用 `VOLCANO_API_KEY` / `VOLCANO_BASE_URL` |
 | `VOLCANO_BASE_URL` | 火山引擎 API 基础地址 |

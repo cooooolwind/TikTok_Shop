@@ -128,12 +128,13 @@ export default function AnalyticsConversionPage() {
           <StatCard title="总曝光量" value={((overview?.total_exposure ?? 0) / 10000).toFixed(1)} suffix="万" loading={loading} />
         </Col>
         <Col xs={12} sm={6}>
-          <StatCard title="ROI" value={`${roi.toFixed(1)}x`} loading={loading} />
-          {roi > 0 && (
-            <div style={{ marginTop: 4, textAlign: 'center', fontSize: 12, color: '#999' }}>
-              每投入 1 元 AI 费用，赚回 ¥{(roi).toFixed(1)}
-            </div>
-          )}
+          <StatCard title="ROI" value={`${roi.toFixed(1)}x`} loading={loading}>
+            {roi > 0 && (
+              <div style={{ marginTop: 4, textAlign: 'center', fontSize: 12, color: '#999' }}>
+                每投入 1 元 AI 费用，赚回 ¥{(roi).toFixed(1)}
+              </div>
+            )}
+          </StatCard>
         </Col>
         <Col xs={12} sm={6}>
           <StatCard
@@ -195,6 +196,7 @@ function SankeyChart({ data }: { data: { stage: string; count: number; rate: num
   }
 
   const option = {
+    color: ['#1677ff', '#fa8c16', '#52c41a', '#ff4d4f'],
     tooltip: { trigger: 'item', triggerOn: 'mousemove' },
     series: [
       {
@@ -206,7 +208,6 @@ function SankeyChart({ data }: { data: { stage: string; count: number; rate: num
         links,
         label: { show: true, formatter: '{b}' },
         lineStyle: { color: 'gradient', curveness: 0.5 },
-        itemStyle: { color: ['#1677ff', '#fa8c16', '#52c41a', '#ff4d4f'] },
       },
     ],
   };
@@ -223,7 +224,7 @@ function BubbleMatrixChart({ data }: { data: { category: string; video_count: nu
       formatter: (p: { name: string; value: [number, number, number, number] }) =>
         `${p.name}<br/>视频: ${p.value[0]}<br/>CVR: ${(p.value[1] * 100).toFixed(2)}%<br/>GMV: ¥${p.value[2].toLocaleString()}<br/>ROI: ${p.value[3].toFixed(1)}x`,
     },
-    grid: { left: 80, right: 30, top: 20, bottom: 40 },
+    grid: { left: 80, right: 80, top: 40, bottom: 60 },
     xAxis: { name: '视频产出量', type: 'value' },
     yAxis: { name: 'CVR', type: 'value', axisLabel: { formatter: (v: number) => `${(v * 100).toFixed(1)}%` } },
     series: [
@@ -252,7 +253,7 @@ function DurationCVRChart({ data }: { data: { range: string; video_count: number
 
   const option = {
     tooltip: { trigger: 'axis' },
-    grid: { left: 60, right: 20, top: 20, bottom: 30 },
+    grid: { left: 60, right: 20, top: 40, bottom: 60 },
     xAxis: { type: 'category', data: rows.map((r) => r.range) },
     yAxis: { type: 'value', name: 'CVR', axisLabel: { formatter: (v: number) => `${(v * 100).toFixed(1)}%` } },
     series: [
@@ -284,8 +285,8 @@ function ROITrendChart({ data }: { data: { date: string; gmv: number }[] }) {
 
   const option = {
     tooltip: { trigger: 'axis' },
-    legend: { data: ['GMV'], bottom: 0 },
-    grid: { left: 70, right: 20, top: 20, bottom: 30 },
+    legend: { data: ['GMV'], top: 0 },
+    grid: { left: 70, right: 20, top: 60, bottom: 60 },
     xAxis: { type: 'category', data: rows.map((r) => r.date), axisLabel: { rotate: 45, fontSize: 10 } },
     yAxis: { type: 'value', axisLabel: { formatter: (v: number) => v >= 10000 ? `${(v / 10000).toFixed(0)}万` : `${v}` } },
     series: [
