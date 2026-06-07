@@ -176,17 +176,19 @@ export default function TemplateUsePage() {
           title="生成结果"
           style={{ marginTop: 16, borderRadius: 8 }}
           extra={
-            <Space wrap>
-              <Button icon={<CopyOutlined />} onClick={copyResult}>
-                复制结果
-              </Button>
-              <Button icon={<RedoOutlined />} onClick={generate} loading={generating}>
-                重新生成
-              </Button>
-              <Button type="primary" icon={<SaveOutlined />} onClick={saveResult} loading={saving}>
-                保存到我的作品
-              </Button>
-            </Space>
+            !isMobile && (
+              <Space wrap>
+                <Button icon={<CopyOutlined />} onClick={copyResult}>
+                  复制结果
+                </Button>
+                <Button icon={<RedoOutlined />} onClick={generate} loading={generating}>
+                  重新生成
+                </Button>
+                <Button type="primary" icon={<SaveOutlined />} onClick={saveResult} loading={saving}>
+                  保存到我的作品
+                </Button>
+              </Space>
+            )
           }
         >
           <Title level={4}>{result.title}</Title>
@@ -207,6 +209,21 @@ export default function TemplateUsePage() {
           <Paragraph strong>发布文案</Paragraph>
           <Paragraph>{result.publishCopy}</Paragraph>
           <Space wrap>{result.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)}</Space>
+          {isMobile && (
+            <div style={{ marginTop: 24 }}>
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <Button block type="primary" icon={<SaveOutlined />} onClick={saveResult} loading={saving}>
+                  保存到我的作品
+                </Button>
+                <Button block icon={<CopyOutlined />} onClick={copyResult}>
+                  复制结果
+                </Button>
+                <Button block icon={<RedoOutlined />} onClick={generate} loading={generating}>
+                  重新生成
+                </Button>
+              </Space>
+            </div>
+          )}
         </Card>
       )}
     </div>
