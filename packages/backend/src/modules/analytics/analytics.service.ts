@@ -262,16 +262,50 @@ export class AnalyticsService {
       .andWhere('task.status = :status', { status: 'done' })
       .getMany();
 
-    const buckets = [
-      { range: '< 10s', min: 0, max: 10, count: 0 },
-      { range: '10s - 30s', min: 10, max: 30, count: 0 },
-      { range: '30s - 60s', min: 30, max: 60, count: 0 },
-      { range: '> 60s', min: 60, max: Infinity, count: 0 },
-    ];
+    const durations = tasks
+      .filter((t) => t.completedAt)
+      .map((t) => (t.completedAt!.getTime() - t.createdAt.getTime()) / 1000);
 
-    for (const task of tasks) {
-      if (!task.completedAt) continue;
-      const duration = (task.completedAt.getTime() - task.createdAt.getTime()) / 1000;
+    let buckets: { range: string; min: number; max: number; count: number }[] = [];
+
+    if (durations.length === 0) {
+      buckets = [
+        { range: '< 10s', min: 0, max: 10, count: 0 },
+        { range: '10s - 30s', min: 10, max: 30, count: 0 },
+        { range: '30s - 60s', min: 30, max: 60, count: 0 },
+        { range: '> 60s', min: 60, max: Infinity, count: 0 },
+      ];
+    } else {
+      const minD = Math.floor(Math.min(...durations));
+      const maxD = Math.ceil(Math.max(...durations));
+      
+      let diff = maxD - minD;
+      if (diff === 0) diff = 10;
+      
+      let step = diff / 4;
+      if (step < 1) {
+        step = 1;
+      } else {
+        const mag = Math.pow(10, Math.floor(Math.log10(step)));
+        const normalized = step / mag;
+        if (normalized <= 1) step = 1 * mag;
+        else if (normalized <= 2) step = 2 * mag;
+        else if (normalized <= 5) step = 5 * mag;
+        else step = 10 * mag;
+      }
+      step = Math.ceil(step);
+      
+      const start = Math.floor(minD / step) * step;
+      
+      buckets = [
+        { range: `${start}s - ${start + step}s`, min: start, max: start + step, count: 0 },
+        { range: `${start + step}s - ${start + 2 * step}s`, min: start + step, max: start + 2 * step, count: 0 },
+        { range: `${start + 2 * step}s - ${start + 3 * step}s`, min: start + 2 * step, max: start + 3 * step, count: 0 },
+        { range: `> ${start + 3 * step}s`, min: start + 3 * step, max: Infinity, count: 0 },
+      ];
+    }
+
+    for (const duration of durations) {
       for (const bucket of buckets) {
         if (duration >= bucket.min && duration < bucket.max) {
           bucket.count++;
