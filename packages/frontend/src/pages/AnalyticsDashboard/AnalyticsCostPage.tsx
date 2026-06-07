@@ -87,12 +87,13 @@ export default function AnalyticsCostPage() {
             title="单视频平均成本"
             value={`¥${avgCost.toFixed(2)}`}
             loading={loading}
-          />
-          <div style={{ marginTop: 4, textAlign: 'center' }}>
-            <span style={{ fontSize: 12, color: costColors[costLevel] }}>
-              {costLabels[costLevel]}
-            </span>
-          </div>
+          >
+            <div style={{ marginTop: 4, textAlign: 'center' }}>
+              <span style={{ fontSize: 12, color: costColors[costLevel] }}>
+                {costLabels[costLevel]}
+              </span>
+            </div>
+          </StatCard>
         </Col>
         <Col xs={12} sm={6}>
           <StatCard
@@ -193,11 +194,18 @@ function NestedDonutChart({ data }: { data: { model: string; usage: string; cost
     '语义分析': '#52c41a', // green
   };
 
+  const modelNameMap: Record<string, string> = {
+    'ChatCompletion': '大语言模型',
+    'Seedream': '图片生成模型',
+    'Seedance': '视频生成模型',
+    'Doubao-embedding-vision': '多模态分析模型',
+  };
+
   const modelColors: Record<string, string> = {
-    'ChatCompletion': '#4096ff', // light blue
-    'Seedream': '#ffc069', // light orange
-    'Seedance': '#fa8c16', // orange
-    'Doubao-embedding-vision': '#73d13d', // light green
+    '大语言模型': '#4096ff', // light blue
+    '图片生成模型': '#ffc069', // light orange
+    '视频生成模型': '#fa8c16', // orange
+    '多模态分析模型': '#73d13d', // light green
   };
 
   const categories: Record<string, number> = {};
@@ -213,7 +221,8 @@ function NestedDonutChart({ data }: { data: { model: string; usage: string; cost
 
   const models: Record<string, number> = {};
   rows.forEach((r) => {
-    models[r.model] = (models[r.model] || 0) + r.cost;
+    const modelName = modelNameMap[r.model] || r.model;
+    models[modelName] = (models[modelName] || 0) + r.cost;
   });
   const outerData = Object.entries(models).map(([name, value]) => ({ 
     name, 
@@ -235,7 +244,8 @@ function NestedDonutChart({ data }: { data: { model: string; usage: string; cost
       {
         name: '功能分类',
         type: 'pie',
-        radius: ['0%', '45%'],
+        radius: ['0%', '35%'],
+        center: ['50%', '40%'],
         itemStyle: { borderRadius: 3, borderColor: token.colorBgContainer, borderWidth: 2 },
         label: { show: true, position: 'inner', formatter: '{b}\n{d}%', fontSize: 10, color: '#fff', textBorderColor: 'rgba(0,0,0,0.3)', textBorderWidth: 1 },
         data: innerData,
@@ -243,10 +253,11 @@ function NestedDonutChart({ data }: { data: { model: string; usage: string; cost
       {
         name: '模型',
         type: 'pie',
-        radius: ['55%', '75%'],
+        radius: ['45%', '60%'],
+        center: ['50%', '40%'],
         itemStyle: { borderRadius: 3, borderColor: token.colorBgContainer, borderWidth: 2 },
         label: { show: true, position: 'outside', formatter: '{b}\n¥{c}', fontSize: 11, color: token.colorText },
-        labelLine: { length: 15, length2: 15, lineStyle: { color: token.colorTextSecondary } },
+        labelLine: { length: 10, length2: 15, lineStyle: { color: token.colorTextSecondary } },
         data: outerData,
       },
     ],

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Card, Statistic, Typography } from 'antd';
 import { ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import type { StatCardConfig } from '../../../types';
@@ -6,10 +7,11 @@ const { Text } = Typography;
 
 interface StatCardProps extends StatCardConfig {
   onClick?: () => void;
+  children?: ReactNode;
 }
 
 export default function StatCard({
-  title, value, suffix, change, changePositive = true, icon, loading, onClick,
+  title, value, suffix, change, changePositive = true, icon, loading, onClick, children
 }: StatCardProps) {
   const renderChange = () => {
     if (change === undefined) return null;
@@ -36,6 +38,7 @@ export default function StatCard({
         loading={loading}
       />
       {renderChange()}
+      {children}
     </Card>
   );
 }
