@@ -297,61 +297,73 @@ export default function MainLayout() {
           <Row justify="center" style={{ width: '100%', maxWidth: '400px', margin: '0 auto', padding: '0 16px' }}>
             {/* 提取有效导航项并分组显示 */}
             {[
-              { type: 'header', label: '核心功能', isFirst: true },
-              { key: ROUTES.HOME, icon: <HomeOutlined />, label: '首页' },
-              { key: ROUTES.CREATION, icon: <VideoCameraOutlined />, label: '创作工作室' },
-              
-              { type: 'header', label: '资源与工具' },
-              { key: ROUTES.MATERIALS, icon: <PictureOutlined />, label: '素材管理' },
-              { key: ROUTES.SCRIPTS, icon: <FileTextOutlined />, label: '剧本列表' },
-              { key: ROUTES.TEMPLATE_MARKET, icon: <ShopOutlined />, label: '模板广场' },
-              { key: ROUTES.REFERENCES, icon: <BookOutlined />, label: '参考视频' },
-              { key: ROUTES.TEMPLATES, icon: <BulbOutlined />, label: '灵感模板' },
-              
-              { type: 'header', label: '数据看板' },
-              { key: ROUTES.ANALYTICS_OVERVIEW, icon: <DashboardOutlined />, label: '产出总览' },
-              { key: ROUTES.ANALYTICS_COST, icon: <DollarOutlined />, label: '成本分析' },
-              { key: ROUTES.ANALYTICS_CONVERSION, icon: <RiseOutlined />, label: '转化分析' },
-              { key: ROUTES.ANALYTICS_STRATEGY, icon: <ExperimentOutlined />, label: '策略洞察' },
-
-              { type: 'header', label: '主题设置' },
-              { key: 'THEME_TOGGLE', icon: themeMode === 'dark' ? <SunOutlined /> : <MoonOutlined />, label: themeMode === 'dark' ? '开灯' : '关灯' },
-            ].map((item, index) => {
-              if (item.type === 'header') {
-                return (
-                  <Col span={24} key={item.label}>
-                    <div className="mobile-grid-group-header" style={{ 
-                      marginTop: item.isFirst ? '0.5rem' : '1.5rem', 
-                      paddingTop: item.isFirst ? 0 : '1rem', 
-                      borderTop: item.isFirst ? 'none' : '1px solid rgba(128,128,128,0.2)', 
-                      paddingBottom: '0.5rem', 
-                      opacity: 0.6, 
-                      fontSize: '0.8rem', 
-                      textAlign: 'center' 
-                    }}>
-                      {item.label}
+              {
+                title: '核心功能',
+                items: [
+                  { key: ROUTES.HOME, icon: <HomeOutlined />, label: '首页' },
+                  { key: ROUTES.CREATION, icon: <VideoCameraOutlined />, label: '创作工作室' },
+                  { key: ROUTES.SCRIPTS, icon: <FileTextOutlined />, label: '剧本列表' },
+                ]
+              },
+              {
+                title: '资源与工具',
+                items: [
+                  { key: ROUTES.MATERIALS, icon: <PictureOutlined />, label: '素材管理' },
+                  { key: ROUTES.TEMPLATE_MARKET, icon: <ShopOutlined />, label: '模板广场' },
+                  { key: ROUTES.REFERENCES, icon: <BookOutlined />, label: '参考视频' },
+                  { key: ROUTES.TEMPLATES, icon: <BulbOutlined />, label: '灵感模板' },
+                ]
+              },
+              {
+                title: '数据看板',
+                items: [
+                  { key: ROUTES.ANALYTICS_OVERVIEW, icon: <DashboardOutlined />, label: '产出总览' },
+                  { key: ROUTES.ANALYTICS_COST, icon: <DollarOutlined />, label: '成本分析' },
+                  { key: ROUTES.ANALYTICS_CONVERSION, icon: <RiseOutlined />, label: '转化分析' },
+                  { key: ROUTES.ANALYTICS_STRATEGY, icon: <ExperimentOutlined />, label: '策略洞察' },
+                ]
+              },
+              {
+                title: '主题设置',
+                items: [
+                  { key: 'THEME_TOGGLE', icon: themeMode === 'dark' ? <SunOutlined /> : <MoonOutlined />, label: themeMode === 'dark' ? '开灯' : '关灯' },
+                ]
+              }
+            ].flatMap((group, groupIndex) => {
+              const colSpan = group.items.length === 4 ? 12 : 8;
+              return [
+                <Col span={24} key={group.title}>
+                  <div className="mobile-grid-group-header" style={{ 
+                    marginTop: groupIndex === 0 ? '0.5rem' : '1.5rem', 
+                    paddingTop: groupIndex === 0 ? 0 : '1rem', 
+                    borderTop: groupIndex === 0 ? 'none' : '1px solid rgba(128,128,128,0.2)', 
+                    paddingBottom: '0.5rem', 
+                    opacity: 0.6, 
+                    fontSize: '0.8rem', 
+                    textAlign: 'center' 
+                  }}>
+                    {group.title}
+                  </div>
+                </Col>,
+                ...group.items.map((item, itemIndex) => (
+                  <Col span={colSpan} className="mobile-grid-cell" key={item.key} style={{ animationDelay: `${(groupIndex * 5 + itemIndex) * 20}ms` }}>
+                    <div
+                      className="mobile-grid-item"
+                      onClick={() => {
+                        if (item.key === 'THEME_TOGGLE') {
+                          setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
+                        } else if (item.key) {
+                          navigate(item.key);
+                        }
+                        setMobileDrawerOpen(false);
+                      }}
+                    >
+                      {item.icon}
+                      <span>{item.label}</span>
                     </div>
                   </Col>
-                );
-              }
-              return (
-                <Col span={8} className="mobile-grid-cell" key={item.key} style={{ animationDelay: `${index * 20}ms` }}>
-                  <div
-                    className="mobile-grid-item"
-                    onClick={() => {
-                      if (item.key === 'THEME_TOGGLE') {
-                        setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
-                      } else if (item.key) {
-                        navigate(item.key);
-                      }
-                      setMobileDrawerOpen(false);
-                    }}
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </div>
-                </Col>
-              );
+                ))
+              ];
             })}
           </Row>
         </div>
