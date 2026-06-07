@@ -191,7 +191,7 @@ export default function VideoPreview() {
 
       {result && (
         <Card title="视频信息">
-          <Descriptions column={3} size="small" bordered>
+          <Descriptions column={{ xs: 1, sm: 2, md: 3 }} size="small" bordered>
             <Descriptions.Item label="总时长">{formatDuration(result.duration)}</Descriptions.Item>
             <Descriptions.Item label="分段数">{segments.length}</Descriptions.Item>
             <Descriptions.Item label="当前画幅">{activeAspectRatio}</Descriptions.Item>
