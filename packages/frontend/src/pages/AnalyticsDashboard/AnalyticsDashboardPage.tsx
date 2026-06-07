@@ -1,13 +1,10 @@
-import { useEffect, useState } from 'react';
-import { Card, Col, DatePicker, Row, Select, Space, Modal, Button } from 'antd';
-import { FullscreenOutlined } from '@ant-design/icons';
+import { Card, Col, DatePicker, Row, Select, Space } from 'antd';
 import ReactECharts from 'echarts-for-react';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import type {
   AttributionData,
   DurationDistribution,
-  TrendData,
 } from '@aigc/shared-types';
 import PageHeader from '../../components/common/PageHeader';
 import StatCard from '../../components/analytics/StatCard';
@@ -20,7 +17,6 @@ export default function AnalyticsDashboardPage() {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const {
     overview,
-    trends,
     attribution,
     durationDistribution,
     materialDistribution,
@@ -30,13 +26,10 @@ export default function AnalyticsDashboardPage() {
     setDateRange,
     setGranularity,
     fetchOverview,
-    fetchTrends,
     fetchAttribution,
     fetchDurationDistribution,
     fetchMaterialDistribution,
   } = useAnalyticsStore();
-
-  const [heatmapModalOpen, setHeatmapModalOpen] = useState(false);
 
   const [dates, setDates] = useState<[Dayjs, Dayjs]>([
     dayjs().subtract(7, 'day'),
@@ -53,7 +46,6 @@ export default function AnalyticsDashboardPage() {
   useEffect(() => {
     if (dateRange.start_date && dateRange.end_date) {
       fetchOverview();
-      fetchTrends();
       fetchAttribution();
       fetchDurationDistribution();
       fetchMaterialDistribution();
@@ -139,35 +131,6 @@ export default function AnalyticsDashboardPage() {
         </Col>
       </Row>
 
-      <Card 
-        title="产出热力图" 
-        style={{ marginBottom: 24 }}
-        extra={<Button type="text" icon={<FullscreenOutlined />} onClick={() => setHeatmapModalOpen(true)}>全屏预览</Button>}
-      >
-        <div 
-          style={{ overflowX: 'hidden', cursor: 'pointer', direction: 'rtl' }}
-          onClick={() => setHeatmapModalOpen(true)}
-          title="点击查看全屏"
-        >
-          <div style={{ direction: 'ltr', display: 'inline-block' }}>
-            <CalendarHeatmap data={trends} />
-          </div>
-        </div>
-      </Card>
-
-      <Modal
-        title="产出热力图 (全屏预览)"
-        open={heatmapModalOpen}
-        onCancel={() => setHeatmapModalOpen(false)}
-        footer={null}
-        width="min(95vw, 1200px)"
-        style={{ top: 20 }}
-      >
-        <div style={{ overflowX: 'auto', paddingBottom: 16 }}>
-          <CalendarHeatmap data={trends} />
-        </div>
-      </Modal>
-
       <Row gutter={24} style={{ marginBottom: 24 }}>
         <Col xs={24} md={12}>
           <Card title="因子归因分析">
@@ -235,63 +198,6 @@ function pieOption(data: { name: string; value: number }[]) {
       },
     ],
   };
-}
-
-function CalendarHeatmap({ data }: { data: TrendData[] }) {
-  const rows = Array.isArray(data) ? data : [];
-  if (rows.length === 0) return <div style={{ height: 200, textAlign: 'center', lineHeight: '200px', color: '#999' }}>暂无数据</div>;
-
-  const maxVal = Math.max(...rows.map((r) => Math.max(r.generated_count, 1)), 1);
-  const firstDate = dayjs(rows[0].date);
-  const lastDate = dayjs(rows[rows.length - 1].date);
-  const dayCount = lastDate.diff(firstDate, 'day') + 1;
-
-  const option = {
-    tooltip: {
-      formatter: (p: { data: [string, number] }) =>
-        `${p.data[0]}<br/>生成: ${p.data[1]} 个`,
-    },
-    visualMap: {
-      min: 0,
-      max: maxVal,
-      type: 'piecewise',
-      orient: 'horizontal',
-      left: 'center',
-      bottom: 0,
-      pieces: [
-        { min: maxVal * 0.7, color: '#1a3a5c' },
-        { min: maxVal * 0.4, max: maxVal * 0.7, color: '#2e6b9e' },
-        { min: maxVal * 0.15, max: maxVal * 0.4, color: '#5ba0d0' },
-        { min: 1, max: maxVal * 0.15, color: '#b8d8f0' },
-        { value: 0, color: '#f0f0f0' },
-      ],
-    },
-    calendar: {
-      top: 20,
-      left: 30,
-      right: 30,
-      cellSize: [20, 20],
-      range: [rows[0].date, rows[rows.length - 1].date],
-      itemStyle: {
-        borderWidth: 3,
-        borderColor: '#fff',
-        borderRadius: 4,
-      },
-      yearLabel: { show: true },
-      dayLabel: { firstDay: 1 },
-      monthLabel: { show: true },
-    },
-    series: [
-      {
-        type: 'heatmap',
-        coordinateSystem: 'calendar',
-        data: rows.map((r) => [r.date, r.generated_count]),
-      },
-    ],
-  };
-
-  const minWidth = Math.max(600, Math.ceil(dayCount / 7) * 20 + 80);
-  return <ReactECharts option={option} style={{ height: 220, minWidth }} />;
 }
 
 function AttributionChart({ data }: { data: AttributionData[] }) {

@@ -214,7 +214,6 @@ export interface BGMState {
 
 export interface AnalyticsState {
   overview: OverviewData | null;
-  trends: TrendData[];
   attribution: AttributionData[];
   durationDistribution: DurationDistribution[];
   materialDistribution: {
@@ -227,13 +226,11 @@ export interface AnalyticsState {
   granularity: 'day' | 'week' | 'month';
   loading: boolean;
   overviewLoading: boolean;
-  trendsLoading: boolean;
   attributionLoading: boolean;
 
   setDateRange: (range: AnalyticsQuery) => void;
   setGranularity: (g: 'day' | 'week' | 'month') => void;
   fetchOverview: () => Promise<void>;
-  fetchTrends: () => Promise<void>;
   fetchAttribution: () => Promise<void>;
   fetchDurationDistribution: () => Promise<void>;
   fetchMaterialDistribution: () => Promise<void>;
