@@ -137,7 +137,11 @@ export default function AnalyticsDashboardPage() {
       </Row>
 
       <Card title="产出热力图" style={{ marginBottom: 24 }}>
-        <CalendarHeatmap data={trends} />
+        <div style={{ overflowX: 'auto' }}>
+          <div style={{ minWidth: 800 }}>
+            <CalendarHeatmap data={trends} />
+          </div>
+        </div>
       </Card>
 
       <Row gutter={24} style={{ marginBottom: 24 }}>
