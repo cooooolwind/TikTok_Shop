@@ -67,6 +67,7 @@ export interface CostTrend {
   script_cost: number;
   first_frame_cost: number;
   video_cost: number;
+  embedding_cost?: number;
   total_cost: number;
 }
 

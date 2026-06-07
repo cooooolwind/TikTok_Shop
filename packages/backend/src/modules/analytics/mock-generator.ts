@@ -57,11 +57,13 @@ class SeededRandom {
   }
 }
 
-const MODEL_PRICE = {
-  chat: 0.8, // CNY per 1M tokens (Doubao-pro)
-  seedream: 0.2, // CNY per image call
-  seedance: 0.3, // CNY per video segment call
-};
+const getModelPrice = () => ({
+  chat: Number(process.env.VOLCANO_TEXT_PRICE || 0.8), // CNY per 1M tokens (Doubao-pro)
+  seedream: Number(process.env.VOLCANO_IMAGE_PRICE || 0.2), // CNY per image call
+  seedance: Number(process.env.VOLCANO_VIDEO_PRICE || 0.3), // CNY per video segment call
+  embeddingText: Number(process.env.VOLCANO_EMBEDDING_TEXT_PRICE || 0.7), // CNY per 1M tokens
+  embeddingImage: Number(process.env.VOLCANO_EMBEDDING_IMAGE_PRICE || 1.8), // CNY per 1M tokens
+});
 
 const TOKENS_PER_SCRIPT = { min: 8000, max: 25000 };
 
@@ -86,19 +88,29 @@ export class AnalyticsMockGenerator {
   private estimateTokens(): {
     chatTokens: number;
     seedanceCalls: number;
+    embeddingTextTokens: number;
+    embeddingImageTokens: number;
     totalChatCost: number;
     totalSeedanceCost: number;
     totalSeedreamCost: number;
+    totalEmbeddingCost: number;
   } {
     const avgSegmentsPerVideo = Math.max(3, Math.round(this.seed.totalScripts / Math.max(1, this.seed.doneCount) * 4));
     const chatTokensPerScript = this.rng.int(TOKENS_PER_SCRIPT.min, TOKENS_PER_SCRIPT.max);
     const seedanceCalls = this.seed.doneCount * avgSegmentsPerVideo;
     const chatTokens = this.seed.totalScripts * chatTokensPerScript;
-    const totalChatCost = (chatTokens / 1_000_000) * MODEL_PRICE.chat;
-    const totalSeedanceCost = seedanceCalls * MODEL_PRICE.seedance;
-    const totalSeedreamCost = seedanceCalls * MODEL_PRICE.seedream;
+    
+    // Embedding mock logic
+    const embeddingTextTokens = this.seed.totalMaterials * this.rng.int(100, 300);
+    const embeddingImageTokens = this.seed.totalMaterials * this.rng.int(500, 1000);
 
-    return { chatTokens, seedanceCalls, totalChatCost, totalSeedanceCost, totalSeedreamCost };
+    const price = getModelPrice();
+    const totalChatCost = (chatTokens / 1_000_000) * price.chat;
+    const totalSeedanceCost = seedanceCalls * price.seedance;
+    const totalSeedreamCost = seedanceCalls * price.seedream;
+    const totalEmbeddingCost = (embeddingTextTokens / 1_000_000) * price.embeddingText + (embeddingImageTokens / 1_000_000) * price.embeddingImage;
+
+    return { chatTokens, seedanceCalls, embeddingTextTokens, embeddingImageTokens, totalChatCost, totalSeedanceCost, totalSeedreamCost, totalEmbeddingCost };
   }
 
   // ===== 成本 =====
@@ -122,31 +134,38 @@ export class AnalyticsMockGenerator {
   }
 
   generateCostTrends(dates: string[]): CostTrend[] {
-    const { totalChatCost, totalSeedanceCost, totalSeedreamCost } = this.estimateTokens();
+    const { totalChatCost, totalSeedanceCost, totalSeedreamCost, totalEmbeddingCost } = this.estimateTokens();
     const days = dates.length || 30;
     const dailyChat = totalChatCost / days;
     const dailySeedance = totalSeedanceCost / days;
     const dailySeedream = totalSeedreamCost / days;
+    const dailyEmbedding = totalEmbeddingCost / days;
 
     return dates.map((date) => {
       const noise = () => this.rng.range(0.7, 1.3);
       const script = Math.round(dailyChat * noise() * 100) / 100;
       const firstFrame = Math.round(dailySeedream * noise() * 100) / 100;
       const video = Math.round(dailySeedance * noise() * 100) / 100;
+      const embedding = Math.round(dailyEmbedding * noise() * 100) / 100;
       return {
         date,
         script_cost: script,
         first_frame_cost: firstFrame,
         video_cost: video,
-        total_cost: Math.round((script + firstFrame + video) * 100) / 100,
+        embedding_cost: embedding,
+        total_cost: Math.round((script + firstFrame + video + embedding) * 100) / 100,
       };
     });
   }
 
   generateCostBreakdown(): CostBreakdown[] {
-    const { totalChatCost, totalSeedanceCost, totalSeedreamCost, chatTokens } = this.estimateTokens();
-    const totalCost = totalChatCost + totalSeedanceCost + totalSeedreamCost;
+    const { totalChatCost, totalSeedanceCost, totalSeedreamCost, totalEmbeddingCost, chatTokens, embeddingTextTokens, embeddingImageTokens } = this.estimateTokens();
+    const totalCost = totalChatCost + totalSeedanceCost + totalSeedreamCost + totalEmbeddingCost;
     if (totalCost === 0) return [];
+
+    const price = getModelPrice();
+    const embeddingTextCost = (embeddingTextTokens / 1_000_000) * price.embeddingText;
+    const embeddingImageCost = (embeddingImageTokens / 1_000_000) * price.embeddingImage;
 
     return [
       {
@@ -170,12 +189,26 @@ export class AnalyticsMockGenerator {
         tokens: 0,
         percentage: Math.round((totalSeedanceCost / totalCost) * 1000) / 10,
       },
+      {
+        model: 'Doubao-embedding-vision',
+        usage: '素材多模态分析(文本)',
+        cost: Math.round(embeddingTextCost * 100) / 100,
+        tokens: embeddingTextTokens,
+        percentage: Math.round((embeddingTextCost / totalCost) * 1000) / 10,
+      },
+      {
+        model: 'Doubao-embedding-vision',
+        usage: '素材多模态分析(图片)',
+        cost: Math.round(embeddingImageCost * 100) / 100,
+        tokens: embeddingImageTokens,
+        percentage: Math.round((embeddingImageCost / totalCost) * 1000) / 10,
+      },
     ];
   }
 
   generateTemplateCost(templateUsage: { name: string; count: number; successRate: number }[]): TemplateCostItem[] {
-    const { totalChatCost, totalSeedanceCost, totalSeedreamCost } = this.estimateTokens();
-    const totalCost = totalChatCost + totalSeedanceCost + totalSeedreamCost;
+    const { totalChatCost, totalSeedanceCost, totalSeedreamCost, totalEmbeddingCost } = this.estimateTokens();
+    const totalCost = totalChatCost + totalSeedanceCost + totalSeedreamCost + totalEmbeddingCost;
     const avgCostPerUnit = this.seed.totalVideos > 0 ? totalCost / this.seed.totalVideos : 0;
 
     return templateUsage.slice(0, 10).map((t) => ({
@@ -211,7 +244,7 @@ export class AnalyticsMockGenerator {
     const orders = clicks * cvr;
     const avgPrice = this.rng.int(80, 300);
     const gmv = orders * avgPrice;
-    const totalCost = this.estimateTokens().totalChatCost + this.estimateTokens().totalSeedanceCost + this.estimateTokens().totalSeedreamCost;
+    const totalCost = this.estimateTokens().totalChatCost + this.estimateTokens().totalSeedanceCost + this.estimateTokens().totalSeedreamCost + this.estimateTokens().totalEmbeddingCost;
     const roi = totalCost > 0 ? gmv / totalCost : 0;
 
     return {
