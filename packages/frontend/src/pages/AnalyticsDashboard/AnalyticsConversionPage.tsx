@@ -223,7 +223,7 @@ function BubbleMatrixChart({ data }: { data: { category: string; video_count: nu
       formatter: (p: { name: string; value: [number, number, number, number] }) =>
         `${p.name}<br/>视频: ${p.value[0]}<br/>CVR: ${(p.value[1] * 100).toFixed(2)}%<br/>GMV: ¥${p.value[2].toLocaleString()}<br/>ROI: ${p.value[3].toFixed(1)}x`,
     },
-    grid: { left: 80, right: 30, top: 20, bottom: 40 },
+    grid: { left: 80, right: 80, top: 40, bottom: 40 },
     xAxis: { name: '视频产出量', type: 'value' },
     yAxis: { name: 'CVR', type: 'value', axisLabel: { formatter: (v: number) => `${(v * 100).toFixed(1)}%` } },
     series: [
@@ -252,7 +252,7 @@ function DurationCVRChart({ data }: { data: { range: string; video_count: number
 
   const option = {
     tooltip: { trigger: 'axis' },
-    grid: { left: 60, right: 20, top: 20, bottom: 30 },
+    grid: { left: 60, right: 20, top: 40, bottom: 30 },
     xAxis: { type: 'category', data: rows.map((r) => r.range) },
     yAxis: { type: 'value', name: 'CVR', axisLabel: { formatter: (v: number) => `${(v * 100).toFixed(1)}%` } },
     series: [
