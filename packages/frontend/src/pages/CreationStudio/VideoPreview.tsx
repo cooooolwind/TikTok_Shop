@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Card, Descriptions, List, Space, Spin, Tag, Typography } from 'antd';
 import { ArrowLeftOutlined, DownloadOutlined, EditOutlined } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useCreationStore } from '../../stores/useGenerationStore';
 import { routePath } from '../../constants';
 import { formatBytes, formatDuration, formatGenerationTaskDisplayId } from '../../utils/format';
@@ -12,6 +13,7 @@ const { Text } = Typography;
 export default function VideoPreview() {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const { currentTask, fetchTask, exportVideo } = useCreationStore();
   const [activeSegmentIndex, setActiveSegmentIndex] = useState<number | null>(null);
   const [completeVideoUrl, setCompleteVideoUrl] = useState<string | undefined>();
@@ -113,9 +115,11 @@ export default function VideoPreview() {
             <Button icon={<EditOutlined />} onClick={() => navigate(`/scripts/${task.script_id}?returnTask=${task.id}`)}>
               修改脚本
             </Button>
-            <Button icon={<EditOutlined />} onClick={() => navigate(routePath.editorTask(task.id))}>
-              视频剪辑
-            </Button>
+            {!isMobile && (
+              <Button icon={<EditOutlined />} onClick={() => navigate(routePath.editorTask(task.id))}>
+                视频剪辑
+              </Button>
+            )}
             <Button
               aria-label="导出完整视频"
               type="primary"

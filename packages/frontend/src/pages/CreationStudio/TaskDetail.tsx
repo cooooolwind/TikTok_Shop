@@ -8,6 +8,7 @@ import {
   ReloadOutlined,
   StopOutlined,
 } from '@ant-design/icons';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import PageHeader from '../../components/common/PageHeader';
 import TaskProgressPanel from '../../components/creation/TaskProgressPanel';
 import StatusTag from '../../components/common/StatusTag';
@@ -20,6 +21,7 @@ import { openExportWindow } from '../../utils/exportWindow';
 export default function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const {
     currentTask,
     loading,
@@ -107,9 +109,11 @@ export default function TaskDetail() {
                 >
                   预览
                 </Button>
-                <Button icon={<EditOutlined />} onClick={() => navigate(routePath.editorTask(task.id))}>
-                  视频剪辑
-                </Button>
+                {!isMobile && (
+                  <Button icon={<EditOutlined />} onClick={() => navigate(routePath.editorTask(task.id))}>
+                    视频剪辑
+                  </Button>
+                )}
                 <Button
                   aria-label="导出完整视频"
                   icon={<DownloadOutlined />}
