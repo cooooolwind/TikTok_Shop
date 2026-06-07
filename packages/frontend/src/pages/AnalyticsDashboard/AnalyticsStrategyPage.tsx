@@ -165,7 +165,7 @@ function RhythmChart({ data }: { data: { rhythm: string; completion_rate: number
 
   const option = {
     tooltip: { trigger: 'axis' },
-    grid: { left: 80, right: 20, top: 10, bottom: 30 },
+    grid: { left: 80, right: 80, top: 40, bottom: 60 },
     xAxis: { type: 'value', name: '完播率(%)', max: 100 },
     yAxis: { type: 'category', data: rows.map((r) => r.rhythm) },
     series: [{
@@ -187,7 +187,7 @@ function SubtitleChart({ data }: { data: { strategy: string; cvr: number }[] }) 
 
   const option = {
     tooltip: { trigger: 'axis' },
-    grid: { left: 80, right: 20, top: 10, bottom: 30 },
+    grid: { left: 80, right: 80, top: 40, bottom: 60 },
     xAxis: { type: 'value', name: 'CVR(%)', axisLabel: { formatter: '{value}%' } },
     yAxis: { type: 'category', data: rows.map((r) => r.strategy) },
     series: [{
@@ -209,7 +209,7 @@ function CTAChart({ data }: { data: { position: string; ctr: number }[] }) {
 
   const option = {
     tooltip: { trigger: 'axis' },
-    grid: { left: 80, right: 20, top: 10, bottom: 30 },
+    grid: { left: 80, right: 80, top: 40, bottom: 60 },
     xAxis: { type: 'value', name: 'CTR(%)', axisLabel: { formatter: '{value}%' } },
     yAxis: { type: 'category', data: rows.map((r) => r.position) },
     series: [{
@@ -231,7 +231,7 @@ function BGMChart({ data }: { data: { style: string; completion_rate: number }[]
 
   const option = {
     tooltip: { trigger: 'axis' },
-    grid: { left: 80, right: 20, top: 10, bottom: 30 },
+    grid: { left: 80, right: 80, top: 40, bottom: 60 },
     xAxis: { type: 'value', name: '完播率(%)', max: 100 },
     yAxis: { type: 'category', data: rows.map((r) => r.style) },
     series: [{
@@ -253,6 +253,8 @@ function ABChart(props: { data: { version_a_name: string; version_b_name: string
     tooltip: {},
     legend: { bottom: 0, data: [data.version_a_name, data.version_b_name] },
     radar: {
+      radius: '60%',
+      center: ['50%', '45%'],
       indicator: data.metrics.map((m) => ({ name: `${m.name}(${m.unit})`, max: Math.max(m.a, m.b) * 1.3 })),
     },
     series: [

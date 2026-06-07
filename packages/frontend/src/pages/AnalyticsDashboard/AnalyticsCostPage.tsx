@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Card, Col, DatePicker, Row, Select, Space } from 'antd';
+import { Card, Col, DatePicker, Row, Select, Space, theme } from 'antd';
 import ReactECharts from 'echarts-for-react';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
@@ -87,12 +87,13 @@ export default function AnalyticsCostPage() {
             title="单视频平均成本"
             value={`¥${avgCost.toFixed(2)}`}
             loading={loading}
-          />
-          <div style={{ marginTop: 4, textAlign: 'center' }}>
-            <span style={{ fontSize: 12, color: costColors[costLevel] }}>
-              {costLabels[costLevel]}
-            </span>
-          </div>
+          >
+            <div style={{ marginTop: 4, textAlign: 'center' }}>
+              <span style={{ fontSize: 12, color: costColors[costLevel] }}>
+                {costLabels[costLevel]}
+              </span>
+            </div>
+          </StatCard>
         </Col>
         <Col xs={12} sm={6}>
           <StatCard
@@ -135,15 +136,22 @@ export default function AnalyticsCostPage() {
 }
 
 function WaterfallChart({ data }: { data: { date: string; script_cost: number; first_frame_cost: number; video_cost: number; total_cost: number }[] }) {
+  const { token } = theme.useToken();
   const rows = Array.isArray(data) ? data : [];
-  if (rows.length === 0) return <div style={{ height: 320, textAlign: 'center', lineHeight: '320px', color: '#999' }}>暂无数据</div>;
+  if (rows.length === 0) return <div style={{ height: 320, textAlign: 'center', lineHeight: '320px', color: token.colorTextPlaceholder }}>暂无数据</div>;
 
   const option = {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: { data: ['剧本生成', '首帧生成', '视频片段', '总成本'], bottom: 0 },
-    grid: { left: 60, right: 20, top: 20, bottom: 30 },
-    xAxis: { type: 'category', data: rows.map((r) => r.date), axisLabel: { rotate: 45, fontSize: 10 } },
-    yAxis: { type: 'value', name: '元' },
+    legend: { data: ['剧本生成', '首帧生成', '视频片段', '总成本'], top: 0, textStyle: { color: token.colorText } },
+    grid: { left: 60, right: 20, top: 90, bottom: 60 },
+    xAxis: { type: 'category', data: rows.map((r) => r.date), axisLabel: { rotate: 45, fontSize: 10, color: token.colorTextSecondary } },
+    yAxis: { 
+      type: 'value', 
+      name: '元',
+      nameTextStyle: { color: token.colorTextSecondary },
+      axisLabel: { color: token.colorTextSecondary },
+      splitLine: { lineStyle: { color: token.colorBorderSecondary } }
+    },
     series: [
       {
         name: '剧本生成', type: 'bar', stack: 'cost',
@@ -169,10 +177,58 @@ function WaterfallChart({ data }: { data: { date: string; script_cost: number; f
 }
 
 function NestedDonutChart({ data }: { data: { model: string; usage: string; cost: number; percentage: number }[] }) {
+  const { token } = theme.useToken();
   const rows = Array.isArray(data) ? data : [];
-  if (rows.length === 0) return <div style={{ height: 320, textAlign: 'center', lineHeight: '320px', color: '#999' }}>暂无数据</div>;
+  if (rows.length === 0) return <div style={{ height: 320, textAlign: 'center', lineHeight: '320px', color: token.colorTextPlaceholder }}>暂无数据</div>;
 
-  const colors: Record<string, string> = { ChatCompletion: '#1677ff', Seedream: '#fa8c16', Seedance: '#52c41a' };
+  const getCategory = (usage: string) => {
+    if (usage.includes('剧本')) return '剧本生成';
+    if (usage.includes('视频') || usage.includes('首帧')) return '视频生成';
+    if (usage.includes('多模态') || usage.includes('分析')) return '语义分析';
+    return '其他';
+  };
+
+  const catColors: Record<string, string> = {
+    '剧本生成': '#1677ff', // blue
+    '视频生成': '#fa8c16', // orange
+    '语义分析': '#52c41a', // green
+  };
+
+  const modelNameMap: Record<string, string> = {
+    'ChatCompletion': '大语言模型',
+    'Seedream': '图片生成模型',
+    'Seedance': '视频生成模型',
+    'Doubao-embedding-vision': '多模态分析模型',
+  };
+
+  const modelColors: Record<string, string> = {
+    '大语言模型': '#4096ff', // light blue
+    '图片生成模型': '#ffc069', // light orange
+    '视频生成模型': '#fa8c16', // orange
+    '多模态分析模型': '#73d13d', // light green
+  };
+
+  const categories: Record<string, number> = {};
+  rows.forEach((r) => {
+    const cat = getCategory(r.usage);
+    categories[cat] = (categories[cat] || 0) + r.cost;
+  });
+  const innerData = Object.entries(categories).map(([name, value]) => ({ 
+    name, 
+    value, 
+    itemStyle: { color: catColors[name] || '#999' } 
+  }));
+
+  const models: Record<string, number> = {};
+  rows.forEach((r) => {
+    const modelName = modelNameMap[r.model] || r.model;
+    models[modelName] = (models[modelName] || 0) + r.cost;
+  });
+  const outerData = Object.entries(models).map(([name, value]) => ({ 
+    name, 
+    value, 
+    itemStyle: { color: modelColors[name] || '#999' } 
+  }));
 
   const option = {
     tooltip: {
@@ -180,30 +236,29 @@ function NestedDonutChart({ data }: { data: { model: string; usage: string; cost
       formatter: (p: { seriesName: string; name: string; value: number; percent: number }) =>
         `${p.seriesName}<br/>${p.name}: ¥${p.value.toFixed(2)} (${p.percent}%)`,
     },
-    legend: { bottom: 0 },
+    legend: { 
+      bottom: 0,
+      textStyle: { color: token.colorText }
+    },
     series: [
       {
-        name: '用途',
+        name: '功能分类',
         type: 'pie',
-        radius: ['0%', '45%'],
-        itemStyle: { borderRadius: 3, borderColor: '#fff', borderWidth: 2 },
-        label: { show: true, position: 'inside', formatter: '{b}\n{d}%', fontSize: 10 },
-        data: rows.map((r) => ({ name: r.usage, value: r.cost, itemStyle: { color: colors[r.model] || '#999' } })),
+        radius: ['0%', '35%'],
+        center: ['50%', '40%'],
+        itemStyle: { borderRadius: 3, borderColor: token.colorBgContainer, borderWidth: 2 },
+        label: { show: true, position: 'inner', formatter: '{b}\n{d}%', fontSize: 10, color: '#fff', textBorderColor: 'rgba(0,0,0,0.3)', textBorderWidth: 1 },
+        data: innerData,
       },
       {
         name: '模型',
         type: 'pie',
-        radius: ['55%', '75%'],
-        itemStyle: { borderRadius: 3, borderColor: '#fff', borderWidth: 2 },
-        label: { show: true, position: 'outside', formatter: '{b} ¥{c}', fontSize: 11 },
-        labelLine: { length: 20, length2: 30 },
-        data: (() => {
-          const merged: Record<string, number> = {};
-          rows.forEach((r) => { merged[r.model] = (merged[r.model] || 0) + r.cost; });
-          return Object.entries(merged).map(([name, value]) => ({
-            name, value, itemStyle: { color: colors[name] || '#999' },
-          }));
-        })(),
+        radius: ['45%', '60%'],
+        center: ['50%', '40%'],
+        itemStyle: { borderRadius: 3, borderColor: token.colorBgContainer, borderWidth: 2 },
+        label: { show: true, position: 'outside', formatter: '{b}\n¥{c}', fontSize: 11, color: token.colorText },
+        labelLine: { length: 10, length2: 15, lineStyle: { color: token.colorTextSecondary } },
+        data: outerData,
       },
     ],
   };
@@ -212,6 +267,7 @@ function NestedDonutChart({ data }: { data: { model: string; usage: string; cost
 }
 
 function TemplateBubbleChart({ data }: { data: { template_name: string; usage_count: number; avg_cost: number; success_rate: number }[] }) {
+  const { token } = theme.useToken();
   const rows = Array.isArray(data) ? data : [];
   if (rows.length === 0) return null;
 
@@ -220,9 +276,21 @@ function TemplateBubbleChart({ data }: { data: { template_name: string; usage_co
       formatter: (p: { name: string; value: [number, number, number, number] }) =>
         `${p.name}<br/>使用: ${p.value[0]}次<br/>单次成本: ¥${p.value[1].toFixed(2)}<br/>成功率: ${(p.value[2] * 100).toFixed(0)}%`,
     },
-    grid: { left: 80, right: 30, top: 20, bottom: 40 },
-    xAxis: { name: '使用次数', type: 'value' },
-    yAxis: { name: '单视频成本 (元)', type: 'value' },
+    grid: { left: 80, right: 80, top: 40, bottom: 60 },
+    xAxis: { 
+      name: '使用次数', 
+      type: 'value',
+      nameTextStyle: { color: token.colorTextSecondary },
+      axisLabel: { color: token.colorTextSecondary },
+      splitLine: { lineStyle: { color: token.colorBorderSecondary } }
+    },
+    yAxis: { 
+      name: '单视频成本 (元)', 
+      type: 'value',
+      nameTextStyle: { color: token.colorTextSecondary },
+      axisLabel: { color: token.colorTextSecondary },
+      splitLine: { lineStyle: { color: token.colorBorderSecondary } }
+    },
     series: [
       {
         type: 'scatter',
@@ -232,7 +300,7 @@ function TemplateBubbleChart({ data }: { data: { template_name: string; usage_co
           value: [r.usage_count, r.avg_cost, r.success_rate],
         })),
         itemStyle: { color: '#1677ff', opacity: 0.7 },
-        label: { show: true, formatter: '{b}', position: 'top', fontSize: 11 },
+        label: { show: true, formatter: '{b}', position: 'top', fontSize: 11, color: token.colorText },
         emphasis: { focus: 'series' },
       },
     ],
