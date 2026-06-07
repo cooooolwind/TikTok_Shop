@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseInterceptors } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
 import type {
@@ -28,8 +28,11 @@ import type {
   TrendsQuery,
 } from '@aigc/shared-types';
 
+import { MockProxyInterceptor } from './mock-proxy.interceptor';
+
 @ApiTags('数据看板 /analytics')
 @Controller('analytics')
+@UseInterceptors(MockProxyInterceptor)
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
