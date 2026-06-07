@@ -300,7 +300,6 @@ export default function MainLayout() {
               { type: 'header', label: '核心功能', isFirst: true },
               { key: ROUTES.HOME, icon: <HomeOutlined />, label: '首页' },
               { key: ROUTES.CREATION, icon: <VideoCameraOutlined />, label: '创作工作室' },
-              { key: ROUTES.EDITOR, icon: <ScissorOutlined />, label: '视频剪辑' },
               
               { type: 'header', label: '资源与工具' },
               { key: ROUTES.MATERIALS, icon: <PictureOutlined />, label: '素材管理' },
