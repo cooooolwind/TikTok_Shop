@@ -144,7 +144,7 @@ export default function TaskDetail() {
                   description="完整视频会在点击“导出完整视频”时按需拼接；拼接前可先预览每个分镜片段。"
                 />
               )}
-              <Descriptions column={2} size="small" bordered>
+              <Descriptions column={{ xs: 1, sm: 2 }} size="small" bordered>
                 <Descriptions.Item label="时长">{formatDuration(task.result.duration)}</Descriptions.Item>
                 <Descriptions.Item label="分辨率">{task.result.resolution}</Descriptions.Item>
                 <Descriptions.Item label="画幅">{task.result.aspect_ratio}</Descriptions.Item>
