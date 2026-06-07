@@ -104,7 +104,7 @@ export default function AnalyticsCostPage() {
         <Col xs={12} sm={6}>
           <StatCard
             title="成本环比"
-            value={overview?.period_comparison?.cost_change ?? 0}
+            value={(overview?.period_comparison?.cost_change ?? 0).toFixed(1)}
             suffix="%"
             change={overview?.period_comparison?.cost_change}
             loading={loading}

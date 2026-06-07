@@ -115,7 +115,7 @@ export default function AnalyticsDashboardPage() {
         <Col xs={12} sm={6}>
           <StatCard
             title="平均耗时"
-            value={overview?.avg_generation_time ?? 0}
+            value={(overview?.avg_generation_time ?? 0).toFixed(1)}
             suffix="s"
             loading={overviewLoading}
           />
