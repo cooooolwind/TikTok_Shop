@@ -355,6 +355,7 @@ make docker-down     # 停止全部服务
 ## 数据看板 Mock 逻辑说明 (Analytics Mock Logic)
 
 为保证在开发和演示环境（尤其是数据库为空或数据量极少时）数据看板依然能够呈现丰富、自洽的图表，系统内置了 `AnalyticsMockGenerator` 并设置了基础偏置量（Baseline）。
+> **注意**：可通过环境变量 `MOCK_DASHBOARD=false` 关闭此逻辑，届时所有基准偏置将归零，且成本、转化、策略等外部指标将由 `MockProxyInterceptor` 代理至真实的 `STATISTIC_API_URL` 服务。
 
 ### 1. 基础偏置量 (Baseline Seed)
 由于多项转化与成本数据均由总视频数等基数乘算得出，在提取真实数据库计数的之上，`AnalyticsService` 固定追加了以下 Mock 偏置量作为随机数种子输入：
