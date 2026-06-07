@@ -155,7 +155,7 @@ export default function AnalyticsConversionPage() {
         </Col>
       </Row>
 
-      <Row gutter={24} style={{ marginBottom: 24 }}>
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={12}>
           <Card title="转化漏斗">
             <SankeyChart data={funnel} />
@@ -168,7 +168,7 @@ export default function AnalyticsConversionPage() {
         </Col>
       </Row>
 
-      <Row gutter={24} style={{ marginBottom: 24 }}>
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={12}>
           <Card title="时长与转化率">
             <DurationCVRChart data={durationCVR} />

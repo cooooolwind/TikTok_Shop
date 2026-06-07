@@ -112,7 +112,7 @@ export default function AnalyticsCostPage() {
         </Col>
       </Row>
 
-      <Row gutter={24} style={{ marginBottom: 24 }}>
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={14}>
           <Card title="每日成本构成">
             <WaterfallChart data={trends} />

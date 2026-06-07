@@ -132,7 +132,7 @@ export default function AnalyticsDashboardPage() {
         </Col>
       </Row>
 
-      <Row gutter={24} style={{ marginBottom: 24 }}>
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={12}>
           <Card title="因子归因分析">
             <AttributionChart data={attribution} />
@@ -146,7 +146,7 @@ export default function AnalyticsDashboardPage() {
       </Row>
 
       {materialDistribution && (
-        <Row gutter={24} style={{ marginBottom: 24 }}>
+        <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
           <Col xs={24} md={12}>
             <Card title="素材类型分布">
               <ReactECharts
