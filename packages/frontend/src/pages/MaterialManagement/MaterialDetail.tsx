@@ -192,7 +192,7 @@ export default function MaterialDetail() {
           { title: material.name },
         ]}
         extra={
-          <Space>
+          <Space wrap>
             <Button
               icon={<ReloadOutlined />}
               onClick={handleReanalyze}

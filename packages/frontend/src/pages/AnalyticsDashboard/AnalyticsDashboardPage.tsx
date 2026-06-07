@@ -6,7 +6,6 @@ import type { Dayjs } from 'dayjs';
 import type {
   AttributionData,
   DurationDistribution,
-  TrendData,
 } from '@aigc/shared-types';
 import PageHeader from '../../components/common/PageHeader';
 import StatCard from '../../components/analytics/StatCard';
@@ -19,7 +18,6 @@ export default function AnalyticsDashboardPage() {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const {
     overview,
-    trends,
     attribution,
     durationDistribution,
     materialDistribution,
@@ -29,7 +27,6 @@ export default function AnalyticsDashboardPage() {
     setDateRange,
     setGranularity,
     fetchOverview,
-    fetchTrends,
     fetchAttribution,
     fetchDurationDistribution,
     fetchMaterialDistribution,
@@ -50,7 +47,6 @@ export default function AnalyticsDashboardPage() {
   useEffect(() => {
     if (dateRange.start_date && dateRange.end_date) {
       fetchOverview();
-      fetchTrends();
       fetchAttribution();
       fetchDurationDistribution();
       fetchMaterialDistribution();
@@ -115,7 +111,7 @@ export default function AnalyticsDashboardPage() {
         <Col xs={12} sm={6}>
           <StatCard
             title="平均耗时"
-            value={overview?.avg_generation_time ?? 0}
+            value={(overview?.avg_generation_time ?? 0).toFixed(1)}
             suffix="s"
             loading={overviewLoading}
           />
@@ -136,11 +132,7 @@ export default function AnalyticsDashboardPage() {
         </Col>
       </Row>
 
-      <Card title="产出热力图" style={{ marginBottom: 24 }}>
-        <CalendarHeatmap data={trends} />
-      </Card>
-
-      <Row gutter={24} style={{ marginBottom: 24 }}>
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={12}>
           <Card title="因子归因分析">
             <AttributionChart data={attribution} />
@@ -154,7 +146,7 @@ export default function AnalyticsDashboardPage() {
       </Row>
 
       {materialDistribution && (
-        <Row gutter={24} style={{ marginBottom: 24 }}>
+        <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
           <Col xs={24} md={12}>
             <Card title="素材类型分布">
               <ReactECharts
@@ -207,62 +199,6 @@ function pieOption(data: { name: string; value: number }[]) {
       },
     ],
   };
-}
-
-function CalendarHeatmap({ data }: { data: TrendData[] }) {
-  const rows = Array.isArray(data) ? data : [];
-  if (rows.length === 0) return <div style={{ height: 200, textAlign: 'center', lineHeight: '200px', color: '#999' }}>暂无数据</div>;
-
-  const maxVal = Math.max(...rows.map((r) => Math.max(r.generated_count, 1)), 1);
-  const firstDate = dayjs(rows[0].date);
-  const lastDate = dayjs(rows[rows.length - 1].date);
-  const dayCount = lastDate.diff(firstDate, 'day') + 1;
-
-  const option = {
-    tooltip: {
-      formatter: (p: { data: [string, number] }) =>
-        `${p.data[0]}<br/>生成: ${p.data[1]} 个`,
-    },
-    visualMap: {
-      min: 0,
-      max: maxVal,
-      type: 'piecewise',
-      orient: 'horizontal',
-      left: 'center',
-      bottom: 0,
-      pieces: [
-        { min: maxVal * 0.7, color: '#1a3a5c' },
-        { min: maxVal * 0.4, max: maxVal * 0.7, color: '#2e6b9e' },
-        { min: maxVal * 0.15, max: maxVal * 0.4, color: '#5ba0d0' },
-        { min: 1, max: maxVal * 0.15, color: '#b8d8f0' },
-        { value: 0, color: '#f0f0f0' },
-      ],
-    },
-    calendar: {
-      top: 20,
-      left: 30,
-      right: 30,
-      cellSize: ['auto', 20],
-      range: [rows[0].date, rows[rows.length - 1].date],
-      itemStyle: {
-        borderWidth: 3,
-        borderColor: '#fff',
-        borderRadius: 4,
-      },
-      yearLabel: { show: true },
-      dayLabel: { firstDay: 1 },
-      monthLabel: { show: true },
-    },
-    series: [
-      {
-        type: 'heatmap',
-        coordinateSystem: 'calendar',
-        data: rows.map((r) => [r.date, r.generated_count]),
-      },
-    ],
-  };
-
-  return <ReactECharts option={option} style={{ height: Math.max(200, Math.ceil(dayCount / 7) * 24 + 80) }} />;
 }
 
 function AttributionChart({ data }: { data: AttributionData[] }) {

@@ -6,7 +6,6 @@ import { asArray } from '../services/response';
 
 export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
   overview: null,
-  trends: [],
   attribution: [],
   durationDistribution: [],
   materialDistribution: null,
@@ -14,7 +13,6 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
   granularity: 'day',
   loading: false,
   overviewLoading: false,
-  trendsLoading: false,
   attributionLoading: false,
 
   setDateRange: (range) => set({ dateRange: range }),
@@ -29,20 +27,6 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     } catch {
       set({ overviewLoading: false });
       useUIStore.getState().pushNotification({ type: 'error', title: '加载概览数据失败' });
-    }
-  },
-
-  fetchTrends: async () => {
-    set({ trendsLoading: true });
-    try {
-      const trends = await analyticsApi.trends({
-        ...get().dateRange,
-        granularity: get().granularity,
-      });
-      set({ trends: asArray(trends), trendsLoading: false });
-    } catch {
-      set({ trendsLoading: false });
-      useUIStore.getState().pushNotification({ type: 'error', title: '加载趋势数据失败' });
     }
   },
 

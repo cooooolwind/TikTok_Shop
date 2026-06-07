@@ -21,7 +21,7 @@ export default function StatCard({
         style={{ fontSize: 14 }}
       >
         {isUp ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
-        {' '}{Math.abs(change)}%
+        {' '}{typeof change === 'number' ? Math.abs(change).toFixed(1) : Math.abs(Number(change) || 0).toFixed(1)}%
       </Text>
     );
   };

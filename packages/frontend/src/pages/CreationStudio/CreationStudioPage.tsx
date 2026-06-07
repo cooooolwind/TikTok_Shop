@@ -46,7 +46,7 @@ export default function CreationStudioPage() {
       <PageHeader
         title="创作工作室"
         extra={
-          <Space>
+          <Space wrap>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/creation/new')}>
               新建创作
             </Button>

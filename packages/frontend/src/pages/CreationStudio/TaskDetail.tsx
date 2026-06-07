@@ -8,6 +8,7 @@ import {
   ReloadOutlined,
   StopOutlined,
 } from '@ant-design/icons';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import PageHeader from '../../components/common/PageHeader';
 import TaskProgressPanel from '../../components/creation/TaskProgressPanel';
 import StatusTag from '../../components/common/StatusTag';
@@ -20,6 +21,7 @@ import { openExportWindow } from '../../utils/exportWindow';
 export default function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const {
     currentTask,
     loading,
@@ -81,7 +83,7 @@ export default function TaskDetail() {
           { title: `任务 ${formatGenerationTaskDisplayId(task)}` },
         ]}
         extra={
-          <Space>
+          <Space wrap>
             {task.status === 'failed' && task.error?.retryable && (
               <Button icon={<ReloadOutlined />} onClick={handleRetry}>
                 从失败镜头继续
@@ -107,9 +109,11 @@ export default function TaskDetail() {
                 >
                   预览
                 </Button>
-                <Button icon={<EditOutlined />} onClick={() => navigate(routePath.editorTask(task.id))}>
-                  视频剪辑
-                </Button>
+                {!isMobile && (
+                  <Button icon={<EditOutlined />} onClick={() => navigate(routePath.editorTask(task.id))}>
+                    视频剪辑
+                  </Button>
+                )}
                 <Button
                   aria-label="导出完整视频"
                   icon={<DownloadOutlined />}
@@ -144,7 +148,7 @@ export default function TaskDetail() {
                   description="完整视频会在点击“导出完整视频”时按需拼接；拼接前可先预览每个分镜片段。"
                 />
               )}
-              <Descriptions column={2} size="small" bordered>
+              <Descriptions column={{ xs: 1, sm: 2 }} size="small" bordered>
                 <Descriptions.Item label="时长">{formatDuration(task.result.duration)}</Descriptions.Item>
                 <Descriptions.Item label="分辨率">{task.result.resolution}</Descriptions.Item>
                 <Descriptions.Item label="画幅">{task.result.aspect_ratio}</Descriptions.Item>

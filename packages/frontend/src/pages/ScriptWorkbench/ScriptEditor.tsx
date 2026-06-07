@@ -147,7 +147,7 @@ export default function ScriptEditor() {
           { title: script.product_info.name || script.id },
         ]}
         extra={
-          <Space>
+          <Space wrap>
             <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/scripts')}>
               返回列表
             </Button>
@@ -200,7 +200,7 @@ export default function ScriptEditor() {
       )}
 
       <Row gutter={24}>
-        <Col xs={24} lg={8}>
+        <Col xs={{ span: 24, order: 2 }} lg={{ span: 8, order: 1 }}>
           <Card title="剧本概要" style={{ marginBottom: 16 }}>
             <Descriptions column={1} size="small" bordered>
               <Descriptions.Item label="商品">{script.product_info.name}</Descriptions.Item>
@@ -251,16 +251,17 @@ export default function ScriptEditor() {
             )}
             {isDirty && <Tag color="warning" style={{ marginTop: 12 }}>有未保存的本地修改</Tag>}
           </Card>
-
-          {script.status !== 'generating' && (
-            <Button type="dashed" icon={<PlusOutlined />} block onClick={openAddScene}>
-              添加分镜
-            </Button>
-          )}
         </Col>
 
-        <Col xs={24} lg={16}>
-          <Title level={5}>分镜列表 ({scenes.length})</Title>
+        <Col xs={{ span: 24, order: 1 }} lg={{ span: 16, order: 2 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Title level={5} style={{ margin: 0 }}>分镜列表 ({scenes.length})</Title>
+            {script.status !== 'generating' && (
+              <Button type="primary" size="small" icon={<PlusOutlined />} onClick={openAddScene}>
+                添加分镜
+              </Button>
+            )}
+          </div>
           {scenes.length === 0 ? (
             <EmptyState
               description={script.status === 'generating' ? 'AI 正在生成分镜' : '暂无分镜'}

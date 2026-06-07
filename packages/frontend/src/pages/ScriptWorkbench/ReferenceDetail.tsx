@@ -44,7 +44,7 @@ export default function ReferenceDetail() {
       />
 
       <Card title="基本信息" style={{ marginBottom: 24 }}>
-        <Descriptions column={2} size="small" bordered>
+        <Descriptions column={{ xs: 1, sm: 2 }} size="small" bordered>
           <Descriptions.Item label="来源平台"><Tag>{r.source_platform}</Tag></Descriptions.Item>
           <Descriptions.Item label="类目">{r.category}</Descriptions.Item>
           <Descriptions.Item label="原始链接">{r.source_url}</Descriptions.Item>

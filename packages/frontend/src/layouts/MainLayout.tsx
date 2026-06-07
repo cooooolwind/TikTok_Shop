@@ -295,52 +295,78 @@ export default function MainLayout() {
       <div id="mobile-grid-menu" className={mobileDrawerOpen ? 'show' : ''}>
         <div className="mobile-grid-menu-inner">
           <Row justify="center" style={{ width: '100%', maxWidth: '400px', margin: '0 auto', padding: '0 16px' }}>
-            {/* 提取有效导航项并展平显示 */}
+            {/* 提取有效导航项并分组显示 */}
             {[
-              { key: ROUTES.HOME, icon: <HomeOutlined />, label: '首页' },
-              { key: ROUTES.MATERIALS, icon: <PictureOutlined />, label: '素材管理' },
-              { key: ROUTES.SCRIPTS, icon: <FileTextOutlined />, label: '剧本列表' },
-              { key: ROUTES.REFERENCES, icon: <BookOutlined />, label: '参考视频' },
-              { key: ROUTES.TEMPLATES, icon: <BulbOutlined />, label: '灵感模板' },
-              { key: ROUTES.CREATION, icon: <VideoCameraOutlined />, label: '创作工作室' },
-              { key: ROUTES.TEMPLATE_MARKET, icon: <ShopOutlined />, label: '模板广场' },
-              { key: ROUTES.EDITOR, icon: <ScissorOutlined />, label: '视频剪辑' },
-              { key: ROUTES.ANALYTICS_OVERVIEW, icon: <DashboardOutlined />, label: '产出总览' },
-              { key: ROUTES.ANALYTICS_COST, icon: <DollarOutlined />, label: '成本分析' },
-              { key: ROUTES.ANALYTICS_CONVERSION, icon: <RiseOutlined />, label: '转化分析' },
-              { key: ROUTES.ANALYTICS_STRATEGY, icon: <ExperimentOutlined />, label: '策略洞察' },
-            ].map((item, index) => (
-              <Col span={8} className="mobile-grid-cell" key={item.key} style={{ animationDelay: `${index * 20}ms` }}>
-                <div
-                  className="mobile-grid-item"
-                  onClick={() => {
-                    navigate(item.key);
-                    setMobileDrawerOpen(false);
-                  }}
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
-                </div>
-              </Col>
-            ))}
-            
-            <Col span={24}>
-              <div className="mobile-grid-group-header" style={{ marginTop: '1rem', borderTop: '1px solid rgba(128,128,128,0.2)', paddingTop: '1rem', paddingBottom: '0.5rem', opacity: 0.6, fontSize: '0.8rem', textAlign: 'center' }}>
-                主题设置
-              </div>
-            </Col>
-            <Col span={8} className="mobile-grid-cell" style={{ animationDelay: `${8 * 20}ms` }}>
-                <div
-                  className="mobile-grid-item"
-                  onClick={() => {
-                    setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
-                    setMobileDrawerOpen(false);
-                  }}
-                >
-                  {themeMode === 'dark' ? <SunOutlined /> : <MoonOutlined />}
-                  <span>{themeMode === 'dark' ? '开灯' : '关灯'}</span>
-                </div>
-              </Col>
+              {
+                title: '',
+                items: [
+                  { key: ROUTES.HOME, icon: <HomeOutlined />, label: '首页' },
+                  { key: ROUTES.CREATION, icon: <VideoCameraOutlined />, label: '创作工作室' },
+                  { key: ROUTES.SCRIPTS, icon: <FileTextOutlined />, label: '剧本列表' },
+                ]
+              },
+              {
+                title: '资源与工具',
+                items: [
+                  { key: ROUTES.MATERIALS, icon: <PictureOutlined />, label: '素材管理' },
+                  { key: ROUTES.TEMPLATE_MARKET, icon: <ShopOutlined />, label: '模板广场' },
+                  { key: ROUTES.REFERENCES, icon: <BookOutlined />, label: '参考视频' },
+                  { key: ROUTES.TEMPLATES, icon: <BulbOutlined />, label: '灵感模板' },
+                ]
+              },
+              {
+                title: '数据看板',
+                items: [
+                  { key: ROUTES.ANALYTICS_OVERVIEW, icon: <DashboardOutlined />, label: '产出总览' },
+                  { key: ROUTES.ANALYTICS_COST, icon: <DollarOutlined />, label: '成本分析' },
+                  { key: ROUTES.ANALYTICS_CONVERSION, icon: <RiseOutlined />, label: '转化分析' },
+                  { key: ROUTES.ANALYTICS_STRATEGY, icon: <ExperimentOutlined />, label: '策略洞察' },
+                ]
+              },
+              {
+                title: '主题设置',
+                items: [
+                  { key: 'THEME_TOGGLE', icon: themeMode === 'dark' ? <SunOutlined /> : <MoonOutlined />, label: themeMode === 'dark' ? '开灯' : '关灯' },
+                ]
+              }
+            ].flatMap((group, groupIndex) => {
+              const colSpan = group.items.length === 4 ? 12 : 8;
+              return [
+                group.title ? (
+                  <Col span={24} key={group.title}>
+                    <div className="mobile-grid-group-header" style={{ 
+                      marginTop: groupIndex === 0 ? '0.5rem' : '1.5rem', 
+                      paddingTop: groupIndex === 0 ? 0 : '1rem', 
+                      borderTop: groupIndex === 0 ? 'none' : '1px solid rgba(128,128,128,0.2)', 
+                      paddingBottom: '0.5rem', 
+                      opacity: 0.6, 
+                      fontSize: '0.8rem', 
+                      textAlign: 'center' 
+                    }}>
+                      {group.title}
+                    </div>
+                  </Col>
+                ) : null,
+                ...group.items.map((item, itemIndex) => (
+                  <Col span={colSpan} className="mobile-grid-cell" key={item.key} style={{ animationDelay: `${(groupIndex * 5 + itemIndex) * 20}ms` }}>
+                    <div
+                      className="mobile-grid-item"
+                      onClick={() => {
+                        if (item.key === 'THEME_TOGGLE') {
+                          setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
+                        } else if (item.key) {
+                          navigate(item.key);
+                        }
+                        setMobileDrawerOpen(false);
+                      }}
+                    >
+                      {item.icon}
+                      <span>{item.label}</span>
+                    </div>
+                  </Col>
+                ))
+              ];
+            })}
           </Row>
         </div>
       </div>
