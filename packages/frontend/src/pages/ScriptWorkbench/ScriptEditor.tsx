@@ -147,7 +147,7 @@ export default function ScriptEditor() {
           { title: script.product_info.name || script.id },
         ]}
         extra={
-          <Space>
+          <Space wrap>
             <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/scripts')}>
               返回列表
             </Button>
