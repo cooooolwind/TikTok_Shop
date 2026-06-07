@@ -195,6 +195,7 @@ function SankeyChart({ data }: { data: { stage: string; count: number; rate: num
   }
 
   const option = {
+    color: ['#1677ff', '#fa8c16', '#52c41a', '#ff4d4f'],
     tooltip: { trigger: 'item', triggerOn: 'mousemove' },
     series: [
       {
@@ -206,7 +207,6 @@ function SankeyChart({ data }: { data: { stage: string; count: number; rate: num
         links,
         label: { show: true, formatter: '{b}' },
         lineStyle: { color: 'gradient', curveness: 0.5 },
-        itemStyle: { color: ['#1677ff', '#fa8c16', '#52c41a', '#ff4d4f'] },
       },
     ],
   };
