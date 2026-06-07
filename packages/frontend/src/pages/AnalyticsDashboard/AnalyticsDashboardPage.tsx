@@ -134,12 +134,12 @@ export default function AnalyticsDashboardPage() {
 
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={12}>
-          <Card title="因子归因分析">
+          <Card title="因子归因分析" style={{ height: '100%' }}>
             <AttributionChart data={attribution} />
           </Card>
         </Col>
         <Col xs={24} md={12}>
-          <Card title="生成耗时分布">
+          <Card title="生成耗时分布" style={{ height: '100%' }}>
             <DurationChart data={durationDistribution} />
           </Card>
         </Col>
@@ -148,7 +148,7 @@ export default function AnalyticsDashboardPage() {
       {materialDistribution && (
         <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
           <Col xs={24} md={12}>
-            <Card title="素材类型分布">
+            <Card title="素材类型分布" style={{ height: '100%' }}>
               <ReactECharts
                 option={pieOption(
                   materialDistribution.type_distribution.map((d) => ({
@@ -156,12 +156,12 @@ export default function AnalyticsDashboardPage() {
                     value: d.count,
                   })),
                 )}
-                style={{ height: 280 }}
+                style={{ height: 280, width: '100%' }}
               />
             </Card>
           </Col>
           <Col xs={24} md={12}>
-            <Card title="素材品类分布">
+            <Card title="素材品类分布" style={{ height: '100%' }}>
               <ReactECharts
                 option={pieOption(
                   materialDistribution.category_distribution.map((d) => {
@@ -174,7 +174,7 @@ export default function AnalyticsDashboardPage() {
                     return { name: labelMap[d.category] ?? d.category, value: d.count };
                   }),
                 )}
-                style={{ height: 280 }}
+                style={{ height: 280, width: '100%' }}
               />
             </Card>
           </Col>
@@ -203,7 +203,7 @@ function pieOption(data: { name: string; value: number }[]) {
 
 function AttributionChart({ data }: { data: AttributionData[] }) {
   const rows = Array.isArray(data) ? data : [];
-  if (rows.length === 0) return <div style={{ height: 280, textAlign: 'center', lineHeight: '280px', color: '#999' }}>暂无归因数据</div>;
+  if (rows.length === 0) return <div style={{ height: 320, textAlign: 'center', lineHeight: '320px', color: '#999' }}>暂无归因数据</div>;
 
   const option = {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
@@ -225,7 +225,7 @@ function AttributionChart({ data }: { data: AttributionData[] }) {
     ],
   };
 
-  return <ReactECharts option={option} style={{ height: 320 }} />;
+  return <ReactECharts option={option} style={{ height: 320, width: '100%' }} />;
 }
 
 function DurationChart({ data }: { data: DurationDistribution[] }) {
@@ -248,5 +248,5 @@ function DurationChart({ data }: { data: DurationDistribution[] }) {
     ],
   };
 
-  return <ReactECharts option={option} style={{ height: 320 }} />;
+  return <ReactECharts option={option} style={{ height: 320, width: '100%' }} />;
 }

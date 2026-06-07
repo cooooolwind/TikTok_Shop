@@ -125,17 +125,17 @@ export default function AnalyticsStrategyPage() {
 
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={8}>
-          <Card title="节奏与完播率">
+          <Card title="节奏与完播率" style={{ height: '100%' }}>
             <RhythmChart data={rhythm} />
           </Card>
         </Col>
         <Col xs={24} md={8}>
-          <Card title="字幕策略 vs 转化率">
+          <Card title="字幕策略 vs 转化率" style={{ height: '100%' }}>
             <SubtitleChart data={subtitle} />
           </Card>
         </Col>
         <Col xs={24} md={8}>
-          <Card title="CTA 位置 vs 点击率">
+          <Card title="CTA 位置 vs 点击率" style={{ height: '100%' }}>
             <CTAChart data={cta} />
           </Card>
         </Col>
@@ -143,13 +143,13 @@ export default function AnalyticsStrategyPage() {
 
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={12}>
-          <Card title="BGM 风格 vs 完播率">
+          <Card title="BGM 风格 vs 完播率" style={{ height: '100%' }}>
             <BGMChart data={bgm} />
           </Card>
         </Col>
         {abComparison && (
           <Col xs={24} md={12}>
-            <Card title="A/B 版本效果对比">
+            <Card title="A/B 版本效果对比" style={{ height: '100%' }}>
               <ABChart data={abComparison} />
             </Card>
           </Col>
@@ -178,7 +178,7 @@ function RhythmChart({ data }: { data: { rhythm: string; completion_rate: number
     }],
   };
 
-  return <ReactECharts option={option} style={{ height: 260 }} />;
+  return <ReactECharts option={option} style={{ height: 260, width: '100%' }} />;
 }
 
 function SubtitleChart({ data }: { data: { strategy: string; cvr: number }[] }) {
@@ -200,7 +200,7 @@ function SubtitleChart({ data }: { data: { strategy: string; cvr: number }[] }) 
     }],
   };
 
-  return <ReactECharts option={option} style={{ height: 260 }} />;
+  return <ReactECharts option={option} style={{ height: 260, width: '100%' }} />;
 }
 
 function CTAChart({ data }: { data: { position: string; ctr: number }[] }) {
@@ -222,12 +222,12 @@ function CTAChart({ data }: { data: { position: string; ctr: number }[] }) {
     }],
   };
 
-  return <ReactECharts option={option} style={{ height: 260 }} />;
+  return <ReactECharts option={option} style={{ height: 260, width: '100%' }} />;
 }
 
 function BGMChart({ data }: { data: { style: string; completion_rate: number }[] }) {
   const rows = Array.isArray(data) ? data : [];
-  if (rows.length === 0) return <div style={{ height: 300, textAlign: 'center', lineHeight: '300px', color: '#999' }}>暂无数据</div>;
+  if (rows.length === 0) return <div style={{ height: 340, textAlign: 'center', lineHeight: '340px', color: '#999' }}>暂无数据</div>;
 
   const option = {
     tooltip: { trigger: 'axis' },
@@ -244,7 +244,7 @@ function BGMChart({ data }: { data: { style: string; completion_rate: number }[]
     }],
   };
 
-  return <ReactECharts option={option} style={{ height: 300 }} />;
+  return <ReactECharts option={option} style={{ height: 340, width: '100%' }} />;
 }
 
 function ABChart(props: { data: { version_a_name: string; version_b_name: string; metrics: Array<{ name: string; a: number; b: number; unit: string }> } }) {
@@ -273,5 +273,5 @@ function ABChart(props: { data: { version_a_name: string; version_b_name: string
     ],
   };
 
-  return <ReactECharts option={option} style={{ height: 340 }} />;
+  return <ReactECharts option={option} style={{ height: 340, width: '100%' }} />;
 }

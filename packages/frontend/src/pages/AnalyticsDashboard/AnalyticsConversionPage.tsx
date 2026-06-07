@@ -157,12 +157,12 @@ export default function AnalyticsConversionPage() {
 
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={12}>
-          <Card title="转化漏斗">
+          <Card title="转化漏斗" style={{ height: '100%' }}>
             <SankeyChart data={funnel} />
           </Card>
         </Col>
         <Col xs={24} md={12}>
-          <Card title="品类转化气泡矩阵">
+          <Card title="品类转化气泡矩阵" style={{ height: '100%' }}>
             <BubbleMatrixChart data={categoryConversion} />
           </Card>
         </Col>
@@ -170,12 +170,12 @@ export default function AnalyticsConversionPage() {
 
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={12}>
-          <Card title="时长与转化率">
+          <Card title="时长与转化率" style={{ height: '100%' }}>
             <DurationCVRChart data={durationCVR} />
           </Card>
         </Col>
         <Col xs={24} md={12}>
-          <Card title="GMV 与开销趋势">
+          <Card title="GMV 与开销趋势" style={{ height: '100%' }}>
             <ROITrendChart data={trends} />
           </Card>
         </Col>
@@ -211,7 +211,7 @@ function SankeyChart({ data }: { data: { stage: string; count: number; rate: num
     ],
   };
 
-  return <ReactECharts option={option} style={{ height: 300 }} />;
+  return <ReactECharts option={option} style={{ height: 300, width: '100%' }} />;
 }
 
 function BubbleMatrixChart({ data }: { data: { category: string; video_count: number; cvr: number; gmv: number; roi: number }[] }) {
@@ -241,7 +241,7 @@ function BubbleMatrixChart({ data }: { data: { category: string; video_count: nu
     ],
   };
 
-  return <ReactECharts option={option} style={{ height: 300 }} />;
+  return <ReactECharts option={option} style={{ height: 300, width: '100%' }} />;
 }
 
 function DurationCVRChart({ data }: { data: { range: string; video_count: number; cvr: number }[] }) {
@@ -275,7 +275,7 @@ function DurationCVRChart({ data }: { data: { range: string; video_count: number
     ],
   };
 
-  return <ReactECharts option={option} style={{ height: 300 }} />;
+  return <ReactECharts option={option} style={{ height: 300, width: '100%' }} />;
 }
 
 function ROITrendChart({ data }: { data: { date: string; gmv: number }[] }) {
@@ -300,5 +300,5 @@ function ROITrendChart({ data }: { data: { date: string; gmv: number }[] }) {
     ],
   };
 
-  return <ReactECharts option={option} style={{ height: 300 }} />;
+  return <ReactECharts option={option} style={{ height: 300, width: '100%' }} />;
 }

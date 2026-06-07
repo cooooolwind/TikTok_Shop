@@ -27,7 +27,7 @@ export default function StatCard({
   };
 
   return (
-    <Card hoverable={!!onClick} onClick={onClick}>
+    <Card hoverable={!!onClick} onClick={onClick} style={{ height: '100%' }}>
       <Statistic
         title={title}
         value={value}

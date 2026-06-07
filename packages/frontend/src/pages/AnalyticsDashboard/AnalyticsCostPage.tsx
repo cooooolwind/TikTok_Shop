@@ -114,19 +114,19 @@ export default function AnalyticsCostPage() {
 
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={14}>
-          <Card title="每日成本构成">
+          <Card title="每日成本构成" style={{ height: '100%' }}>
             <WaterfallChart data={trends} />
           </Card>
         </Col>
         <Col xs={24} md={10}>
-          <Card title="模型成本占比">
+          <Card title="模型成本占比" style={{ height: '100%' }}>
             <NestedDonutChart data={breakdown} />
           </Card>
         </Col>
       </Row>
 
       {templateCost.length > 0 && (
-        <Card title="模板成本对比" style={{ marginBottom: 24 }}>
+        <Card title="模板成本对比" style={{ marginBottom: 24, height: '100%' }}>
           <TemplateBubbleChart data={templateCost} />
         </Card>
       )}
@@ -165,7 +165,7 @@ function WaterfallChart({ data }: { data: { date: string; script_cost: number; f
     ],
   };
 
-  return <ReactECharts option={option} style={{ height: 320 }} />;
+  return <ReactECharts option={option} style={{ height: 320, width: '100%' }} />;
 }
 
 function NestedDonutChart({ data }: { data: { model: string; usage: string; cost: number; percentage: number }[] }) {
@@ -208,7 +208,7 @@ function NestedDonutChart({ data }: { data: { model: string; usage: string; cost
     ],
   };
 
-  return <ReactECharts option={option} style={{ height: 320 }} />;
+  return <ReactECharts option={option} style={{ height: 320, width: '100%' }} />;
 }
 
 function TemplateBubbleChart({ data }: { data: { template_name: string; usage_count: number; avg_cost: number; success_rate: number }[] }) {
@@ -238,5 +238,5 @@ function TemplateBubbleChart({ data }: { data: { template_name: string; usage_co
     ],
   };
 
-  return <ReactECharts option={option} style={{ height: 360 }} />;
+  return <ReactECharts option={option} style={{ height: 360, width: '100%' }} />;
 }
