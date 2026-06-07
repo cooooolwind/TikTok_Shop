@@ -68,8 +68,8 @@ export class AnalyticsService {
   ): Promise<AnalyticsSeed> {
     const tasks = await this.tasksRepository
       .createQueryBuilder('task')
-      .where('task.created_at >= :start', { start: new Date(startDate) })
-      .andWhere('task.created_at <= :end', { end: new Date(endDate) })
+      .where('task.created_at >= :start', { start: new Date(`${startDate}T00:00:00.000Z`) })
+      .andWhere('task.created_at <= :end', { end: new Date(`${endDate}T23:59:59.999Z`) })
       .getMany();
 
     const BASE_TOTAL_VIDEOS = 125;
@@ -256,8 +256,8 @@ export class AnalyticsService {
   ): Promise<DurationDistribution[]> {
     const tasks = await this.tasksRepository
       .createQueryBuilder('task')
-      .where('task.created_at >= :start', { start: new Date(query.start_date) })
-      .andWhere('task.created_at <= :end', { end: new Date(query.end_date) })
+      .where('task.created_at >= :start', { start: new Date(`${query.start_date}T00:00:00.000Z`) })
+      .andWhere('task.created_at <= :end', { end: new Date(`${query.end_date}T23:59:59.999Z`) })
       .andWhere('task.status = :status', { status: 'done' })
       .getMany();
 
