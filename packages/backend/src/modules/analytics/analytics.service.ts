@@ -72,11 +72,12 @@ export class AnalyticsService {
       .andWhere('task.created_at <= :end', { end: new Date(`${endDate}T23:59:59.999Z`) })
       .getMany();
 
-    const BASE_TOTAL_VIDEOS = 125;
-    const BASE_DONE_COUNT = 118;
-    const BASE_FAILED_COUNT = 7;
-    const BASE_MATERIALS = 200;
-    const BASE_SCRIPTS = 150;
+    const isMock = process.env.MOCK_DASHBOARD !== 'false';
+    const BASE_TOTAL_VIDEOS = isMock ? 125 : 0;
+    const BASE_DONE_COUNT = isMock ? 118 : 0;
+    const BASE_FAILED_COUNT = isMock ? 7 : 0;
+    const BASE_MATERIALS = isMock ? 200 : 0;
+    const BASE_SCRIPTS = isMock ? 150 : 0;
 
     const materials = await this.materialsRepository.count() + BASE_MATERIALS;
     const scripts = await this.scriptsRepository.count() + BASE_SCRIPTS;
@@ -103,8 +104,8 @@ export class AnalyticsService {
         (t) => t.createdAt.toISOString().split('T')[0] === date,
       );
       const seedVal = date.split('-').reduce((a, b) => a + parseInt(b, 10), 0);
-      const mockTotal = 3 + (seedVal % 3);
-      const mockDone = Math.floor(mockTotal * 0.94);
+      const mockTotal = isMock ? 3 + (seedVal % 3) : 0;
+      const mockDone = isMock ? Math.floor(mockTotal * 0.94) : 0;
       const mockFailed = mockTotal - mockDone;
       return {
         date,
@@ -392,10 +393,11 @@ export class AnalyticsService {
   // ===== Home =====
 
   async getHomeStats(): Promise<HomeStats> {
-    const BASE_TOTAL_VIDEOS = 125;
-    const BASE_MATERIALS = 200;
-    const BASE_SCRIPTS = 150;
-    const BASE_DONE_COUNT = 118;
+    const isMock = process.env.MOCK_DASHBOARD !== 'false';
+    const BASE_TOTAL_VIDEOS = isMock ? 125 : 0;
+    const BASE_MATERIALS = isMock ? 200 : 0;
+    const BASE_SCRIPTS = isMock ? 150 : 0;
+    const BASE_DONE_COUNT = isMock ? 118 : 0;
 
     const [totalVideosDb, totalMaterialsDb, totalScriptsDb] = await Promise.all([
       this.tasksRepository.count(),

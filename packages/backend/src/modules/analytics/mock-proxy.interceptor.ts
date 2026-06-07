@@ -17,6 +17,18 @@ export class MockProxyInterceptor implements NestInterceptor {
     }
 
     const req = context.switchToHttp().getRequest<Request>();
+    
+    // Only proxy external metrics (Cost, Conversion, Strategy, Attribution)
+    const isExternalMetric = 
+      req.path.includes('/cost/') || 
+      req.path.includes('/conversion/') || 
+      req.path.includes('/strategy/') || 
+      req.path.includes('/attribution');
+
+    if (!isExternalMetric) {
+      return next.handle();
+    }
+
     const baseUrl = process.env.STATISTIC_API_URL;
 
     if (!baseUrl) {
