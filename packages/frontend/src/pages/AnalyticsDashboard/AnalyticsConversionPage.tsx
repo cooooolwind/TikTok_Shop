@@ -130,7 +130,7 @@ export default function AnalyticsConversionPage() {
         <Col xs={12} sm={6}>
           <StatCard title="ROI" value={`${roi.toFixed(1)}x`} loading={loading}>
             {roi > 0 && (
-              <div style={{ marginTop: 4, textAlign: 'center', fontSize: 12, color: '#999', wordBreak: 'keep-all', whiteSpace: 'nowrap' }}>
+              <div style={{ marginTop: 4, textAlign: 'center', fontSize: 12, color: '#999' }}>
                 每投入 1 元 AI 费用，赚回 ¥{(roi).toFixed(1)}
               </div>
             )}
@@ -224,7 +224,7 @@ function BubbleMatrixChart({ data }: { data: { category: string; video_count: nu
       formatter: (p: { name: string; value: [number, number, number, number] }) =>
         `${p.name}<br/>视频: ${p.value[0]}<br/>CVR: ${(p.value[1] * 100).toFixed(2)}%<br/>GMV: ¥${p.value[2].toLocaleString()}<br/>ROI: ${p.value[3].toFixed(1)}x`,
     },
-    grid: { left: 80, right: 80, top: 40, bottom: 40 },
+    grid: { left: 80, right: 80, top: 40, bottom: 60 },
     xAxis: { name: '视频产出量', type: 'value' },
     yAxis: { name: 'CVR', type: 'value', axisLabel: { formatter: (v: number) => `${(v * 100).toFixed(1)}%` } },
     series: [
@@ -253,7 +253,7 @@ function DurationCVRChart({ data }: { data: { range: string; video_count: number
 
   const option = {
     tooltip: { trigger: 'axis' },
-    grid: { left: 60, right: 20, top: 40, bottom: 40 },
+    grid: { left: 60, right: 20, top: 40, bottom: 60 },
     xAxis: { type: 'category', data: rows.map((r) => r.range) },
     yAxis: { type: 'value', name: 'CVR', axisLabel: { formatter: (v: number) => `${(v * 100).toFixed(1)}%` } },
     series: [
@@ -285,8 +285,8 @@ function ROITrendChart({ data }: { data: { date: string; gmv: number }[] }) {
 
   const option = {
     tooltip: { trigger: 'axis' },
-    legend: { data: ['GMV'], bottom: 0 },
-    grid: { left: 70, right: 20, top: 20, bottom: 60 },
+    legend: { data: ['GMV'], top: 0 },
+    grid: { left: 70, right: 20, top: 60, bottom: 60 },
     xAxis: { type: 'category', data: rows.map((r) => r.date), axisLabel: { rotate: 45, fontSize: 10 } },
     yAxis: { type: 'value', axisLabel: { formatter: (v: number) => v >= 10000 ? `${(v / 10000).toFixed(0)}万` : `${v}` } },
     series: [

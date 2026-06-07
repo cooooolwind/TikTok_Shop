@@ -142,8 +142,8 @@ function WaterfallChart({ data }: { data: { date: string; script_cost: number; f
 
   const option = {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: { data: ['剧本生成', '首帧生成', '视频片段', '总成本'], bottom: 0, textStyle: { color: token.colorText } },
-    grid: { left: 60, right: 20, top: 40, bottom: 30 },
+    legend: { data: ['剧本生成', '首帧生成', '视频片段', '总成本'], top: 0, textStyle: { color: token.colorText } },
+    grid: { left: 60, right: 20, top: 90, bottom: 60 },
     xAxis: { type: 'category', data: rows.map((r) => r.date), axisLabel: { rotate: 45, fontSize: 10, color: token.colorTextSecondary } },
     yAxis: { 
       type: 'value', 
@@ -276,7 +276,7 @@ function TemplateBubbleChart({ data }: { data: { template_name: string; usage_co
       formatter: (p: { name: string; value: [number, number, number, number] }) =>
         `${p.name}<br/>使用: ${p.value[0]}次<br/>单次成本: ¥${p.value[1].toFixed(2)}<br/>成功率: ${(p.value[2] * 100).toFixed(0)}%`,
     },
-    grid: { left: 80, right: 80, top: 40, bottom: 40 },
+    grid: { left: 80, right: 80, top: 40, bottom: 60 },
     xAxis: { 
       name: '使用次数', 
       type: 'value',
