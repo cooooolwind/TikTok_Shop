@@ -349,3 +349,41 @@ make docker-down     # 停止全部服务
 2. **剧本生成**：用户输入商品信息/偏好 → 后端调用 AI → 生成分镜剧本 → 返回编辑
 3. **视频创作**：用户提交创作任务 → 入队列 (BullMQ) → 异步执行 (TTS + 视频生成 + BGM 合成) → WebSocket 实时推送进度 → 完成/导出
 4. **数据看板**：汇总素材量、生成量、成功率等指标 → ECharts 可视化
+
+---
+
+## 数据看板 Mock 逻辑说明 (Analytics Mock Logic)
+
+为保证在开发和演示环境（尤其是数据库为空或数据量极少时）数据看板依然能够呈现丰富、自洽的图表，系统内置了 `AnalyticsMockGenerator` 并设置了基础偏置量（Baseline）。
+
+### 1. 基础偏置量 (Baseline Seed)
+由于多项转化与成本数据均由总视频数等基数乘算得出，在提取真实数据库计数的之上，`AnalyticsService` 固定追加了以下 Mock 偏置量作为随机数种子输入：
+- **总视频数 (totalVideos)**: 真实数据 + 125
+- **成功视频数 (doneCount)**: 真实数据 + 118
+- **总素材数 (materials)**: 真实数据 + 200
+- **总剧本数 (scripts)**: 真实数据 + 150
+每日生成的趋势数据 (dailyData) 也会根据日期的哈希值，动态追加每日 3~6 条的虚拟生成记录。
+
+### 2. 成本计算 (Cost)
+- `ChatTokens`: `剧本数量 * random(8000, 25000)`
+- `SeedanceCalls` (视频片段): `成功视频数 * 平均分镜数(3~4)`
+- `totalChatCost`: `(ChatTokens / 1,000,000) * 0.8` (以 Doubao-pro ¥0.8/1M tokens 计算)
+- `totalSeedanceCost`: `SeedanceCalls * 0.3` (¥0.3/次调用)
+- `totalSeedreamCost`: `SeedanceCalls * 0.2` (¥0.2/次调用)
+- `totalCost`: 上述三项之和
+
+### 3. 转化计算 (Conversion & ROI)
+- **曝光量 (Exposure)**: `总视频数 * random(500, 5000)`
+- **点击量 (Click)**: `曝光量 * random(0.02, 0.05)` (CTR 为 2% ~ 5%)
+- **订单量 (Order)**: `点击量 * random(0.01, 0.03)` (CVR 为 1% ~ 3%)
+- **GMV**: `订单量 * random(80, 300)` (客单价 80~300 元)
+- **ROI**: `GMV / totalCost`
+
+### 4. 漏斗计算 (Funnel)
+- `曝光`: 100%
+- `点击`: 曝光 * ~3.2%
+- `深度观看`: 点击 * 30%~50%
+- `下单`: 深度观看 * ~1.8%
+
+### 5. 策略归因 (Strategy Attribution)
+读取真实数据库中的模板因子 (Factors) 配置，并为每个出现过的因子分配 `0.5 ~ 0.95` 之间的随机“平均表现分”。A/B 测试、BGM、字幕策略等数据，均通过类似方式生成符合行业常见表现特征的固定区间随机分布。
