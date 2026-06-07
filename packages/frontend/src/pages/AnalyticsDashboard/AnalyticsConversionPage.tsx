@@ -3,7 +3,7 @@ import { Card, Col, DatePicker, Row, Select, Space } from 'antd';
 import ReactECharts from 'echarts-for-react';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import { ArrowRightOutlined } from '@ant-design/icons';
+import { ArrowRightOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
 import StatCard from '../../components/analytics/StatCard';
 import { useConversionAnalyticsStore } from '../../stores/useConversionAnalyticsStore';
@@ -89,34 +89,34 @@ export default function AnalyticsConversionPage() {
           align="middle"
           style={{ textAlign: 'center', padding: '16px 0' }}
         >
-          <Col>
+          <Col xs={24} md={4}>
             <div style={{ fontSize: 12, color: '#999' }}>曝光量</div>
             <div style={{ fontSize: 28, fontWeight: 700, color: '#1677ff' }}>
               {((overview?.total_exposure ?? 0) / 10000).toFixed(1)}万
             </div>
           </Col>
-          <Col>
-            <ArrowRightOutlined style={{ color: '#ccc', fontSize: 20 }} />
+          <Col xs={24} md={1}>
+            {isMobile ? <ArrowDownOutlined style={{ color: '#ccc', fontSize: 20 }} /> : <ArrowRightOutlined style={{ color: '#ccc', fontSize: 20 }} />}
           </Col>
-          <Col>
+          <Col xs={24} md={4}>
             <div style={{ fontSize: 12, color: '#999' }}>点击率 (CTR)</div>
             <div style={{ fontSize: 28, fontWeight: 700, color: '#fa8c16' }}>
               {((overview?.ctr ?? 0) * 100).toFixed(2)}%
             </div>
           </Col>
-          <Col>
-            <ArrowRightOutlined style={{ color: '#ccc', fontSize: 20 }} />
+          <Col xs={24} md={1}>
+            {isMobile ? <ArrowDownOutlined style={{ color: '#ccc', fontSize: 20 }} /> : <ArrowRightOutlined style={{ color: '#ccc', fontSize: 20 }} />}
           </Col>
-          <Col>
+          <Col xs={24} md={4}>
             <div style={{ fontSize: 12, color: '#999' }}>转化率 (CVR)</div>
             <div style={{ fontSize: 28, fontWeight: 700, color: '#52c41a' }}>
               {((overview?.cvr ?? 0) * 100).toFixed(2)}%
             </div>
           </Col>
-          <Col>
-            <ArrowRightOutlined style={{ color: '#ccc', fontSize: 20 }} />
+          <Col xs={24} md={1}>
+            {isMobile ? <ArrowDownOutlined style={{ color: '#ccc', fontSize: 20 }} /> : <ArrowRightOutlined style={{ color: '#ccc', fontSize: 20 }} />}
           </Col>
-          <Col>
+          <Col xs={24} md={4}>
             <div style={{ fontSize: 12, color: '#999' }}>GMV 贡献</div>
             <div style={{ fontSize: 28, fontWeight: 700, color: '#ff4d4f' }}>{gmvText}</div>
           </Col>
