@@ -9,6 +9,10 @@ import type {
   Voice, BGM, BGMListQuery,
   OverviewData, TrendData, AttributionData, DurationDistribution,
   AnalyticsQuery, TrendsQuery,
+  CostOverview, CostTrend, CostBreakdown, TemplateCostItem, HighCostVideo,
+  ConversionOverview, ConversionTrend, CategoryConversion, FunnelStage, DurationCVR,
+  StrategyFactor, StrategyFormula, ABComparison, RhythmCompleteness, SubtitleStrategy, CTAPosition, BGMEffect,
+  HomeStats,
   MaterialAnalysisStep,
 } from '@aigc/shared-types';
 
@@ -213,6 +217,12 @@ export interface AnalyticsState {
   trends: TrendData[];
   attribution: AttributionData[];
   durationDistribution: DurationDistribution[];
+  materialDistribution: {
+    type_distribution: { type: string; count: number }[];
+    category_distribution: { category: string; count: number }[];
+    status_distribution: { status: string; count: number }[];
+    ai_tag_coverage: number;
+  } | null;
   dateRange: AnalyticsQuery;
   granularity: 'day' | 'week' | 'month';
   loading: boolean;
@@ -226,6 +236,89 @@ export interface AnalyticsState {
   fetchTrends: () => Promise<void>;
   fetchAttribution: () => Promise<void>;
   fetchDurationDistribution: () => Promise<void>;
+  fetchMaterialDistribution: () => Promise<void>;
+}
+
+// ==============================
+// Cost Analytics Store
+// ==============================
+
+export interface CostAnalyticsState {
+  overview: CostOverview | null;
+  trends: CostTrend[];
+  breakdown: CostBreakdown[];
+  templateCost: TemplateCostItem[];
+  highCostVideos: HighCostVideo[];
+  dateRange: AnalyticsQuery;
+  granularity: 'day' | 'week' | 'month';
+  loading: boolean;
+
+  setDateRange: (range: AnalyticsQuery) => void;
+  setGranularity: (g: 'day' | 'week' | 'month') => void;
+  fetchOverview: () => Promise<void>;
+  fetchTrends: () => Promise<void>;
+  fetchBreakdown: () => Promise<void>;
+  fetchTemplateCost: () => Promise<void>;
+  fetchHighCostVideos: () => Promise<void>;
+}
+
+// ==============================
+// Conversion Analytics Store
+// ==============================
+
+export interface ConversionAnalyticsState {
+  overview: ConversionOverview | null;
+  trends: ConversionTrend[];
+  categoryConversion: CategoryConversion[];
+  funnel: FunnelStage[];
+  durationCVR: DurationCVR[];
+  dateRange: AnalyticsQuery;
+  granularity: 'day' | 'week' | 'month';
+  loading: boolean;
+
+  setDateRange: (range: AnalyticsQuery) => void;
+  setGranularity: (g: 'day' | 'week' | 'month') => void;
+  fetchOverview: () => Promise<void>;
+  fetchTrends: () => Promise<void>;
+  fetchCategoryConversion: () => Promise<void>;
+  fetchFunnel: () => Promise<void>;
+  fetchDurationCVR: () => Promise<void>;
+}
+
+// ==============================
+// Strategy Analytics Store
+// ==============================
+
+export interface StrategyAnalyticsState {
+  factors: StrategyFactor[];
+  formula: StrategyFormula | null;
+  abComparison: ABComparison | null;
+  rhythm: RhythmCompleteness[];
+  subtitle: SubtitleStrategy[];
+  cta: CTAPosition[];
+  bgm: BGMEffect[];
+  dateRange: AnalyticsQuery;
+  loading: boolean;
+
+  setDateRange: (range: AnalyticsQuery) => void;
+  fetchFactors: () => Promise<void>;
+  fetchFormula: () => Promise<void>;
+  fetchABComparison: () => Promise<void>;
+  fetchRhythm: () => Promise<void>;
+  fetchSubtitle: () => Promise<void>;
+  fetchCTA: () => Promise<void>;
+  fetchBGM: () => Promise<void>;
+  fetchAll: () => Promise<void>;
+}
+
+// ==============================
+// Home Store
+// ==============================
+
+export interface HomeStatsState {
+  stats: HomeStats | null;
+  loading: boolean;
+  fetchStats: () => Promise<void>;
 }
 
 // ==============================

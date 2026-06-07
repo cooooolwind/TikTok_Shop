@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import MainLayout from '../layouts/MainLayout';
 import Loading from '../components/common/Loading';
@@ -29,6 +29,9 @@ const ScriptEditor = lazy(() => import('../pages/ScriptWorkbench/ScriptEditor'))
 const ReferenceList = lazy(() => import('../pages/ScriptWorkbench/ReferenceList'));
 const ReferenceDetail = lazy(() => import('../pages/ScriptWorkbench/ReferenceDetail'));
 const TemplateManager = lazy(() => import('../pages/ScriptWorkbench/TemplateManager'));
+const TemplateMarketPage = lazy(() => import('../pages/TemplateMarket/TemplateMarketPage'));
+const TemplateUsePage = lazy(() => import('../pages/TemplateMarket/TemplateUsePage'));
+const MyVideosPage = lazy(() => import('../pages/TemplateMarket/MyVideosPage'));
 
 // ===== 创作工作室 =====
 const CreationStudioPage = lazy(() => import('../pages/CreationStudio/CreationStudioPage'));
@@ -42,6 +45,9 @@ const VideoEditor = lazy(() => import('../pages/Editor/VideoEditor'));
 
 // ===== 数据看板 =====
 const AnalyticsDashboardPage = lazy(() => import('../pages/AnalyticsDashboard/AnalyticsDashboardPage'));
+const AnalyticsCostPage = lazy(() => import('../pages/AnalyticsDashboard/AnalyticsCostPage'));
+const AnalyticsConversionPage = lazy(() => import('../pages/AnalyticsDashboard/AnalyticsConversionPage'));
+const AnalyticsStrategyPage = lazy(() => import('../pages/AnalyticsDashboard/AnalyticsStrategyPage'));
 
 // ===== 404 =====
 const NotFoundPage = lazy(() => import('../pages/NotFound'));
@@ -67,6 +73,9 @@ export const router: Router = createBrowserRouter([
       { path: 'references', element: <LazyPage Component={ReferenceList} /> },
       { path: 'references/:id', element: <LazyPage Component={ReferenceDetail} /> },
       { path: 'templates', element: <LazyPage Component={TemplateManager} /> },
+      { path: 'template-market', element: <LazyPage Component={TemplateMarketPage} /> },
+      { path: 'template-market/:id/use', element: <LazyPage Component={TemplateUsePage} /> },
+      { path: 'my-videos', element: <LazyPage Component={MyVideosPage} /> },
 
       // 创作工作室
       { path: 'creation', element: <LazyPage Component={CreationStudioPage} /> },
@@ -79,7 +88,11 @@ export const router: Router = createBrowserRouter([
       { path: 'editor/:taskId', element: <LazyPage Component={VideoEditor} /> },
 
       // 数据看板
-      { path: 'analytics', element: <LazyPage Component={AnalyticsDashboardPage} /> },
+      { path: 'analytics', element: <Navigate to="/analytics/overview" replace /> },
+      { path: 'analytics/overview', element: <LazyPage Component={AnalyticsDashboardPage} /> },
+      { path: 'analytics/cost', element: <LazyPage Component={AnalyticsCostPage} /> },
+      { path: 'analytics/conversion', element: <LazyPage Component={AnalyticsConversionPage} /> },
+      { path: 'analytics/strategy', element: <LazyPage Component={AnalyticsStrategyPage} /> },
 
       // 404
       { path: '*', element: <LazyPage Component={NotFoundPage} /> },
