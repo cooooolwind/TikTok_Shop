@@ -138,9 +138,7 @@ export default function AnalyticsDashboardPage() {
 
       <Card title="产出热力图" style={{ marginBottom: 24 }}>
         <div style={{ overflowX: 'auto' }}>
-          <div style={{ minWidth: 800 }}>
-            <CalendarHeatmap data={trends} />
-          </div>
+          <CalendarHeatmap data={trends} />
         </div>
       </Card>
 
@@ -246,7 +244,7 @@ function CalendarHeatmap({ data }: { data: TrendData[] }) {
       top: 20,
       left: 30,
       right: 30,
-      cellSize: ['auto', 20],
+      cellSize: [20, 20],
       range: [rows[0].date, rows[rows.length - 1].date],
       itemStyle: {
         borderWidth: 3,
@@ -266,7 +264,8 @@ function CalendarHeatmap({ data }: { data: TrendData[] }) {
     ],
   };
 
-  return <ReactECharts option={option} style={{ height: Math.max(200, Math.ceil(dayCount / 7) * 24 + 80) }} />;
+  const minWidth = Math.max(600, Math.ceil(dayCount / 7) * 20 + 80);
+  return <ReactECharts option={option} style={{ height: 220, minWidth }} />;
 }
 
 function AttributionChart({ data }: { data: AttributionData[] }) {
