@@ -123,7 +123,7 @@ export default function AnalyticsStrategyPage() {
         </Card>
       )}
 
-      <Row gutter={24} style={{ marginBottom: 24 }}>
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={8}>
           <Card title="节奏与完播率">
             <RhythmChart data={rhythm} />
@@ -141,7 +141,7 @@ export default function AnalyticsStrategyPage() {
         </Col>
       </Row>
 
-      <Row gutter={24} style={{ marginBottom: 24 }}>
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={12}>
           <Card title="BGM 风格 vs 完播率">
             <BGMChart data={bgm} />
