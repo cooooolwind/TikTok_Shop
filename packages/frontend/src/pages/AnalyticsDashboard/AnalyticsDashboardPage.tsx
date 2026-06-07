@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Card, Col, DatePicker, Row, Select, Space } from 'antd';
+import { Card, Col, DatePicker, Row, Select, Space, Modal, Button } from 'antd';
+import { FullscreenOutlined } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
@@ -34,6 +35,8 @@ export default function AnalyticsDashboardPage() {
     fetchDurationDistribution,
     fetchMaterialDistribution,
   } = useAnalyticsStore();
+
+  const [heatmapModalOpen, setHeatmapModalOpen] = useState(false);
 
   const [dates, setDates] = useState<[Dayjs, Dayjs]>([
     dayjs().subtract(7, 'day'),
@@ -136,11 +139,34 @@ export default function AnalyticsDashboardPage() {
         </Col>
       </Row>
 
-      <Card title="产出热力图" style={{ marginBottom: 24 }}>
-        <div style={{ overflowX: 'auto' }}>
-          <CalendarHeatmap data={trends} />
+      <Card 
+        title="产出热力图" 
+        style={{ marginBottom: 24 }}
+        extra={<Button type="text" icon={<FullscreenOutlined />} onClick={() => setHeatmapModalOpen(true)}>全屏预览</Button>}
+      >
+        <div 
+          style={{ overflowX: 'hidden', cursor: 'pointer', direction: 'rtl' }}
+          onClick={() => setHeatmapModalOpen(true)}
+          title="点击查看全屏"
+        >
+          <div style={{ direction: 'ltr', display: 'inline-block' }}>
+            <CalendarHeatmap data={trends} />
+          </div>
         </div>
       </Card>
+
+      <Modal
+        title="产出热力图 (全屏预览)"
+        open={heatmapModalOpen}
+        onCancel={() => setHeatmapModalOpen(false)}
+        footer={null}
+        width="min(95vw, 1200px)"
+        style={{ top: 20 }}
+      >
+        <div style={{ overflowX: 'auto', paddingBottom: 16 }}>
+          <CalendarHeatmap data={trends} />
+        </div>
+      </Modal>
 
       <Row gutter={24} style={{ marginBottom: 24 }}>
         <Col xs={24} md={12}>
