@@ -298,7 +298,7 @@ export default function MainLayout() {
             {/* 提取有效导航项并分组显示 */}
             {[
               {
-                title: '核心功能',
+                title: '',
                 items: [
                   { key: ROUTES.HOME, icon: <HomeOutlined />, label: '首页' },
                   { key: ROUTES.CREATION, icon: <VideoCameraOutlined />, label: '创作工作室' },
@@ -332,19 +332,21 @@ export default function MainLayout() {
             ].flatMap((group, groupIndex) => {
               const colSpan = group.items.length === 4 ? 12 : 8;
               return [
-                <Col span={24} key={group.title}>
-                  <div className="mobile-grid-group-header" style={{ 
-                    marginTop: groupIndex === 0 ? '0.5rem' : '1.5rem', 
-                    paddingTop: groupIndex === 0 ? 0 : '1rem', 
-                    borderTop: groupIndex === 0 ? 'none' : '1px solid rgba(128,128,128,0.2)', 
-                    paddingBottom: '0.5rem', 
-                    opacity: 0.6, 
-                    fontSize: '0.8rem', 
-                    textAlign: 'center' 
-                  }}>
-                    {group.title}
-                  </div>
-                </Col>,
+                group.title ? (
+                  <Col span={24} key={group.title}>
+                    <div className="mobile-grid-group-header" style={{ 
+                      marginTop: groupIndex === 0 ? '0.5rem' : '1.5rem', 
+                      paddingTop: groupIndex === 0 ? 0 : '1rem', 
+                      borderTop: groupIndex === 0 ? 'none' : '1px solid rgba(128,128,128,0.2)', 
+                      paddingBottom: '0.5rem', 
+                      opacity: 0.6, 
+                      fontSize: '0.8rem', 
+                      textAlign: 'center' 
+                    }}>
+                      {group.title}
+                    </div>
+                  </Col>
+                ) : null,
                 ...group.items.map((item, itemIndex) => (
                   <Col span={colSpan} className="mobile-grid-cell" key={item.key} style={{ animationDelay: `${(groupIndex * 5 + itemIndex) * 20}ms` }}>
                     <div
