@@ -16,6 +16,7 @@ import { TtsModule } from './modules/tts/tts.module';
 import { BgmModule } from './modules/bgm/bgm.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { SystemModule } from './modules/system/system.module';
+import { MyVideosModule } from './modules/my-videos/my-videos.module';
 
 import { AiModule } from './ai/ai.module';
 import { TasksModule } from './tasks/tasks.module';
@@ -49,6 +50,7 @@ import { WebsocketModule } from './websocket/websocket.module';
     BgmModule,
     AnalyticsModule,
     SystemModule,
+    MyVideosModule,
     AiModule,
     TasksModule,
     WebsocketModule,

@@ -14,6 +14,8 @@ function makeTemplate(overrides: Partial<Template> = {}): Template {
     constraints: ['short scenes'],
     applicableCategories: ['fashion'],
     derivedFrom: [],
+    prompt: null,
+    status: 'enabled',
     isBuiltin: false,
     createdAt: now,
     updatedAt: now,
@@ -48,7 +50,7 @@ describe('TemplatesService', () => {
 
     const result = await service.findAll({ page: 1, pageSize: 20 });
 
-    expect(result.items.length).toBeGreaterThan(1);
+    expect(result.items.length).toBeGreaterThanOrEqual(6);
     expect(result.items.some((item) => item.is_builtin)).toBe(true);
   });
 
@@ -84,5 +86,25 @@ describe('TemplatesService', () => {
     const { service } = makeService({ template: null });
 
     await expect(service.findOne('missing')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('generates a shoppable video plan from a template and product info', async () => {
+    const { service } = makeService();
+
+    const result = await service.generate('builtin-problem-solution', {
+      productName: 'Strawberry Cookies',
+      category: 'food',
+      sellingPoints: 'crispy, strawberry flavor',
+      price: '19.9',
+      targetUser: 'students',
+      promotion: 'second half price',
+      duration: '30 seconds',
+      style: 'unboxing',
+    });
+
+    expect(result.title).toContain('Strawberry Cookies');
+    expect(result.storyboard).toHaveLength(5);
+    expect(result.storyboard[0]).toHaveProperty('videoPrompt');
+    expect(result.tags.length).toBeGreaterThanOrEqual(3);
   });
 });

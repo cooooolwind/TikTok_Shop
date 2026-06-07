@@ -38,6 +38,11 @@ export type {
   CreateTemplateRequest,
   UpdateTemplateRequest,
   TemplateListQuery,
+  TemplateGenerateRequest,
+  TemplateStoryboardShot,
+  TemplateGenerateResult,
+  MyVideo,
+  SaveMyVideoRequest,
 } from './template';
 
 // 剧本
@@ -99,6 +104,24 @@ export type {
   TrendData,
   AttributionData,
   DurationDistribution,
+  CostOverview,
+  CostTrend,
+  CostBreakdown,
+  TemplateCostItem,
+  HighCostVideo,
+  ConversionOverview,
+  ConversionTrend,
+  CategoryConversion,
+  FunnelStage,
+  DurationCVR,
+  StrategyFactor,
+  StrategyFormula,
+  ABComparison,
+  RhythmCompleteness,
+  SubtitleStrategy,
+  CTAPosition,
+  BGMEffect,
+  HomeStats,
 } from './analytics';
 
 // 系统

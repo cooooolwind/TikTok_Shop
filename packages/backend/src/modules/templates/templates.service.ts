@@ -1,36 +1,96 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import type { CreateTemplateRequest, Template as TemplateResponse, TemplateListQuery } from '@aigc/shared-types';
+import type {
+  CreateTemplateRequest,
+  Template as TemplateResponse,
+  TemplateGenerateRequest,
+  TemplateGenerateResult,
+  TemplateListQuery,
+} from '@aigc/shared-types';
 import { Template } from './entities/template.entity';
 
 const DEFAULT_MERCHANT_ID = 'default';
+const BUILTIN_DATE = new Date('2026-01-01T00:00:00.000Z').toISOString();
+
+function buildPrompt(templateName: string, strategy: string, factors: Record<string, string>) {
+  return [
+    '你是一名专业电商短视频编导。',
+    '请根据用户选择的短视频创作模板和商品信息，生成一个适合电商带货场景的视频方案。',
+    `当前模板名称：${templateName}`,
+    `当前模板策略：${strategy}`,
+    `模板因子：${Object.values(factors).join('、')}`,
+    '请输出视频标题、口播脚本、5 个分镜设计、每个分镜的视频生成提示词、发布文案和 3 到 5 个话题标签。',
+    '要求开头吸引注意，语言口语化，分镜清晰，结尾有购买引导，不夸大功效，不使用绝对化表达。',
+  ].join('\n');
+}
+
+function builtin(
+  id: string,
+  name: string,
+  strategy: string,
+  applicableCategories: string[],
+  factors: Record<string, string>,
+): TemplateResponse {
+  return {
+    id,
+    name,
+    strategy,
+    factors,
+    constraints: ['不要夸大商品功效', '不要虚假宣传', '避免使用绝对化表达'],
+    applicable_categories: applicableCategories,
+    derived_from: [],
+    prompt: buildPrompt(name, strategy, factors),
+    status: 'enabled',
+    is_builtin: true,
+    created_at: BUILTIN_DATE,
+    updated_at: BUILTIN_DATE,
+  };
+}
 
 const BUILTIN_TEMPLATES: TemplateResponse[] = [
-  {
-    id: 'builtin-problem-solution',
-    name: '痛点解决型',
-    strategy: '3 秒痛点钩子，展示商品解决方案，强化利益点，结尾行动号召。',
-    factors: { hook: '痛点提问', proof: '商品演示', cta: '立即下单' },
-    constraints: ['总时长控制在 15-25 秒', '每个分镜只表达一个核心信息'],
-    applicable_categories: ['fashion', 'beauty', 'home', 'electronics'],
-    derived_from: [],
-    is_builtin: true,
-    created_at: new Date('2026-01-01T00:00:00.000Z').toISOString(),
-    updated_at: new Date('2026-01-01T00:00:00.000Z').toISOString(),
-  },
-  {
-    id: 'builtin-before-after',
-    name: '前后对比型',
-    strategy: '先展示使用前状态，再展示使用后效果，通过对比建立购买理由。',
-    factors: { contrast: '前后变化', scene: '真实使用场景', trust: '细节证明' },
-    constraints: ['必须包含对比画面', '避免夸大无法证明的效果'],
-    applicable_categories: ['beauty', 'home', 'fashion'],
-    derived_from: [],
-    is_builtin: true,
-    created_at: new Date('2026-01-01T00:00:00.000Z').toISOString(),
-    updated_at: new Date('2026-01-01T00:00:00.000Z').toISOString(),
-  },
+  builtin(
+    'builtin-problem-solution',
+    '痛点解决型',
+    '先提出用户痛点，再展示商品解决方案，最后强化购买理由。',
+    ['beauty', 'home', 'electronics', 'fashion'],
+    { pain: '痛点', solution: '解决方案', cta: '转化引导' },
+  ),
+  builtin(
+    'builtin-before-after',
+    '前后对比型',
+    '先展示使用前状态，再展示使用后效果，通过对比突出商品价值。',
+    ['beauty', 'home', 'fashion'],
+    { before: '使用前', after: '使用后', contrast: '效果对比' },
+  ),
+  builtin(
+    'builtin-unboxing',
+    '开箱种草型',
+    '通过开箱、细节展示和真实体验，营造种草氛围。',
+    ['food', 'beauty', 'electronics', 'general'],
+    { unboxing: '开箱', detail: '细节', experience: '体验' },
+  ),
+  builtin(
+    'builtin-feature-demo',
+    '功能展示型',
+    '重点展示商品功能、参数和使用场景，适合偏理性消费商品。',
+    ['electronics', 'home'],
+    { feature: '功能', parameter: '参数', scene: '场景' },
+  ),
+  builtin(
+    'builtin-scene-immersion',
+    '场景代入型',
+    '构造真实生活场景，让用户感受到商品在实际生活中的价值。',
+    ['home', 'fashion', 'food', 'beauty'],
+    { scene: '场景', need: '需求', experience: '使用体验' },
+  ),
+  builtin(
+    'builtin-viral-general',
+    '通用爆款型',
+    '使用短视频常见爆款结构，先吸引注意，再讲卖点，最后引导下单。',
+    ['general'],
+    { hook: '钩子', sellingPoint: '卖点', cta: '行动引导' },
+  ),
 ];
 
 @Injectable()
@@ -46,6 +106,8 @@ export class TemplatesService {
       constraints: data.constraints,
       applicableCategories: data.applicable_categories,
       derivedFrom: data.derived_from ?? [],
+      prompt: data.prompt ?? buildPrompt(data.name, data.strategy, data.factors),
+      status: data.status ?? 'enabled',
       isBuiltin: false,
     });
     return this.toResponse(await this.templatesRepository.save(template));
@@ -67,6 +129,10 @@ export class TemplatesService {
       qb.andWhere('template.applicable_categories::text ILIKE :category', { category: `%${query.category}%` });
     }
 
+    if (query.status) {
+      qb.andWhere('template.status = :status', { status: query.status });
+    }
+
     const [userTemplates, userTotal] = await qb
       .skip((page - 1) * pageSize)
       .take(pageSize)
@@ -86,8 +152,8 @@ export class TemplatesService {
   }
 
   async findOne(id: string) {
-    const builtin = this.findBuiltin(id);
-    if (builtin) return builtin;
+    const builtinTemplate = this.findBuiltin(id);
+    if (builtinTemplate) return builtinTemplate;
 
     const template = await this.templatesRepository.findOne({ where: { id, merchantId: DEFAULT_MERCHANT_ID } });
     if (!template) throw new NotFoundException('Template not found');
@@ -95,12 +161,64 @@ export class TemplatesService {
   }
 
   async findRawById(id: string) {
-    const builtin = this.findBuiltin(id);
-    if (builtin) return builtin;
+    const builtinTemplate = this.findBuiltin(id);
+    if (builtinTemplate) return builtinTemplate;
 
     const template = await this.templatesRepository.findOne({ where: { id, merchantId: DEFAULT_MERCHANT_ID } });
     if (!template) return null;
     return this.toResponse(template);
+  }
+
+  async generate(id: string, data: TemplateGenerateRequest): Promise<TemplateGenerateResult> {
+    const template = await this.findOne(id);
+    if (template.status === 'disabled') throw new BadRequestException('Template is disabled');
+
+    const sellingPoints = data.sellingPoints
+      .split(/[,\n，、]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const mainSellingPoint = sellingPoints[0] ?? data.sellingPoints;
+    const promotion = data.promotion?.trim() || '当前优惠活动';
+    const factorText = Object.values(template.factors).join('、');
+
+    return {
+      title: `${data.productName}这样讲，${data.targetUser}更容易被打动`,
+      script: [
+        `你是不是也在找一款适合${data.targetUser}的${data.category}好物？`,
+        `今天用「${template.name}」的方式讲${data.productName}，先抓住真实需求，再把${mainSellingPoint}这些卖点讲清楚。`,
+        `${data.productName}的价格是${data.price}，现在还有${promotion}。`,
+        `如果你想要${data.style}风格、${data.duration}左右的带货视频，这套方案可以直接进入拍摄和生成流程。`,
+      ].join(''),
+      storyboard: [
+        {
+          shot: 1,
+          content: `开场用${template.name}钩子引出需求，点出${data.targetUser}的购买场景。`,
+          videoPrompt: `Commercial short video opening shot for ${data.productName}, focused on target users, clean TikTok Shop style, vertical 9:16`,
+        },
+        {
+          shot: 2,
+          content: `展示商品包装和核心细节，突出${mainSellingPoint}。`,
+          videoPrompt: `Close-up product showcase of ${data.productName}, highlight packaging and texture, bright soft lighting, ecommerce advertising`,
+        },
+        {
+          shot: 3,
+          content: `结合${data.category}使用场景，说明${data.sellingPoints}。`,
+          videoPrompt: `Lifestyle usage scene for ${data.productName}, realistic daily environment, product benefits visible, natural handheld camera`,
+        },
+        {
+          shot: 4,
+          content: `按照模板因子「${factorText}」强化购买理由，避免夸大表达。`,
+          videoPrompt: `Benefit demonstration shot for ${data.productName}, trustworthy product demo, clear composition, no exaggerated effects`,
+        },
+        {
+          shot: 5,
+          content: `收尾给出价格和${promotion}，引导用户点击下单或收藏。`,
+          videoPrompt: `Final call-to-action product shot for ${data.productName}, price and promotion mood, clean commercial layout, vertical video`,
+        },
+      ],
+      publishCopy: `${data.productName}带货视频方案来了！适合${data.targetUser}，主打${data.sellingPoints}，${promotion}，拍摄时按「${template.name}」结构推进更清楚。`,
+      tags: [`#${data.category}推荐`, `#${data.productName}`, `#${template.name}`, '#带货短视频'],
+    };
   }
 
   async update(id: string, data: Partial<CreateTemplateRequest>) {
@@ -115,6 +233,8 @@ export class TemplatesService {
     if (data.constraints !== undefined) template.constraints = data.constraints;
     if (data.applicable_categories !== undefined) template.applicableCategories = data.applicable_categories;
     if (data.derived_from !== undefined) template.derivedFrom = data.derived_from;
+    if (data.prompt !== undefined) template.prompt = data.prompt;
+    if (data.status !== undefined) template.status = data.status;
 
     return this.toResponse(await this.templatesRepository.save(template));
   }
@@ -135,7 +255,8 @@ export class TemplatesService {
         template.name.toLowerCase().includes(query.keyword.toLowerCase()) ||
         template.strategy.toLowerCase().includes(query.keyword.toLowerCase());
       const categoryOk = !query.category || template.applicable_categories.includes(query.category);
-      return keywordOk && categoryOk;
+      const statusOk = !query.status || template.status === query.status;
+      return keywordOk && categoryOk && statusOk;
     });
   }
 
@@ -152,6 +273,8 @@ export class TemplatesService {
       constraints: template.constraints ?? [],
       applicable_categories: template.applicableCategories ?? [],
       derived_from: template.derivedFrom ?? [],
+      prompt: template.prompt ?? buildPrompt(template.name, template.strategy, template.factors ?? {}),
+      status: template.status ?? 'enabled',
       is_builtin: template.isBuiltin,
       created_at: template.createdAt.toISOString(),
       updated_at: template.updatedAt.toISOString(),
