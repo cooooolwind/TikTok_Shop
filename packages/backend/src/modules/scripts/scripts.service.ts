@@ -22,6 +22,7 @@ import type {
 import { QUEUES } from '../../tasks/queues';
 import { Material } from '../materials/entities/material.entity';
 import { TemplatesService } from '../templates/templates.service';
+import { ReferencesService } from '../references/references.service';
 import { GenerationTask } from '../generation/entities/generation-task.entity';
 import { Video } from '../generation/entities/video.entity';
 import { Scene } from './entities/scene.entity';
@@ -44,6 +45,7 @@ export class ScriptsService {
     @InjectRepository(GenerationTask) private readonly generationTasksRepository: Repository<GenerationTask>,
     @InjectRepository(Video) private readonly videosRepository: Repository<Video>,
     private readonly templatesService: TemplatesService,
+    private readonly referencesService: ReferencesService,
     private readonly configService: ConfigService,
     @InjectQueue(QUEUES.SCRIPT_GENERATION) private readonly scriptQueue: Queue,
   ) {}
@@ -53,6 +55,13 @@ export class ScriptsService {
     const productInfo = this.withMaterialProductImages(data.product_info, materialInput.productImageUrls);
     const template = data.template_id ? await this.templatesService.findRawById(data.template_id) : null;
     if (data.template_id && !template) throw new NotFoundException('Template not found');
+
+    const reference = data.reference_id ? await this.referencesService.findOne(data.reference_id) : null;
+    if (data.reference_id && !reference) throw new NotFoundException('Reference video not found');
+    if (data.mode === 'imitation') {
+      if (!reference) throw new BadRequestException('Reference ID is required for imitation mode');
+      if (reference.analysisStatus !== 'done') throw new BadRequestException('Reference video analysis is not completed yet');
+    }
 
     const taskId = `script_generation_${randomUUID()}`;
     const script = await this.scriptsRepository.save(
@@ -65,7 +74,7 @@ export class ScriptsService {
         generationTaskId: taskId,
         generationError: null,
         mode: data.mode,
-        narrativeFramework: template?.strategy ?? '',
+        narrativeFramework: template?.strategy ?? reference?.analysis?.style ?? '',
         visualStyle: data.preferences?.style ?? '',
         totalDuration: data.preferences?.duration ?? 15,
         status: 'generating',
@@ -86,6 +95,7 @@ export class ScriptsService {
         mode: data.mode,
         preferences: data.preferences,
         template,
+        reference,
         materialContext: materialInput.context,
         materialMedia: materialInput.media,
         manualText: data.manual_text,
@@ -255,6 +265,7 @@ export class ScriptsService {
     if (script.status !== 'failed') throw new BadRequestException('Only failed scripts can be retried');
     const taskId = `script_generation_${script.id}`;
     const template = script.templateId ? await this.templatesService.findRawById(script.templateId) : null;
+    const reference = script.referenceId ? await this.referencesService.findOne(script.referenceId) : null;
     const materialInput = await this.buildMaterialInput(script.sourceMaterialIds ?? []);
     script.status = 'generating';
     script.generationTaskId = taskId;
@@ -268,6 +279,7 @@ export class ScriptsService {
         productInfo: script.productInfo,
         mode: script.mode,
         template,
+        reference,
         materialContext: materialInput.context,
         materialMedia: materialInput.media,
       },
