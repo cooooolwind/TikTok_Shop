@@ -1,6 +1,6 @@
-﻿import type { CreateScriptRequest, GenerateScriptRequest, ScriptStatus } from '@aigc/shared-types';
+import type { CreateScriptRequest, GenerateScriptRequest, ScriptStatus } from '@aigc/shared-types';
 
-export type ScriptEntryMode = 'material' | 'template' | 'manual_text' | 'manual_structured';
+export type ScriptEntryMode = 'material' | 'template' | 'imitation' | 'manual_text' | 'manual_structured';
 
 export interface ScriptGenerateFormValues {
   entry?: ScriptEntryMode;
@@ -14,6 +14,7 @@ export interface ScriptGenerateFormValues {
   product_image_url?: string;
   product_image_urls?: string[];
   template_id?: string;
+  reference_id?: string;
   material_ids?: string[];
   manual_text?: string;
   duration?: number;
@@ -29,8 +30,9 @@ export function buildScriptGeneratePayload(values: ScriptGenerateFormValues): Ge
   const materialIds = values.material_ids ?? [];
   return {
     product_info: buildProductInfo(values),
-    mode: entry === 'template' ? 'template' : entry === 'material' ? 'imitation' : 'free',
+    mode: entry === 'template' ? 'template' : entry === 'imitation' ? 'imitation' : 'free',
     template_id: entry === 'template' ? values.template_id : undefined,
+    reference_id: entry === 'imitation' ? values.reference_id : undefined,
     material_ids: materialIds.length > 0 ? materialIds : undefined,
     manual_text: entry === 'manual_text' ? values.manual_text : undefined,
     preferences: {

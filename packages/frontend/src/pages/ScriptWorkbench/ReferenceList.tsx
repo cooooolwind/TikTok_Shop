@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Card, Button, Space, Table, Tag, Select, Modal, Form, Input, List, Row, Col,
+  Card, Button, Space, Table, Tag, Select, Modal, Form, Input, List, Row, Col, Tabs, Upload, message
 } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { ReferenceVideo } from '@aigc/shared-types';
 import PageHeader from '../../components/common/PageHeader';
@@ -16,7 +16,7 @@ import { formatBeijingDateTime } from '../../utils/format';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const columns: ColumnsType<ReferenceVideo> = [
-  { title: '来源平台', dataIndex: 'source_platform', width: 100, render: (p: string) => <Tag>{p}</Tag> },
+  { title: '来源平台', dataIndex: 'source_platform', width: 100, render: (p: string) => <Tag>{p === 'local_upload' ? '本地上传' : p}</Tag> },
   { title: '类目', dataIndex: 'category', width: 100 },
   {
     title: '来源声明', dataIndex: 'source_declaration', width: 100,
@@ -39,9 +39,11 @@ const columns: ColumnsType<ReferenceVideo> = [
 export default function ReferenceList() {
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const { items, total, loading, filters, fetchList, create } = useReferenceStore();
+  const { items, total, loading, filters, fetchList, create, upload } = useReferenceStore();
   const pagination = usePagination({ defaultPageSize: 20 });
   const [modalOpen, setModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('upload');
+  const [fileList, setFileList] = useState<any[]>([]);
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -52,11 +54,28 @@ export default function ReferenceList() {
     pagination.setTotal(total);
   }, [total]);
 
-  const handleCreate = () => {
+  const handleSubmit = () => {
     form.validateFields().then((values) => {
-      create(values);
-      setModalOpen(false);
-      form.resetFields();
+      if (activeTab === 'link') {
+        create({
+          source_url: values.source_url,
+          source_platform: values.source_platform,
+          category: values.category,
+          source_declaration: values.source_declaration,
+        });
+        setModalOpen(false);
+        form.resetFields();
+      } else {
+        if (fileList.length === 0) {
+          message.error('请选择视频文件');
+          return;
+        }
+        const file = fileList[0].originFileObj;
+        upload(file, values.category, values.source_declaration);
+        setModalOpen(false);
+        form.resetFields();
+        setFileList([]);
+      }
     });
   };
 
@@ -73,7 +92,7 @@ export default function ReferenceList() {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }}>
             <Space>
-              <Tag color="blue">{item.source_platform}</Tag>
+              <Tag color="blue">{item.source_platform === 'local_upload' ? '本地上传' : item.source_platform}</Tag>
               <span style={{ fontWeight: 600 }}>{item.category}</span>
             </Space>
             <StatusTag status={item.analysis_status} labels={ANALYSIS_STATUS_LABELS} />
@@ -147,38 +166,74 @@ export default function ReferenceList() {
       <Modal
         title="添加参考视频"
         open={modalOpen}
-        onCancel={() => setModalOpen(false)}
-        onOk={handleCreate}
+        onCancel={() => {
+          setModalOpen(false);
+          form.resetFields();
+          setFileList([]);
+        }}
+        onOk={handleSubmit}
         width={isMobile ? '100%' : 520}
         style={isMobile ? { top: 20 } : {}}
+        okText={activeTab === 'upload' ? '上传并分析' : '添加并分析'}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item name="source_url" label="视频链接" rules={[{ required: true, message: '请输入视频链接' }]}>
-            <Input placeholder="TikTok / YouTube / 其他平台链接" />
-          </Form.Item>
-          <Form.Item name="source_platform" label="来源平台" rules={[{ required: true }]}>
-            <Select
-              placeholder="选择平台"
-              options={[
-                { label: 'TikTok', value: 'tiktok' },
-                { label: '抖音', value: 'douyin' },
-                { label: 'YouTube', value: 'youtube' },
-                { label: 'Instagram', value: 'instagram' },
-              ]}
-            />
-          </Form.Item>
-          <Form.Item name="category" label="商品类目" rules={[{ required: true, message: '请输入类目' }]}>
-            <Input placeholder="如：美妆、服饰、3C" />
-          </Form.Item>
-          <Form.Item name="source_declaration" label="来源声明" rules={[{ required: true }]}>
-            <Select
-              placeholder="选择来源声明"
-              options={[
-                { label: '公开视频（分析用途）', value: 'public_reference' },
-              ]}
-            />
-          </Form.Item>
-        </Form>
+        <Tabs activeKey={activeTab} onChange={setActiveTab}>
+          <Tabs.TabPane tab="本地上传" key="upload">
+            <Form form={form} layout="vertical" initialValues={{ source_declaration: 'public_reference' }}>
+              <Form.Item label="视频文件" required>
+                <Upload
+                  accept="video/*"
+                  maxCount={1}
+                  beforeUpload={() => false} // 手动处理上传
+                  fileList={fileList}
+                  onChange={({ fileList: newFileList }) => setFileList(newFileList)}
+                >
+                  <Button icon={<UploadOutlined />}>选择视频</Button>
+                </Upload>
+              </Form.Item>
+              <Form.Item name="category" label="商品类目" rules={[{ required: true, message: '请输入类目' }]}>
+                <Input placeholder="如：美妆、服饰、3C" />
+              </Form.Item>
+              <Form.Item name="source_declaration" label="来源声明" rules={[{ required: true }]}>
+                <Select
+                  placeholder="选择来源声明"
+                  options={[
+                    { label: '自有视频（可商用）', value: 'owned_reference' },
+                    { label: '公开视频（分析用途）', value: 'public_reference' },
+                  ]}
+                />
+              </Form.Item>
+            </Form>
+          </Tabs.TabPane>
+          <Tabs.TabPane tab="链接提取 (暂未开放)" key="link" disabled>
+            <Form form={form} layout="vertical" initialValues={{ source_declaration: 'public_reference' }}>
+              <Form.Item name="source_url" label="视频链接" rules={[{ required: true, message: '请输入视频链接' }]}>
+                <Input placeholder="TikTok / YouTube / 其他平台链接" />
+              </Form.Item>
+              <Form.Item name="source_platform" label="来源平台" rules={[{ required: true }]}>
+                <Select
+                  placeholder="选择平台"
+                  options={[
+                    { label: 'TikTok', value: 'tiktok' },
+                    { label: '抖音', value: 'douyin' },
+                    { label: 'YouTube', value: 'youtube' },
+                    { label: 'Instagram', value: 'instagram' },
+                  ]}
+                />
+              </Form.Item>
+              <Form.Item name="category" label="商品类目" rules={[{ required: true, message: '请输入类目' }]}>
+                <Input placeholder="如：美妆、服饰、3C" />
+              </Form.Item>
+              <Form.Item name="source_declaration" label="来源声明" rules={[{ required: true }]}>
+                <Select
+                  placeholder="选择来源声明"
+                  options={[
+                    { label: '公开视频（分析用途）', value: 'public_reference' },
+                  ]}
+                />
+              </Form.Item>
+            </Form>
+          </Tabs.TabPane>
+        </Tabs>
       </Modal>
     </div>
   );

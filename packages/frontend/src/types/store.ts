@@ -72,6 +72,7 @@ export interface ReferenceState {
   fetchList: (params?: ReferenceListQuery) => Promise<void>;
   fetchDetail: (id: string) => Promise<void>;
   create: (data: { source_url: string; source_platform: string; category: string; source_declaration: string }) => Promise<void>;
+  upload: (file: File, category: string, sourceDeclaration: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
   setFilters: (filters: Partial<ReferenceListQuery>) => void;
 }
