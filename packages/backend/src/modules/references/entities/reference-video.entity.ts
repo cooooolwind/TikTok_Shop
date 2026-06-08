@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-export type AnalysisStatus = 'pending' | 'analyzing' | 'done' | 'failed';
+export type AnalysisStatus = 'fetching' | 'uploading' | 'analyzing' | 'done' | 'failed';
 
 interface ReferenceAnalysis {
   hook: string;
@@ -15,10 +15,10 @@ export class ReferenceVideo {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'source_url', length: 2048 })
+  @Column({ name: 'source_url', length: 2048, nullable: true })
   sourceUrl: string;
 
-  @Column({ name: 'source_platform', length: 64 })
+  @Column({ name: 'source_platform', length: 64, nullable: true })
   sourcePlatform: string;
 
   @Column({ length: 128, nullable: true })
@@ -30,8 +30,8 @@ export class ReferenceVideo {
   @Column({
     name: 'analysis_status',
     type: 'enum',
-    enum: ['pending', 'analyzing', 'done', 'failed'],
-    default: 'pending',
+    enum: ['fetching', 'uploading', 'analyzing', 'done', 'failed'],
+    default: 'fetching',
   })
   analysisStatus: AnalysisStatus;
 
