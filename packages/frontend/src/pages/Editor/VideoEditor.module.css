@@ -327,6 +327,45 @@
   margin-top: 18px;
 }
 
+.subtitlePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.subtitleList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subtitleCard {
+  width: 100%;
+  padding: 10px;
+  text-align: left;
+  color: var(--editor-text);
+  background: var(--editor-bg);
+  border: 1px solid var(--editor-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.subtitleCard strong,
+.subtitleCard span {
+  display: block;
+}
+
+.subtitleCard span {
+  margin-top: 4px;
+  color: var(--editor-muted);
+  font-size: 12px;
+}
+
+.subtitleCardActive {
+  border-color: var(--editor-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--editor-accent) 18%, transparent);
+}
+
 .timelinePanel {
   padding: 14px;
   background: var(--editor-panel);
@@ -340,6 +379,50 @@
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
+}
+
+.subtitleTimelineTrack {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--editor-border);
+}
+
+.subtitleTrackLabel {
+  color: var(--editor-muted);
+  font-size: 12px;
+}
+
+.subtitleTrackRail {
+  position: relative;
+  min-height: 34px;
+  overflow-x: auto;
+  background: var(--editor-bg);
+  border: 1px dashed var(--editor-border);
+  border-radius: 8px;
+}
+
+.subtitleTimelineCue {
+  position: absolute;
+  top: 5px;
+  height: 24px;
+  overflow: hidden;
+  padding: 0 8px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--editor-text);
+  background: color-mix(in srgb, var(--editor-accent) 16%, var(--editor-panel));
+  border: 1px solid color-mix(in srgb, var(--editor-accent) 45%, var(--editor-border));
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.subtitleTimelineCueActive {
+  background: color-mix(in srgb, var(--editor-accent) 28%, var(--editor-panel));
+  border-color: var(--editor-accent);
 }
 
 .loading {

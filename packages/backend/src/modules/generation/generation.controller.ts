@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Post, Param, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Put, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import type {
   CreateVideoRequest,
@@ -6,13 +6,18 @@ import type {
   GenerationListQuery,
   QuickGenerateRequest,
   RegenerateSceneVideoRequest,
+  SubtitleProject,
 } from '@aigc/shared-types';
 import { GenerationService } from './generation.service';
+import { SubtitlesService } from './subtitles.service';
 
 @ApiTags('视频创作 /generation')
 @Controller('generation')
 export class GenerationController {
-  constructor(private readonly generationService: GenerationService) {}
+  constructor(
+    private readonly generationService: GenerationService,
+    private readonly subtitlesService: SubtitlesService,
+  ) {}
 
   @Post('create')
   @ApiOperation({ summary: '4.1 一键成片' })
@@ -70,5 +75,17 @@ export class GenerationController {
   @ApiOperation({ summary: '4.8 视频导出' })
   export(@Param('taskId') taskId: string, @Body() data: ExportRequest) {
     return this.generationService.export(taskId, data);
+  }
+
+  @Get('tasks/:taskId/subtitles')
+  @ApiOperation({ summary: '读取任务字幕工程文件' })
+  getSubtitles(@Param('taskId') taskId: string) {
+    return this.subtitlesService.getProject(taskId);
+  }
+
+  @Put('tasks/:taskId/subtitles')
+  @ApiOperation({ summary: '保存任务字幕工程文件' })
+  saveSubtitles(@Param('taskId') taskId: string, @Body() data: SubtitleProject) {
+    return this.subtitlesService.saveProject(taskId, data);
   }
 }

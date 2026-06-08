@@ -6,9 +6,31 @@ import type { GenerationTask } from '@aigc/shared-types';
 import VideoEditor from './VideoEditor';
 import { useCreationStore } from '../../stores/useGenerationStore';
 import { useEditorStore } from '../../stores/useEditorStore';
+import { generationApi } from '../../services/generation.api';
 
 vi.mock('./components/Preview/RemotionPreview', () => ({
   default: () => <div data-testid="remotion-preview">整体预览播放器</div>,
+}));
+
+vi.mock('../../services/generation.api', () => ({
+  generationApi: {
+    getSubtitles: vi.fn(async () => ({
+      version: 1,
+      task_id: 'task-1',
+      source: 'script',
+      cues: [
+        { id: 'cue-1', start_seconds: 0, end_seconds: 2, text: 'Opening subtitle' },
+        { id: 'cue-2', start_seconds: 2, end_seconds: 5, text: 'Second subtitle' },
+      ],
+    })),
+    saveSubtitles: vi.fn(async (taskId, project) => ({ ...project, task_id: taskId })),
+    export: vi.fn(async () => ({
+      download_url: '/uploads/generated/task-1-remotion.mp4',
+      expires_at: '2026-06-07T00:00:00.000Z',
+      source: 'remotion',
+      segments_count: 2,
+    })),
+  },
 }));
 
 const multiSegmentTask: GenerationTask = {
@@ -120,6 +142,9 @@ describe('VideoEditor', () => {
       fetchTask: vi.fn(),
     });
     useEditorStore.getState().resetEditor();
+    vi.mocked(generationApi.getSubtitles).mockClear();
+    vi.mocked(generationApi.saveSubtitles).mockClear();
+    vi.mocked(generationApi.export).mockClear();
   });
 
   it('渲染正常中文的桌面剪辑工作台', async () => {
@@ -299,5 +324,47 @@ describe('VideoEditor', () => {
 
     expect(useEditorStore.getState().transitions).toHaveLength(0);
     expect(useEditorStore.getState().selection).toBeNull();
+  });
+  it('加载字幕文件后可编辑字幕并在导出时提交字幕工程', async () => {
+    renderEditor();
+    seedTimeline();
+
+    await waitFor(() => {
+      expect(useEditorStore.getState().subtitles).toHaveLength(2);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '字幕' }));
+    fireEvent.click(screen.getAllByText('Opening subtitle')[0]);
+    fireEvent.change(screen.getByLabelText('subtitle text'), {
+      target: { value: 'Edited subtitle' },
+    });
+
+    await waitFor(() => {
+      expect(useEditorStore.getState().subtitles[0].text).toBe('Edited subtitle');
+    });
+
+    fireEvent.click(screen.getByLabelText('export transition video'));
+
+    await waitFor(() => {
+      expect(generationApi.saveSubtitles).toHaveBeenCalledWith(
+        'task-1',
+        expect.objectContaining({
+          source: 'editor',
+          cues: expect.arrayContaining([
+            expect.objectContaining({ id: 'cue-1', text: 'Edited subtitle' }),
+          ]),
+        }),
+      );
+      expect(generationApi.export).toHaveBeenCalledWith(
+        'task-1',
+        expect.objectContaining({
+          edit_project: expect.objectContaining({
+            subtitles: expect.arrayContaining([
+              expect.objectContaining({ id: 'cue-1', text: 'Edited subtitle' }),
+            ]),
+          }),
+        }),
+      );
+    });
   });
 });

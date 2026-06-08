@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Card, Descriptions, List, Space, Spin, Tag, Typography } from 'antd';
 import { ArrowLeftOutlined, DownloadOutlined, EditOutlined } from '@ant-design/icons';
+import type { SubtitleCue } from '@aigc/shared-types';
 import PageHeader from '../../components/common/PageHeader';
 import { useCreationStore } from '../../stores/useGenerationStore';
 import { routePath } from '../../constants';
 import { formatBytes, formatDuration, formatGenerationTaskDisplayId } from '../../utils/format';
+import { generationApi } from '../../services/generation.api';
 
 const { Text } = Typography;
 
@@ -16,10 +18,33 @@ export default function VideoPreview() {
   const [activeSegmentIndex, setActiveSegmentIndex] = useState<number | null>(null);
   const [completeVideoUrl, setCompleteVideoUrl] = useState<string | undefined>();
   const [exporting, setExporting] = useState(false);
+  const [subtitles, setSubtitles] = useState<SubtitleCue[]>([]);
+  const [previewSeconds, setPreviewSeconds] = useState(0);
 
   useEffect(() => {
     if (taskId) fetchTask(taskId);
   }, [fetchTask, taskId]);
+
+  useEffect(() => {
+    let disposed = false;
+    if (!taskId) {
+      setSubtitles([]);
+      return;
+    }
+
+    generationApi
+      .getSubtitles(taskId)
+      .then((project) => {
+        if (!disposed) setSubtitles(project.cues ?? []);
+      })
+      .catch(() => {
+        if (!disposed) setSubtitles([]);
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [taskId]);
 
   const task = currentTask;
   const result = task?.result;
@@ -69,6 +94,21 @@ export default function VideoPreview() {
   const activeVideoUrl = activeSegment?.video_url ?? completeVideoUrl ?? result?.video_url;
   const activeAspectRatio = activeSegment?.aspect_ratio ?? result?.aspect_ratio;
   const activeResolution = activeSegment?.resolution ?? result?.resolution;
+  const activeSegmentOffset = activeSegment
+    ? segments
+        .filter((segment) => segment.index < activeSegment.index)
+        .reduce((sum, segment) => sum + (segment.duration || 0), 0)
+    : 0;
+  const activeSegmentEnd = activeSegment ? activeSegmentOffset + (activeSegment.duration || 0) : undefined;
+  const activeSubtitle = subtitles.find(
+    (cue) =>
+      previewSeconds >= cue.start_seconds &&
+      previewSeconds < cue.end_seconds &&
+      (!activeSegment ||
+        (activeSegmentEnd !== undefined &&
+          cue.start_seconds < activeSegmentEnd &&
+          cue.end_seconds > activeSegmentOffset)),
+  );
 
   if (!task) {
     return (
@@ -132,18 +172,47 @@ export default function VideoPreview() {
 
       <Card style={{ marginBottom: 24, textAlign: 'center', background: '#000' }}>
         {activeVideoUrl ? (
-          <video
-            aria-label="video preview"
-            key={activeVideoUrl}
-            src={activeVideoUrl}
-            controls
-            autoPlay
-            style={{
-              maxWidth: '100%',
-              maxHeight: '70vh',
-              borderRadius: 4,
-            }}
-          />
+          <div style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}>
+            <video
+              aria-label="video preview"
+              key={activeVideoUrl}
+              src={activeVideoUrl}
+              controls
+              autoPlay
+              onTimeUpdate={(event) => {
+                setPreviewSeconds(activeSegmentOffset + event.currentTarget.currentTime);
+              }}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '70vh',
+                borderRadius: 4,
+              }}
+            />
+            {activeSubtitle && (
+              <div
+                aria-label="subtitle overlay"
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  bottom: 24,
+                  transform: 'translateX(-50%)',
+                  maxWidth: '84%',
+                  padding: '5px 10px',
+                  borderRadius: 6,
+                  background: 'rgba(0, 0, 0, 0.72)',
+                  color: '#fff',
+                  fontSize: 14,
+                  lineHeight: 1.3,
+                  fontWeight: 500,
+                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.7)',
+                  pointerEvents: 'none',
+                  whiteSpace: 'normal',
+                }}
+              >
+                {activeSubtitle.text}
+              </div>
+            )}
+          </div>
         ) : (
           <div style={{ padding: 80, color: '#fff' }}>
             <Text style={{ color: '#fff' }}>视频暂不可用</Text>

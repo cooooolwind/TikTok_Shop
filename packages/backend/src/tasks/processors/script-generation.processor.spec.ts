@@ -60,6 +60,7 @@ function makeProcessor(aiContent: string | Error) {
       scriptId: string;
       productInfo: Script['productInfo'];
       mode: string;
+      materialContext?: string;
       materialMedia?: { type: 'image' | 'video'; filename: string; imageUrl?: string }[];
     };
     updateProgress: jest.Mock;
@@ -205,6 +206,38 @@ describe('ScriptGenerationProcessor', () => {
         }),
       ]),
       expect.objectContaining({ response_format: { type: 'json_object' } }),
+    );
+  });
+  it('instructs AI to ground scenes in material AI analysis and video slices', async () => {
+    const { processor, volcanoClient, job } = makeProcessor(
+      JSON.stringify({
+        narrative_framework: 'Hook',
+        visual_style: 'clean',
+        total_duration: 3,
+        scenes: [{ description: 'Scene', duration: 3 }],
+      }),
+    );
+    job.data.materialContext =
+      'Material material-1; ai_tags=breathable; ai_description=Model try-on\nslice 1: 0-2s; description=Fabric close-up; tags=fabric';
+
+    await processor.process(job as never);
+
+    expect(volcanoClient.chatCompletion).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'system',
+          content: expect.stringContaining('优先参考素材 AI 分析'),
+        }),
+        expect.objectContaining({
+          role: 'system',
+          content: expect.stringContaining('视频切片'),
+        }),
+        expect.objectContaining({
+          role: 'user',
+          content: expect.stringContaining('Fabric close-up'),
+        }),
+      ]),
+      expect.anything(),
     );
   });
 });
