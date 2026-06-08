@@ -6,6 +6,7 @@ import type {
   CreateVideoRequest,
   QuickGenerateRequest,
   RegenerateSceneVideoRequest,
+  SubtitleProject,
   ExportRequest,
   ExportResponse,
   GenerationListQuery,
@@ -49,5 +50,13 @@ export const generationApi = {
   export: async (taskId: string, data: ExportRequest) =>
     unwrapResponse<ExportResponse>(
       await client.post<unknown, ExportResponse | ApiResponse<ExportResponse>>(`${BASE}/tasks/${taskId}/export`, data),
+    ),
+  getSubtitles: async (taskId: string) =>
+    unwrapResponse<SubtitleProject>(
+      await client.get<unknown, SubtitleProject | ApiResponse<SubtitleProject>>(`${BASE}/tasks/${taskId}/subtitles`),
+    ),
+  saveSubtitles: async (taskId: string, data: SubtitleProject) =>
+    unwrapResponse<SubtitleProject>(
+      await client.put<unknown, SubtitleProject | ApiResponse<SubtitleProject>>(`${BASE}/tasks/${taskId}/subtitles`, data),
     ),
 };

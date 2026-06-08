@@ -203,7 +203,9 @@ export function Timeline({
             transitions={transitions}
             segmentByIndex={segmentByIndex}
             pixelsPerSecond={pixelsPerSecond}
-            selection={selection}
+            selection={
+              selection?.type === 'clip' || selection?.type === 'transition' ? selection : null
+            }
             dropPosition={dropPosition}
             onSelectClip={(id) => setSelection({ type: 'clip', id })}
             onSelectTransition={(id) => setSelection({ type: 'transition', id })}
