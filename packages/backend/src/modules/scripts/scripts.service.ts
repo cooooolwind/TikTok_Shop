@@ -60,7 +60,7 @@ export class ScriptsService {
     if (data.reference_id && !reference) throw new NotFoundException('Reference video not found');
     if (data.mode === 'imitation') {
       if (!reference) throw new BadRequestException('Reference ID is required for imitation mode');
-      if (reference.analysisStatus !== 'done') throw new BadRequestException('Reference video analysis is not completed yet');
+      if (reference.analysis_status !== 'done') throw new BadRequestException('Reference video analysis is not completed yet');
     }
 
     const taskId = `script_generation_${randomUUID()}`;

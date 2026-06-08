@@ -2,7 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 
 export type AnalysisStatus = 'fetching' | 'uploading' | 'analyzing' | 'done' | 'failed';
 
-interface ReferenceAnalysis {
+export interface ReferenceAnalysis {
   hook: string;
   selling_points: string[];
   style: string;
