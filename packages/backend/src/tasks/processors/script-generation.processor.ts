@@ -95,6 +95,8 @@ export class ScriptGenerationProcessor extends WorkerHost {
             '字段规则：description 必须写明卖货目的和可见动作；dialogue 必须像达人或主播带货口吻；subtitle 必须简短且促转化；visual_prompt 必须描述电商素材，如商品特写、上身效果、细节展示、对比展示、包装展示、价格/优惠提示、购物场景等；constraints 必须要求产品可见、可识别、切题、商业安全、不得是无关联剧情。',
             '在对话或字幕中使用产品名。将产品 selling_points 分配到各分镜。根据 target_audience 调整用词和场景。如有价格或优惠信息，用作利益点或CTA提示，不得虚构折扣。',
             '不要生成抽象意境镜头、泛化叙事、无关剧情或没有产品展示的分镜。',
+            '如果提供 material_context，必须优先参考素材 AI 分析、ai_tags、ai_description 和视频切片来设计分镜。',
+            '视频切片中的起止时间、描述和标签代表可用素材内容；不要凭空生成与素材分析矛盾或素材中不存在的关键画面。',
           ].join(' '),
       },
       {

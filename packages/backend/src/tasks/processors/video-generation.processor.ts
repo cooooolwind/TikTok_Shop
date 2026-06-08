@@ -399,8 +399,9 @@ export class VideoGenerationProcessor extends WorkerHost {
       '分镜详情：',
       `镜头：${scene?.cameraMotion || '固定'}`,
       `输出时长：${segment.duration} 秒。`,
-      `旁白：${scene?.dialogue || ''}`,
-      `字幕：${scene?.subtitle || ''}`,
+      scene?.dialogue ? `口播台词：${scene.dialogue}` : '',
+      scene?.dialogue ? '台词仅用于人物口播、声音或节奏参考，不要以文字形式出现在画面里。' : '',
+      '字幕和旁白由后期处理，不要在画面中生成任何字幕、标题、促销文字、说明文字或水印。',
       '',
       '约束条件：',
       (scene?.constraints ?? []).join('、') || '保持产品可见且可识别。',
@@ -543,6 +544,7 @@ export class VideoGenerationProcessor extends WorkerHost {
       `镜头方向：${scene?.cameraMotion || '固定产品镜头'}。`,
       `商业风格：${script.visualStyle || '简洁、转化导向的产品展示'}。`,
       '参考图中的产品必须清晰可见、可识别，在形状、颜色、材质和包装上忠实还原。',
+      '不要在画面中生成字幕、标题、促销文字、说明文字、水印或乱码文字。',
       '不要用其他物品替换产品。不要创建抽象或无关的生活场景。',
       (scene?.constraints ?? []).join('、'),
     ]
@@ -558,6 +560,7 @@ export class VideoGenerationProcessor extends WorkerHost {
       `产品：${script.productInfo.name || '该产品'}。`,
       `分镜：${action}。`,
       '保持参考产品清晰可见，忠实地还原其真实形状、颜色、材质、logo和包装。',
+      '不要在画面中生成字幕、标题、促销文字、说明文字、水印或乱码文字。',
       '使用简洁的商业产品展示构图，不加任何可能改变产品身份的额外元素。',
     ].join('\n');
   }

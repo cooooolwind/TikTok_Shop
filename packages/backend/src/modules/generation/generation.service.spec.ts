@@ -83,6 +83,7 @@ function makeService(options?: {
   video?: Video | null;
   stitched?: { video_url: string; file_size: number };
   rendered?: { video_url: string; file_size: number };
+  subtitles?: { cues: { id: string; start_seconds: number; end_seconds: number; text: string }[] };
 }) {
   const script = options && 'script' in options ? options.script : makeScript();
   const task = options && 'task' in options ? options.task : makeTask();
@@ -127,6 +128,9 @@ function makeService(options?: {
   const remotionRenderingService = {
     render: jest.fn(async () => rendered),
   };
+  const subtitlesService = {
+    getProject: jest.fn(async () => options?.subtitles ?? { cues: [] }),
+  };
   const service = new GenerationService(
     videoQueue as never,
     tasksRepository as never,
@@ -135,9 +139,10 @@ function makeService(options?: {
     materialsRepository as never,
     videoStitchingService as never,
     remotionRenderingService as never,
+    subtitlesService as never,
   );
 
-  return { service, videoQueue, scriptsRepository, tasksRepository, videosRepository, materialsRepository, videoStitchingService, remotionRenderingService };
+  return { service, videoQueue, scriptsRepository, tasksRepository, videosRepository, materialsRepository, videoStitchingService, remotionRenderingService, subtitlesService };
 }
 
 describe('GenerationService', () => {
@@ -296,6 +301,37 @@ describe('GenerationService', () => {
 
     expect(result.download_url).toBe('https://example.com/video.mp4');
     expect(new Date(result.expires_at).getTime()).toBeGreaterThan(now.getTime());
+  });
+
+  it('uses Remotion by default when exporting a task with subtitle cues', async () => {
+    const { service, remotionRenderingService, videoStitchingService } = makeService({
+      task: makeTask({ status: 'done', result: makeSegmentedVideoResult() }),
+      subtitles: {
+        cues: [{ id: 'cue-1', start_seconds: 0, end_seconds: 2, text: 'Opening subtitle' }],
+      },
+    });
+
+    const result = await service.export('task-1', {
+      format: 'mp4',
+      resolution: '1080x1920',
+      quality: 'high',
+    });
+
+    expect(videoStitchingService.stitch).not.toHaveBeenCalled();
+    expect(remotionRenderingService.render).toHaveBeenCalledWith(
+      expect.objectContaining({
+        transition: { type: 'none', duration_frames: 6 },
+        editProject: expect.objectContaining({
+          transitions: [],
+          subtitles: [expect.objectContaining({ text: 'Opening subtitle' })],
+          clips: [
+            { id: 'clip-0', segment_index: 0, start_seconds: 0, end_seconds: 6 },
+            { id: 'clip-1', segment_index: 1, start_seconds: 0, end_seconds: 6 },
+          ],
+        }),
+      }),
+    );
+    expect(result).toMatchObject({ source: 'remotion' });
   });
 
   it('stitches segmented legacy tasks during export and returns the generated video url', async () => {

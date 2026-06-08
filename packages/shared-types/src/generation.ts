@@ -148,9 +148,25 @@ export interface TimelineTransition {
   duration_frames?: number;
 }
 
+export interface SubtitleCue {
+  id: string;
+  start_seconds: number;
+  end_seconds: number;
+  text: string;
+}
+
+export interface SubtitleProject {
+  version: 1;
+  task_id: string;
+  source: 'script' | 'editor';
+  cues: SubtitleCue[];
+  updated_at?: string;
+}
+
 export interface VideoEditProject {
   clips: TimelineClip[];
   transitions: TimelineTransition[];
+  subtitles?: SubtitleCue[];
 }
 
 export interface ExportRequest {

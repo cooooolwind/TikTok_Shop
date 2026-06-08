@@ -1,7 +1,7 @@
 import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Alert, Button, Empty, InputNumber, Select, Space, Spin, Tag, Typography } from 'antd';
+import { Alert, Button, Empty, Input, InputNumber, Select, Space, Spin, Tag, Typography } from 'antd';
 import {
   ArrowDownOutlined,
   ArrowLeftOutlined,
@@ -12,6 +12,7 @@ import {
 } from '@ant-design/icons';
 import type {
   ExportRequest,
+  SubtitleCue,
   TimelineClip,
   TimelineTransition,
   TransitionType,
@@ -30,6 +31,7 @@ const RemotionPreview = lazy(() => import('./components/Preview/RemotionPreview'
 const { Text, Title } = Typography;
 
 const TRANSITION_DND_TYPE = 'application/timeline-transition';
+const SUBTITLE_PROJECT_VERSION = 1;
 
 class PreviewErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; message: string }> {
   constructor(props: { children: ReactNode }) {
@@ -77,10 +79,10 @@ const TRANSITION_PRESETS: {
   { label: '缩放模糊', value: 'zoom_blur', description: '更有动势，适合促单和高光片段。' },
 ];
 
-const RESOURCE_TABS = ['素材片段', '商品素材', '文本', '音频', '转场'];
+const RESOURCE_TABS = ['素材片段', '字幕', '商品素材', '文本', '音频', '转场'];
 
 function getTransitionTarget(
-  selection: { type: 'clip' | 'transition'; id: string } | null,
+  selection: { type: 'clip' | 'transition' | 'subtitle'; id: string } | null,
   clips: TimelineClip[],
   transitions: TimelineTransition[],
 ) {
@@ -112,16 +114,22 @@ export default function VideoEditor() {
   const {
     clips,
     transitions,
+    subtitles,
     playheadSeconds,
+    pixelsPerSecond,
     selection,
     setPlayhead,
     setSelection,
+    setSubtitles,
     removeClip,
     moveClip,
     trimClip,
     updateTransition,
     upsertTransitionBetween,
     removeTransition,
+    addSubtitle,
+    updateSubtitle,
+    removeSubtitle,
     resetEditor,
   } = useEditorStore();
 
@@ -138,6 +146,22 @@ export default function VideoEditor() {
       resetEditor();
     };
   }, [fetchTask, taskId, resetEditor]);
+
+  useEffect(() => {
+    if (!currentTask?.id) return;
+    let cancelled = false;
+    generationApi
+      .getSubtitles(currentTask.id)
+      .then((project) => {
+        if (!cancelled) setSubtitles(project.cues ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setSubtitles([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentTask?.id, setSubtitles]);
 
   const sourceSegments = useMemo(
     () =>
@@ -157,6 +181,10 @@ export default function VideoEditor() {
   const selectedTransition =
     selection?.type === 'transition'
       ? transitions.find((transition) => transition.id === selection.id)
+      : undefined;
+  const selectedSubtitle =
+    selection?.type === 'subtitle'
+      ? subtitles.find((subtitle) => subtitle.id === selection.id)
       : undefined;
   const selectedSegment = selectedClip ? segmentByIndex.get(selectedClip.segment_index) : undefined;
 
@@ -265,6 +293,17 @@ export default function VideoEditor() {
     setResourceTab('转场');
   };
 
+  const handleAddSubtitle = () => {
+    const start = Math.max(0, playheadSeconds);
+    const cue: SubtitleCue = {
+      id: `cue-${Date.now()}`,
+      start_seconds: Number(start.toFixed(2)),
+      end_seconds: Number((start + 2).toFixed(2)),
+      text: '新字幕',
+    };
+    addSubtitle(cue);
+  };
+
   const handleExport = async () => {
     if (!canExport || !currentTask) return;
     setExporting(true);
@@ -275,8 +314,14 @@ export default function VideoEditor() {
         resolution: '1080x1920',
         quality: 'high',
         render_engine: 'remotion',
-        edit_project: { clips, transitions },
+        edit_project: { clips, transitions, subtitles },
       };
+      await generationApi.saveSubtitles(currentTask.id, {
+        version: SUBTITLE_PROJECT_VERSION,
+        task_id: currentTask.id,
+        source: 'editor',
+        cues: subtitles,
+      });
       await generationApi.export(currentTask.id, request);
       await fetchTask(currentTask.id);
     } catch (error) {
@@ -458,7 +503,38 @@ export default function VideoEditor() {
             </div>
           )}
 
-          {!['素材片段', '转场'].includes(resourceTab) && (
+          {resourceTab === '字幕' && (
+            <div className={styles.subtitlePanel}>
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleAddSubtitle} block>
+                新增字幕
+              </Button>
+              <div className={styles.subtitleList}>
+                {subtitles.length === 0 ? (
+                  <Empty description="暂无字幕" />
+                ) : (
+                  subtitles.map((cue) => (
+                    <button
+                      key={cue.id}
+                      type="button"
+                      className={`${styles.subtitleCard} ${
+                        selection?.type === 'subtitle' && selection.id === cue.id
+                          ? styles.subtitleCardActive
+                          : ''
+                      }`}
+                      onClick={() => setSelection({ type: 'subtitle', id: cue.id })}
+                    >
+                      <strong>{cue.text}</strong>
+                      <span>
+                        {cue.start_seconds.toFixed(1)}s - {cue.end_seconds.toFixed(1)}s
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {!['素材片段', '字幕', '转场'].includes(resourceTab) && (
             <div className={styles.resourceEmpty}>
               <Empty description={`${resourceTab}能力将在后续版本接入`} />
             </div>
@@ -490,6 +566,7 @@ export default function VideoEditor() {
             <strong>片段属性</strong>
             {selectedTransition && <Tag color="magenta">转场</Tag>}
             {selectedClip && <Tag color="blue">片段</Tag>}
+            {selectedSubtitle && <Tag color="purple">字幕</Tag>}
           </div>
           <div className={styles.inspectorBody}>
             {selectedClip && selectedSegment && (
@@ -592,7 +669,60 @@ export default function VideoEditor() {
               </Space>
             )}
 
-            {!selection && <Empty description="请选择时间线片段或转场" />}
+            {selectedSubtitle && (
+              <Space direction="vertical" size={16} className={styles.fullWidth}>
+                <div>
+                  <Text type="secondary">字幕文本</Text>
+                  <Input.TextArea
+                    aria-label="subtitle text"
+                    value={selectedSubtitle.text}
+                    autoSize={{ minRows: 3, maxRows: 5 }}
+                    onChange={(event) =>
+                      updateSubtitle(selectedSubtitle.id, 'text', event.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <Text type="secondary">开始秒</Text>
+                  <InputNumber
+                    aria-label="subtitle start seconds"
+                    min={0}
+                    step={0.1}
+                    value={selectedSubtitle.start_seconds}
+                    onChange={(value) =>
+                      updateSubtitle(selectedSubtitle.id, 'start_seconds', Number(value ?? 0))
+                    }
+                    className={styles.fullWidthInput}
+                  />
+                </div>
+                <div>
+                  <Text type="secondary">结束秒</Text>
+                  <InputNumber
+                    aria-label="subtitle end seconds"
+                    min={0.1}
+                    step={0.1}
+                    value={selectedSubtitle.end_seconds}
+                    onChange={(value) =>
+                      updateSubtitle(selectedSubtitle.id, 'end_seconds', Number(value ?? 0.1))
+                    }
+                    className={styles.fullWidthInput}
+                  />
+                </div>
+                {selectedSubtitle.end_seconds <= selectedSubtitle.start_seconds && (
+                  <Alert type="error" showIcon message="结束秒必须大于开始秒" />
+                )}
+                <Button
+                  aria-label="删除字幕"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => removeSubtitle(selectedSubtitle.id)}
+                >
+                  删除字幕
+                </Button>
+              </Space>
+            )}
+
+            {!selection && <Empty description="请选择时间线片段、转场或字幕" />}
 
             {!canExport && (
               <Alert
@@ -629,6 +759,29 @@ export default function VideoEditor() {
           onSeekStart={() => setIsUserSeeking(true)}
           onSeekEnd={() => setIsUserSeeking(false)}
         />
+        <div className={styles.subtitleTimelineTrack} data-testid="subtitle-timeline-track">
+          <span className={styles.subtitleTrackLabel}>字幕</span>
+          <div className={styles.subtitleTrackRail}>
+            {subtitles.map((cue) => (
+              <button
+                key={cue.id}
+                type="button"
+                className={`${styles.subtitleTimelineCue} ${
+                  selection?.type === 'subtitle' && selection.id === cue.id
+                    ? styles.subtitleTimelineCueActive
+                    : ''
+                }`}
+                style={{
+                  left: cue.start_seconds * pixelsPerSecond,
+                  width: Math.max((cue.end_seconds - cue.start_seconds) * pixelsPerSecond, 48),
+                }}
+                onClick={() => setSelection({ type: 'subtitle', id: cue.id })}
+              >
+                {cue.text}
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
     </section>
   );
