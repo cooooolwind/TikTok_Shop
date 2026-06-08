@@ -16,6 +16,9 @@ import { MaterialAnalysisProcessor } from './processors/material-analysis.proces
 import { VideoStitchingService } from './services/video-stitching.service';
 import { QUEUES } from './queues';
 
+import { ReferenceVideo } from '../modules/references/entities/reference-video.entity';
+import { ReferenceAnalysisProcessor } from './processors/reference-analysis.processor';
+
 @Global()
 @Module({
   imports: [
@@ -29,7 +32,7 @@ import { QUEUES } from './queues';
       { name: QUEUES.VIDEO_GENERATION },
       { name: QUEUES.REFERENCE_ANALYSIS },
     ),
-    TypeOrmModule.forFeature([Script, Scene, Material, VideoSlice, GenerationTask, Video]),
+    TypeOrmModule.forFeature([Script, Scene, Material, VideoSlice, GenerationTask, Video, ReferenceVideo]),
     WebsocketModule,
     MaterialsModule,
   ],
@@ -37,6 +40,7 @@ import { QUEUES } from './queues';
     ScriptGenerationProcessor,
     VideoGenerationProcessor,
     MaterialAnalysisProcessor,
+    ReferenceAnalysisProcessor,
     VideoStitchingService,
   ],
   exports: [BullModule, VideoStitchingService],
