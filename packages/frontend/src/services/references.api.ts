@@ -13,6 +13,12 @@ const BASE = '/references';
 export const referencesApi = {
   create: async (data: CreateReferenceRequest) =>
     unwrapResponse<ReferenceVideo>(await client.post<unknown, ReferenceVideo | ApiResponse<ReferenceVideo>>(BASE, data)),
+  upload: async (formData: FormData) =>
+    unwrapResponse<ReferenceVideo>(
+      await client.post<unknown, ReferenceVideo | ApiResponse<ReferenceVideo>>(`${BASE}/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }),
+    ),
   list: async (params?: ReferenceListQuery) =>
     unwrapResponse<PaginatedResponse<ReferenceVideo>['data'] | PaginatedResponse<ReferenceVideo>>(
       await client.get<unknown, PaginatedResponse<ReferenceVideo> | ApiResponse<PaginatedResponse<ReferenceVideo>['data']>>(

@@ -43,6 +43,23 @@ export const useReferenceStore = create<ReferenceState>((set, get) => ({
     }
   },
 
+  upload: async (file, category, sourceDeclaration) => {
+    try {
+      set({ loading: true });
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('category', category);
+      formData.append('source_declaration', sourceDeclaration);
+      await referencesApi.upload(formData);
+      useUIStore.getState().pushNotification({ type: 'success', title: '参考视频已上传并加入分析队列' });
+      get().fetchList();
+    } catch {
+      useUIStore.getState().pushNotification({ type: 'error', title: '上传参考视频失败' });
+    } finally {
+      set({ loading: false });
+    }
+  },
+
   remove: async (id) => {
     try {
       await referencesApi.remove(id);
