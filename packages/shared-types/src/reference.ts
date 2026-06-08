@@ -20,7 +20,7 @@ export interface ReferenceAnalysis {
 
 // ===== 参考视频 =====
 
-export type AnalysisStatus = 'pending' | 'analyzing' | 'done' | 'failed';
+export type AnalysisStatus = 'fetching' | 'uploading' | 'analyzing' | 'done' | 'failed';
 
 export interface ReferenceVideo {
   id: string;
