@@ -31,7 +31,7 @@ export class ReferencesService {
     // 将解析任务放入队列
     await this.analysisQueue.add('analyze-reference', { referenceId: ref.id });
 
-    return ref;
+    return this.toReferenceResponse(ref);
   }
 
   async upload(file: Express.Multer.File, dto: UploadReferenceDto) {
@@ -64,14 +64,20 @@ export class ReferencesService {
     // 将解析任务放入队列
     await this.analysisQueue.add('analyze-reference', { referenceId: ref.id });
 
-    return ref;
+    return this.toReferenceResponse(ref);
   }
 
   async findAll() {
     const [items, total] = await this.referenceRepository.findAndCount({
       order: { createdAt: 'DESC' },
     });
-    return { items, total, page: 1, pageSize: items.length, totalPages: 1 };
+    return { 
+      items: items.map(item => this.toReferenceResponse(item)), 
+      total, 
+      page: 1, 
+      pageSize: items.length, 
+      totalPages: 1 
+    };
   }
 
   async findOne(id: string) {
@@ -79,12 +85,29 @@ export class ReferencesService {
     if (!ref) {
       throw new NotFoundException(`Reference video ${id} not found`);
     }
-    return ref;
+    return this.toReferenceResponse(ref);
   }
 
   async remove(id: string) {
-    const ref = await this.findOne(id);
+    const ref = await this.referenceRepository.findOne({ where: { id } });
+    if (!ref) {
+      throw new NotFoundException(`Reference video ${id} not found`);
+    }
     await this.referenceRepository.remove(ref);
     return { id, message: 'deleted' };
+  }
+
+  private toReferenceResponse(ref: ReferenceVideo) {
+    return {
+      id: ref.id,
+      source_url: ref.sourceUrl,
+      source_platform: ref.sourcePlatform,
+      category: ref.category,
+      source_declaration: ref.sourceDeclaration,
+      analysis_status: ref.analysisStatus,
+      analysis: ref.analysis,
+      created_at: ref.createdAt.toISOString(),
+      updated_at: ref.updatedAt.toISOString(),
+    };
   }
 }
