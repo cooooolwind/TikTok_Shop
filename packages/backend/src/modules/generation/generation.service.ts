@@ -20,6 +20,7 @@ import { GenerationTask } from './entities/generation-task.entity';
 import { Video } from './entities/video.entity';
 import { VideoStitchingService } from '../../tasks/services/video-stitching.service';
 import { RemotionRenderingService } from './remotion-rendering.service';
+import { SubtitlesService } from './subtitles.service';
 
 const DEFAULT_PROGRESS: TaskProgress = {
   current_step: 0,
@@ -74,6 +75,7 @@ export class GenerationService {
     @InjectRepository(Material) private readonly materialsRepository: Repository<Material>,
     private readonly videoStitchingService: VideoStitchingService,
     private readonly remotionRenderingService: RemotionRenderingService,
+    private readonly subtitlesService: SubtitlesService,
   ) {}
 
   async create(data: CreateVideoRequest): Promise<GenerationTaskResponse> {
@@ -198,6 +200,17 @@ export class GenerationService {
       return this.exportWithRemotion(task, data);
     }
 
+    const subtitleProject = await this.subtitlesService.getProject(taskId).catch(() => undefined);
+    if (subtitleProject?.cues.length && (task.result.segments ?? []).some((segment) => segment.video_url)) {
+      this.logger.log(`Exporting task=${taskId} with Remotion subtitle renderer`);
+      return this.exportWithRemotion(task, {
+        ...data,
+        render_engine: 'remotion',
+        transition: { type: 'none', duration_frames: 6 },
+        edit_project: this.createDefaultEditProject(task.result, subtitleProject.cues),
+      });
+    }
+
     let video = await this.videosRepository.findOne({ where: { taskId } });
     let downloadUrl = task.result.video_url || video?.url;
     let source: 'segment' | 'stitched' = this.isGeneratedVideoUrl(downloadUrl) ? 'stitched' : 'segment';
@@ -251,8 +264,8 @@ export class GenerationService {
     if (!currentResult) throw new BadRequestException('No generated video is available for export');
 
     const segments = (currentResult.segments ?? []).filter((segment) => segment.status !== 'failed');
-    if (segments.length < 2) {
-      throw new BadRequestException('At least two video segments are required for transition export');
+    if (segments.length < 1) {
+      throw new BadRequestException('At least one video segment is required for Remotion export');
     }
 
     let video = await this.videosRepository.findOne({ where: { taskId: task.id } });
@@ -307,6 +320,22 @@ export class GenerationService {
 
   private isGeneratedVideoUrl(url?: string) {
     return Boolean(url?.startsWith('/uploads/generated/'));
+  }
+
+  private createDefaultEditProject(result: TaskResult, subtitles: NonNullable<ExportRequest['edit_project']>['subtitles']) {
+    return {
+      clips: (result.segments ?? [])
+        .filter((segment) => segment.status !== 'failed' && segment.video_url)
+        .sort((a, b) => a.index - b.index)
+        .map((segment) => ({
+          id: `clip-${segment.index}`,
+          segment_index: segment.index,
+          start_seconds: 0,
+          end_seconds: segment.duration,
+        })),
+      transitions: [],
+      subtitles,
+    };
   }
 
   private prepareResultForRetry(result: TaskResult | null): TaskResult | null {

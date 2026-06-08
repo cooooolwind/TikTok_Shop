@@ -1,4 +1,4 @@
-import { AbsoluteFill, OffthreadVideo, useVideoConfig } from 'remotion';
+import { AbsoluteFill, OffthreadVideo, useCurrentFrame, useVideoConfig } from 'remotion';
 import { TransitionSeries, linearTiming } from '@remotion/transitions';
 import { fade } from '@remotion/transitions/fade';
 import { slide } from '@remotion/transitions/slide';
@@ -13,6 +13,11 @@ interface TransitionVideoProps {
 
 export function TransitionVideo({ input }: TransitionVideoProps) {
   const { fps } = useVideoConfig();
+  const frame = useCurrentFrame();
+  const currentSeconds = frame / fps;
+  const activeSubtitle = input.subtitles?.find(
+    (cue) => currentSeconds >= cue.start_seconds && currentSeconds < cue.end_seconds,
+  );
   const children = input.segments.flatMap((segment, index) => {
     const trimStart = Math.max(segment.trim_start_seconds ?? 0, 0);
     const trimEnd = Math.min(segment.trim_end_seconds ?? segment.duration, segment.duration);
@@ -39,6 +44,38 @@ export function TransitionVideo({ input }: TransitionVideoProps) {
   return (
     <AbsoluteFill style={{ backgroundColor: 'black' }}>
       <TransitionSeries>{children}</TransitionSeries>
+      {activeSubtitle && <SubtitleOverlay text={activeSubtitle.text} />}
+    </AbsoluteFill>
+  );
+}
+
+function SubtitleOverlay({ text }: { text: string }) {
+  return (
+    <AbsoluteFill
+      style={{
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        padding: '0 72px 160px',
+        pointerEvents: 'none',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: '86%',
+          padding: '18px 28px',
+          borderRadius: 12,
+          background: 'rgba(0, 0, 0, 0.64)',
+          color: '#fff',
+          fontSize: 54,
+          fontWeight: 700,
+          lineHeight: 1.24,
+          textAlign: 'center',
+          textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)',
+          whiteSpace: 'pre-wrap',
+        }}
+      >
+        {text}
+      </div>
     </AbsoluteFill>
   );
 }

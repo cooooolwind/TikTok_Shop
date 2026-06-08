@@ -5,6 +5,13 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { GenerationTask } from '@aigc/shared-types';
 import VideoPreview from './VideoPreview';
 import { useCreationStore } from '../../stores/useGenerationStore';
+import { generationApi } from '../../services/generation.api';
+
+vi.mock('../../services/generation.api', () => ({
+  generationApi: {
+    getSubtitles: vi.fn(),
+  },
+}));
 
 const task: GenerationTask = {
   id: 'task-1',
@@ -80,10 +87,17 @@ describe('VideoPreview', () => {
       fetchTask: vi.fn(),
       exportVideo: vi.fn(),
     });
+    vi.mocked(generationApi.getSubtitles).mockResolvedValue({
+      version: 1,
+      task_id: 'task-1',
+      source: 'script',
+      cues: [{ id: 'cue-1', start_seconds: 0, end_seconds: 2, text: 'Opening dialogue' }],
+    });
   });
 
-  it('plays the stitched video by default and keeps segment preview switching available', () => {
+  it('plays the stitched video by default and keeps segment preview switching available', async () => {
     renderPreview();
+    await waitFor(() => expect(generationApi.getSubtitles).toHaveBeenCalledWith('task-1'));
 
     expect(screen.getByLabelText('video preview').getAttribute('src')).toBe('/uploads/generated/task-1.mp4');
     expect(screen.getByText('视频剪辑')).toBeTruthy();
@@ -112,6 +126,7 @@ describe('VideoPreview', () => {
     renderPreview();
     fireEvent.click(screen.getByLabelText('导出完整视频'));
 
+    await waitFor(() => expect(generationApi.getSubtitles).toHaveBeenCalledWith('task-1'));
     expect(openSpy).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(exportVideo).toHaveBeenCalledWith('task-1', 'mp4', '1080x1920', 'high'),
@@ -125,5 +140,41 @@ describe('VideoPreview', () => {
     expect(screen.getByLabelText('video preview').getAttribute('src')).toBe('/uploads/generated/task-1.mp4');
 
     openSpy.mockRestore();
+  });
+
+  it('loads subtitles and overlays the active dialogue cue during preview playback', async () => {
+    renderPreview();
+
+    await waitFor(() => expect(generationApi.getSubtitles).toHaveBeenCalledWith('task-1'));
+
+    const video = screen.getByLabelText('video preview');
+    Object.defineProperty(video, 'currentTime', { configurable: true, value: 1 });
+    fireEvent.timeUpdate(video);
+
+    const overlay = screen.getByLabelText('subtitle overlay');
+    expect(overlay.textContent).toBe('Opening dialogue');
+    expect(overlay.style.fontSize).toBe('14px');
+  });
+
+  it('does not show the next segment subtitle at the end of a segment preview', async () => {
+    vi.mocked(generationApi.getSubtitles).mockResolvedValue({
+      version: 1,
+      task_id: 'task-1',
+      source: 'script',
+      cues: [
+        { id: 'cue-1', start_seconds: 0, end_seconds: 5, text: 'Opening dialogue' },
+        { id: 'cue-2', start_seconds: 5.01, end_seconds: 10, text: 'Second dialogue' },
+      ],
+    });
+    renderPreview();
+
+    await waitFor(() => expect(generationApi.getSubtitles).toHaveBeenCalledWith('task-1'));
+
+    fireEvent.click(screen.getByLabelText('preview segment 1'));
+    const video = screen.getByLabelText('video preview');
+    Object.defineProperty(video, 'currentTime', { configurable: true, value: 5.02 });
+    fireEvent.timeUpdate(video);
+
+    await waitFor(() => expect(screen.queryByLabelText('subtitle overlay')).toBeNull());
   });
 });

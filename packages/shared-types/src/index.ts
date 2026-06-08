@@ -79,6 +79,8 @@ export type {
   TransitionConfig,
   TimelineClip,
   TimelineTransition,
+  SubtitleCue,
+  SubtitleProject,
   VideoEditProject,
   GenerationTask,
   CreateVideoRequest,
