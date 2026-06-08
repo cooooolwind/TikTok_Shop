@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { Player } from '@remotion/player';
 import type { PlayerRef } from '@remotion/player';
-import type { TimelineClip, TimelineTransition, VideoSegmentResult } from '@aigc/shared-types';
+import type { SubtitleCue, TimelineClip, TimelineTransition, VideoSegmentResult } from '@aigc/shared-types';
 import { useEditorStore } from '../../../../stores/useEditorStore';
 import { BrowserTransitionComposition } from './BrowserTransitionComposition';
 import styles from '../../VideoEditor.module.css';
@@ -34,6 +34,7 @@ interface PreviewPlayerProps {
   inputProps: {
     clips: TimelineClip[];
     transitions: TimelineTransition[];
+    subtitles: SubtitleCue[];
     segmentByIndex: Record<number, VideoSegmentResult>;
   };
   durationInFrames: number;
@@ -82,6 +83,7 @@ export default function RemotionPreview({
 }: RemotionPreviewProps) {
   const clips = useEditorStore((state) => state.clips);
   const transitions = useEditorStore((state) => state.transitions);
+  const subtitles = useEditorStore((state) => state.subtitles);
   const playerRef = useRef<PlayerRef>(null);
   const playerDrivenUpdateRef = useRef(false);
   const suppressFrameEventsRef = useRef(0);
@@ -101,9 +103,10 @@ export default function RemotionPreview({
     () => ({
       clips,
       transitions,
+      subtitles,
       segmentByIndex: segmentRecord,
     }),
-    [clips, segmentRecord, transitions],
+    [clips, segmentRecord, subtitles, transitions],
   );
 
   const durationInFrames = useMemo(

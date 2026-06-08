@@ -254,6 +254,43 @@ describe('VideoGenerationProcessor', () => {
     );
   });
 
+  it('keeps subtitle text out of visual prompts while passing dialogue as narration context', async () => {
+    const { processor, volcanoClient, scriptsRepository, job } = makeProcessor('succeeded');
+    scriptsRepository.findOne.mockResolvedValue(
+      makeScript({
+        scenes: [
+          makeScene({
+            id: 'scene-1',
+            order: 1,
+            duration: 4,
+            dialogue: 'Buy now and save',
+            subtitle: 'Limited time deal',
+            visualPrompt: 'Show the dress fabric close-up',
+          }),
+        ],
+      }),
+    );
+
+    await processor.process(job as never);
+
+    const firstFrameCall = volcanoClient.generateFirstFrame.mock.calls[0] as unknown as [
+      { prompt: string },
+    ];
+    const videoTaskCall = volcanoClient.createVideoTask.mock.calls[0] as unknown as [
+      { prompt: string },
+    ];
+    const firstFramePrompt = firstFrameCall[0].prompt;
+    const videoPrompt = videoTaskCall[0].prompt;
+
+    expect(firstFramePrompt).not.toContain('Limited time deal');
+    expect(firstFramePrompt).not.toContain('Buy now and save');
+    expect(firstFramePrompt).toContain('不要在画面中生成字幕');
+    expect(videoPrompt).not.toContain('字幕：Limited time deal');
+    expect(videoPrompt).toContain('口播台词：Buy now and save');
+    expect(videoPrompt).toContain('台词仅用于人物口播、声音或节奏参考');
+    expect(videoPrompt).toContain('字幕和旁白由后期处理');
+  });
+
   it('starts all independent segment pipelines before waiting for earlier first frames', async () => {
     const { processor, volcanoClient, scriptsRepository, job } = makeProcessor('succeeded');
     scriptsRepository.findOne.mockResolvedValue(

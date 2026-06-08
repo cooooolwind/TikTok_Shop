@@ -1,11 +1,16 @@
 import { create } from 'zustand';
-import type { TimelineClip, TimelineTransition, TransitionType } from '@aigc/shared-types';
+import type { SubtitleCue, TimelineClip, TimelineTransition, TransitionType } from '@aigc/shared-types';
 
-type Selection = { type: 'clip'; id: string } | { type: 'transition'; id: string } | null;
+type Selection =
+  | { type: 'clip'; id: string }
+  | { type: 'transition'; id: string }
+  | { type: 'subtitle'; id: string }
+  | null;
 
 export interface EditorState {
   clips: TimelineClip[];
   transitions: TimelineTransition[];
+  subtitles: SubtitleCue[];
   playheadSeconds: number;
   pixelsPerSecond: number;
   isPlaying: boolean;
@@ -14,6 +19,7 @@ export interface EditorState {
 
   setClips: (clips: TimelineClip[]) => void;
   setTransitions: (transitions: TimelineTransition[]) => void;
+  setSubtitles: (subtitles: SubtitleCue[]) => void;
   setPlayhead: (seconds: number) => void;
   setZoom: (pps: number) => void;
   togglePlay: () => void;
@@ -36,6 +42,9 @@ export interface EditorState {
     type: TransitionType,
   ) => void;
   removeTransition: (id: string) => void;
+  addSubtitle: (cue: SubtitleCue) => void;
+  updateSubtitle: (id: string, field: 'text' | 'start_seconds' | 'end_seconds', value: string | number) => void;
+  removeSubtitle: (id: string) => void;
 
   resetEditor: () => void;
 }
@@ -46,6 +55,7 @@ const DEFAULT_TRANSITION_FRAMES = 12;
 const initialState = {
   clips: [],
   transitions: [],
+  subtitles: [],
   playheadSeconds: 0,
   pixelsPerSecond: DEFAULT_PIXELS_PER_SECOND,
   isPlaying: false,
@@ -85,6 +95,7 @@ export const useEditorStore = create<EditorState>((set) => ({
     })),
 
   setTransitions: (transitions) => set({ transitions }),
+  setSubtitles: (subtitles) => set({ subtitles }),
 
   setPlayhead: (seconds) => set({ playheadSeconds: Math.max(0, seconds) }),
 
@@ -229,6 +240,35 @@ export const useEditorStore = create<EditorState>((set) => ({
       transitions: state.transitions.filter((transition) => transition.id !== id),
       selection:
         state.selection?.type === 'transition' && state.selection.id === id
+          ? null
+          : state.selection,
+    })),
+
+  addSubtitle: (cue) =>
+    set((state) => ({
+      subtitles: [...state.subtitles, cue].sort((a, b) => a.start_seconds - b.start_seconds),
+      selection: { type: 'subtitle', id: cue.id } as Selection,
+    })),
+
+  updateSubtitle: (id, field, value) =>
+    set((state) => ({
+      subtitles: state.subtitles
+        .map((cue) =>
+          cue.id === id
+            ? {
+                ...cue,
+                [field]: field === 'text' ? String(value) : Number(value),
+              }
+            : cue,
+        )
+        .sort((a, b) => a.start_seconds - b.start_seconds),
+    })),
+
+  removeSubtitle: (id) =>
+    set((state) => ({
+      subtitles: state.subtitles.filter((cue) => cue.id !== id),
+      selection:
+        state.selection?.type === 'subtitle' && state.selection.id === id
           ? null
           : state.selection,
     })),

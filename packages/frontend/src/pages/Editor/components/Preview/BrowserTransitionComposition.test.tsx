@@ -21,6 +21,7 @@ vi.mock('remotion', () => ({
       data-pause-when-buffering={String(props.pauseWhenBuffering)}
     />
   ),
+  useCurrentFrame: () => 45,
   useVideoConfig: () => ({ fps: 30 }),
 }));
 
@@ -109,5 +110,26 @@ describe('BrowserTransitionComposition', () => {
     expect(screen.getByTestId('preview-transition').getAttribute('data-presentation')).toBe(
       'slide',
     );
+  });
+
+  it('renders the active subtitle cue at the current preview time', () => {
+    const clips: TimelineClip[] = [
+      { id: 'clip-a', segment_index: 0, start_seconds: 0, end_seconds: 3 },
+    ];
+
+    render(
+      <BrowserTransitionComposition
+        clips={clips}
+        transitions={[]}
+        subtitles={[
+          { id: 'cue-before', start_seconds: 0, end_seconds: 1, text: 'Before' },
+          { id: 'cue-active', start_seconds: 1, end_seconds: 2, text: 'Active subtitle' },
+        ]}
+        segmentByIndex={segmentByIndex}
+      />,
+    );
+
+    expect(screen.getByText('Active subtitle')).toBeTruthy();
+    expect(screen.queryByText('Before')).toBeNull();
   });
 });

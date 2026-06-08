@@ -83,6 +83,7 @@ function makeService(options?: { script?: Script | null; scripts?: Script[] }) {
   };
   const materialsRepository = {
     findBy: jest.fn(async () => []),
+    find: jest.fn(async () => []),
   };
   const generationTasksRepository = {
     delete: jest.fn(async () => ({ affected: 0 })),
@@ -153,7 +154,7 @@ describe('ScriptsService', () => {
 
   it('loads selected materials for material-driven generation', async () => {
     const { service, materialsRepository, scriptQueue } = makeService();
-    materialsRepository.findBy.mockResolvedValue([
+    materialsRepository.find.mockResolvedValue([
       { id: 'material-1', filename: 'dress.jpg', tags: ['dress'], aiTags: [], aiDescription: '', category: 'product', status: 'uploaded' },
     ] as never);
 
@@ -163,7 +164,7 @@ describe('ScriptsService', () => {
       material_ids: ['material-1'],
     });
 
-    expect(materialsRepository.findBy).toHaveBeenCalled();
+    expect(materialsRepository.find).toHaveBeenCalled();
     expect(scriptQueue.add).toHaveBeenCalledWith(
       'generate',
       expect.objectContaining({ materialContext: expect.stringContaining('dress.jpg') }),
@@ -171,9 +172,65 @@ describe('ScriptsService', () => {
     );
   });
 
+  it('includes material AI analysis and video slices in script generation context', async () => {
+    const { service, materialsRepository, scriptQueue } = makeService();
+    materialsRepository.find.mockResolvedValue([
+      {
+        id: 'material-1',
+        filename: 'try-on.mp4',
+        type: 'video',
+        url: '/uploads/materials/try-on.mp4',
+        thumbnailUrl: '/uploads/materials/try-on.jpg',
+        tags: ['summer'],
+        aiTags: ['breathable', 'model try-on'],
+        aiDescription: 'Model shows breathable summer dress fabric and fit.',
+        category: 'scene',
+        status: 'ready',
+        slices: [
+          {
+            startTime: 0,
+            endTime: 2.5,
+            description: 'Opening try-on shot with full outfit.',
+            tags: ['opening', 'try-on'],
+          },
+          {
+            startTime: 2.5,
+            endTime: 5,
+            description: 'Close-up of fabric texture.',
+            tags: ['fabric'],
+          },
+        ],
+      },
+    ] as never);
+
+    await service.generate({
+      product_info: { name: 'Dress', description: 'Desc', category: 'fashion', selling_points: [] },
+      mode: 'imitation',
+      material_ids: ['material-1'],
+    });
+
+    expect(materialsRepository.find).toHaveBeenCalledWith(
+      expect.objectContaining({ relations: { slices: true } }),
+    );
+    expect(scriptQueue.add).toHaveBeenCalledWith(
+      'generate',
+      expect.objectContaining({
+        materialContext: expect.stringContaining('ai_description=Model shows breathable summer dress fabric and fit.'),
+      }),
+      expect.anything(),
+    );
+    const queuedJob = (scriptQueue.add as jest.Mock).mock.calls[0]?.[1] as {
+      materialContext: string;
+    };
+    const queuedContext = queuedJob.materialContext;
+    expect(queuedContext).toContain('slice 1: 0-2.5s');
+    expect(queuedContext).toContain('Opening try-on shot with full outfit.');
+    expect(queuedContext).toContain('tags=opening,try-on');
+  });
+
   it('copies selected image material urls into generated script product images', async () => {
     const { service, scriptsRepository, materialsRepository } = makeService();
-    materialsRepository.findBy.mockResolvedValue([
+    materialsRepository.find.mockResolvedValue([
       {
         id: 'material-1',
         type: 'image',
@@ -213,7 +270,7 @@ describe('ScriptsService', () => {
 
   it('copies selected image material urls into manual draft product images', async () => {
     const { service, scriptsRepository, materialsRepository } = makeService();
-    materialsRepository.findBy.mockResolvedValue([
+    materialsRepository.find.mockResolvedValue([
       {
         id: 'material-1',
         type: 'image',
@@ -244,7 +301,7 @@ describe('ScriptsService', () => {
   it('embeds local image materials as multimodal data URLs', async () => {
     const { service, materialsRepository, scriptQueue } = makeService();
     jest.spyOn(fsPromises, 'readFile').mockResolvedValue(Buffer.from('image-bytes'));
-    materialsRepository.findBy.mockResolvedValue([
+    materialsRepository.find.mockResolvedValue([
       {
         id: 'material-1',
         type: 'image',

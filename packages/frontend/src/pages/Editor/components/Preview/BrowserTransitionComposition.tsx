@@ -1,24 +1,31 @@
-import { AbsoluteFill, Video, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Video, useCurrentFrame, useVideoConfig } from 'remotion';
 import { TransitionSeries, linearTiming } from '@remotion/transitions';
 import { fade } from '@remotion/transitions/fade';
 import { slide } from '@remotion/transitions/slide';
 import { wipe } from '@remotion/transitions/wipe';
 import { zoomBlur } from '@remotion/transitions/zoom-blur';
-import type { TimelineClip, TimelineTransition, TransitionType, VideoSegmentResult } from '@aigc/shared-types';
+import type { SubtitleCue, TimelineClip, TimelineTransition, TransitionType, VideoSegmentResult } from '@aigc/shared-types';
 import type { TransitionPresentation } from '@remotion/transitions';
 
 interface BrowserCompositionProps {
   clips: TimelineClip[];
   transitions: TimelineTransition[];
+  subtitles?: SubtitleCue[];
   segmentByIndex: Record<number, VideoSegmentResult>;
 }
 
 export function BrowserTransitionComposition({
   clips,
   transitions,
+  subtitles = [],
   segmentByIndex,
 }: BrowserCompositionProps) {
   const { fps } = useVideoConfig();
+  const frame = useCurrentFrame();
+  const currentSeconds = frame / fps;
+  const activeSubtitle = subtitles.find(
+    (cue) => currentSeconds >= cue.start_seconds && currentSeconds < cue.end_seconds,
+  );
 
   const children = clips.flatMap((clip, index) => {
     const segment = segmentByIndex[clip.segment_index];
@@ -75,6 +82,38 @@ export function BrowserTransitionComposition({
   return (
     <AbsoluteFill style={{ backgroundColor: 'black' }}>
       <TransitionSeries>{children}</TransitionSeries>
+      {activeSubtitle && <SubtitleOverlay text={activeSubtitle.text} />}
+    </AbsoluteFill>
+  );
+}
+
+function SubtitleOverlay({ text }: { text: string }) {
+  return (
+    <AbsoluteFill
+      style={{
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        padding: '0 7% 9%',
+        pointerEvents: 'none',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: '88%',
+          padding: '10px 14px',
+          borderRadius: 8,
+          background: 'rgba(0,0,0,0.64)',
+          color: '#fff',
+          fontSize: 42,
+          fontWeight: 700,
+          lineHeight: 1.25,
+          textAlign: 'center',
+          textShadow: '0 2px 6px rgba(0,0,0,0.6)',
+          whiteSpace: 'pre-wrap',
+        }}
+      >
+        {text}
+      </div>
     </AbsoluteFill>
   );
 }

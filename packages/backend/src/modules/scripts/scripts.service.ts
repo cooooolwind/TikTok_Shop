@@ -295,7 +295,10 @@ export class ScriptsService {
 
   private async buildMaterialInput(materialIds: string[]): Promise<MaterialGenerationInput> {
     if (materialIds.length === 0) return { context: '', media: [], productImageUrls: [] };
-    const materials = await this.materialsRepository.findBy({ id: In(materialIds), merchantId: DEFAULT_MERCHANT_ID });
+    const materials = await this.materialsRepository.find({
+      where: { id: In(materialIds), merchantId: DEFAULT_MERCHANT_ID },
+      relations: { slices: true },
+    });
     const context = materials
       .map((material) =>
         [
@@ -307,6 +310,12 @@ export class ScriptsService {
           `tags=${(material.tags ?? []).join(',')}`,
           `ai_tags=${(material.aiTags ?? []).join(',')}`,
           `ai_description=${material.aiDescription ?? ''}`,
+          ...[...(material.slices ?? [])]
+            .sort((a, b) => Number(a.startTime) - Number(b.startTime))
+            .map(
+              (slice, index) =>
+                `slice ${index + 1}: ${Number(slice.startTime)}-${Number(slice.endTime)}s; description=${slice.description ?? ''}; tags=${(slice.tags ?? []).join(',')}`,
+            ),
         ].join('; '),
       )
       .join('\n');

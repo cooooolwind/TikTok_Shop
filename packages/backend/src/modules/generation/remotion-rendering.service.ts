@@ -33,8 +33,8 @@ export class RemotionRenderingService {
 
   async render(input: RenderInput): Promise<RenderResult> {
     const segments = this.resolveSegments(input.segments, input.editProject);
-    if (segments.length < 2) {
-      throw new Error('At least two succeeded video segments are required for Remotion transitions');
+    if (segments.length < 1) {
+      throw new Error('At least one succeeded video segment is required for Remotion rendering');
     }
     const transitions = this.resolveTransitions(input.editProject, input.transition);
 
@@ -56,6 +56,7 @@ export class RemotionRenderingService {
             fps: 30,
             transition: this.normalizeTransition(input.transition),
             transitions,
+            subtitles: input.editProject?.subtitles ?? [],
             segments: segments.map((segment, index) => ({
               index,
               video_url: this.normalizeMediaUrl(segment.video_url),
@@ -118,7 +119,7 @@ export class RemotionRenderingService {
       const transition = editProject.transitions.find(
         (item) => item.from_clip_id === clip.id && item.to_clip_id === nextClip.id,
       );
-      return this.normalizeTransition(transition ?? fallback);
+      return this.normalizeTransition(transition ?? fallback ?? { type: 'none' });
     });
   }
 
