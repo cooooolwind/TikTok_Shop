@@ -18,6 +18,7 @@ interface ScriptGenerationJob {
   mode: ScriptMode;
   preferences?: ScriptPreferences;
   template?: unknown;
+  reference?: unknown;
   materialContext?: string;
   materialMedia?: { type: 'image' | 'video'; filename: string; imageUrl?: string; url?: string; thumbnailUrl?: string }[];
   manualText?: string;
@@ -79,6 +80,7 @@ export class ScriptGenerationProcessor extends WorkerHost {
       throw error;
     }
   }
+
 
   private parseAiResponse(content: string): AiScriptResult {
     try {

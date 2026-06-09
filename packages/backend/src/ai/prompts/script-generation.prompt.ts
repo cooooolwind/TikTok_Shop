@@ -14,6 +14,7 @@ export const SCRIPT_GENERATION_PROMPT = [
   '不要生成抽象意境镜头、泛化叙事、无关剧情或没有产品展示的分镜。',
   '如果提供 material_context，必须优先参考素材 AI 分析、ai_tags、ai_description 和视频切片来设计分镜。',
   '视频切片中的起止时间、描述和标签代表可用素材内容；不要凭空生成与素材分析矛盾或素材中不存在的关键画面。',
+  '【爆款仿写模式特别指令】：如果提供了 reference_analysis，你必须进行 1:1 爆款仿写。严格保留 reference_analysis 中的整体叙事框架、Hook 手法、分镜时长节奏和运镜要求，仅将所有的商品实体、台词和画面核心视觉元素全部替换为新商品的素材特征。',
 ].join(' ');
 
 export interface ScriptGenerationPromptMedia {
@@ -29,6 +30,7 @@ export interface ScriptGenerationPromptInput {
   mode: ScriptMode;
   preferences?: ScriptPreferences;
   template?: unknown;
+  reference?: unknown;
   materialContext?: string;
   materialMedia?: ScriptGenerationPromptMedia[];
   manualText?: string;
@@ -50,6 +52,7 @@ export function buildScriptGenerationMessages(data: ScriptGenerationPromptInput)
           mode: data.mode,
           preferences: data.preferences,
           template: data.template,
+          reference_analysis: data.reference ? (data.reference as any).analysis : undefined,
           material_context: data.materialContext,
           material_media: (data.materialMedia ?? []).map((item) => ({
             type: item.type,
