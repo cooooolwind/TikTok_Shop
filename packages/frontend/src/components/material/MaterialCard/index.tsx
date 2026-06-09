@@ -147,7 +147,8 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
           footer={null}
           centered
           destroyOnClose
-          width="min(92vw, 960px)"
+          width="fit-content"
+          styles={{ body: { padding: 0, backgroundColor: '#000' } }}
           onCancel={(event) => {
             event.stopPropagation();
             setPreviewOpen(false);
