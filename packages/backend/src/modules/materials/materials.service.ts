@@ -21,6 +21,7 @@ import { UploadMaterialDto } from './dto/upload-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
 import { EmbeddingService } from './embedding.service';
 import { QUEUES } from '../../tasks/queues';
+import type { MaterialCategory } from '@aigc/shared-types';
 
 type MaterialResponse = {
   id: string;
@@ -142,7 +143,7 @@ export class MaterialsService {
       filename: originalFilename,
       size: file.size,
       mimeType: file.mimetype,
-      category: dto.category ?? 'other',
+      category: (dto.category as MaterialCategory) ?? 'other',
       tags: dto.tags ?? [],
       sourceDeclaration: dto.source_declaration,
       sourcePlatform: dto.source_platform,
@@ -259,7 +260,7 @@ export class MaterialsService {
       if (!validCategories.includes(dto.category)) {
         throw new BadRequestException(`Invalid category for source_declaration ${material.sourceDeclaration}`);
       }
-      material.category = dto.category;
+      material.category = dto.category as MaterialCategory;
     }
 
     const saved = await this.materialsRepository.save(material);
