@@ -8,7 +8,7 @@ import { ArrowLeftOutlined } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
 import StatusTag from '../../components/common/StatusTag';
 import { useReferenceStore } from '../../stores/useReferenceStore';
-import { ANALYSIS_STATUS_LABELS } from '../../constants';
+import { ANALYSIS_STATUS_LABELS, REFERENCE_PLATFORM_LABELS, REFERENCE_DECLARATION_LABELS } from '../../constants';
 import { formatDuration } from '../../utils/format';
 
 const { Text, Paragraph, Title } = Typography;
@@ -36,7 +36,7 @@ export default function ReferenceDetail() {
         breadcrumbs={[
           { title: '剧本工作台', path: '/scripts' },
           { title: '参考视频库', path: '/references' },
-          { title: r.source_platform + ' ' + r.category },
+          { title: (REFERENCE_PLATFORM_LABELS[r.source_platform] || r.source_platform) + ' ' + r.category },
         ]}
         extra={
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/references')}>返回列表</Button>
@@ -45,10 +45,14 @@ export default function ReferenceDetail() {
 
       <Card title="基本信息" style={{ marginBottom: 24 }}>
         <Descriptions column={{ xs: 1, sm: 2 }} size="small" bordered>
-          <Descriptions.Item label="来源平台"><Tag>{r.source_platform}</Tag></Descriptions.Item>
+          <Descriptions.Item label="来源平台">
+            <Tag color={r.source_platform === 'local_upload' ? 'default' : undefined}>
+              {REFERENCE_PLATFORM_LABELS[r.source_platform] || r.source_platform}
+            </Tag>
+          </Descriptions.Item>
           <Descriptions.Item label="类目">{r.category}</Descriptions.Item>
           <Descriptions.Item label="原始链接">{r.source_url}</Descriptions.Item>
-          <Descriptions.Item label="来源声明">{r.source_declaration}</Descriptions.Item>
+          <Descriptions.Item label="来源声明">{REFERENCE_DECLARATION_LABELS[r.source_declaration] || r.source_declaration}</Descriptions.Item>
           <Descriptions.Item label="分析状态">
             <StatusTag status={r.analysis_status} labels={ANALYSIS_STATUS_LABELS} />
           </Descriptions.Item>

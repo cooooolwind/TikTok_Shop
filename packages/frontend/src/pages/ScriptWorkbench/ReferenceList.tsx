@@ -10,17 +10,20 @@ import PageHeader from '../../components/common/PageHeader';
 import StatusTag from '../../components/common/StatusTag';
 import { useReferenceStore } from '../../stores/useReferenceStore';
 import { usePagination } from '../../hooks/usePagination';
-import { ANALYSIS_STATUS_LABELS } from '../../constants';
+import { ANALYSIS_STATUS_LABELS, REFERENCE_PLATFORM_LABELS, REFERENCE_DECLARATION_LABELS } from '../../constants';
 import EmptyState from '../../components/common/EmptyState';
 import { formatBeijingDateTime } from '../../utils/format';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const columns: ColumnsType<ReferenceVideo> = [
-  { title: '来源平台', dataIndex: 'source_platform', width: 100, render: (p: string) => <Tag>{p === 'local_upload' ? '本地上传' : p}</Tag> },
+  {
+    title: '来源平台', dataIndex: 'source_platform', width: 100,
+    render: (p: string) => <Tag color={p === 'local_upload' ? 'default' : undefined}>{REFERENCE_PLATFORM_LABELS[p] || p}</Tag>,
+  },
   { title: '类目', dataIndex: 'category', width: 100 },
   {
-    title: '来源声明', dataIndex: 'source_declaration', width: 100,
-    render: (d: string) => <Tag>{d}</Tag>,
+    title: '来源声明', dataIndex: 'source_declaration', width: 130,
+    render: (d: string) => <Tag>{REFERENCE_DECLARATION_LABELS[d] || d}</Tag>,
   },
   {
     title: '分析状态', dataIndex: 'analysis_status', width: 100,
@@ -92,7 +95,9 @@ export default function ReferenceList() {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }}>
             <Space>
-              <Tag color="blue">{item.source_platform === 'local_upload' ? '本地上传' : item.source_platform}</Tag>
+              <Tag color={item.source_platform === 'local_upload' ? 'default' : 'blue'}>
+                {REFERENCE_PLATFORM_LABELS[item.source_platform] || item.source_platform}
+              </Tag>
               <span style={{ fontWeight: 600 }}>{item.category}</span>
             </Space>
             <StatusTag status={item.analysis_status} labels={ANALYSIS_STATUS_LABELS} />
@@ -102,7 +107,7 @@ export default function ReferenceList() {
               <strong>Hook:</strong> {item.analysis?.hook || '-'}
             </div>
             <div>
-              <strong>声明:</strong> <Tag>{item.source_declaration}</Tag>
+              <strong>声明:</strong> <Tag>{REFERENCE_DECLARATION_LABELS[item.source_declaration] || item.source_declaration}</Tag>
             </div>
           </div>
           <div style={{ fontSize: 11, color: '#999', textAlign: 'right' }}>
@@ -197,8 +202,8 @@ export default function ReferenceList() {
                 <Select
                   placeholder="选择来源声明"
                   options={[
-                    { label: '自有视频（可商用）', value: 'owned_reference' },
-                    { label: '公开视频（分析用途）', value: 'public_reference' },
+                    { label: '自有视频', value: 'owned_reference' },
+                    { label: '公开视频', value: 'public_reference' },
                   ]}
                 />
               </Form.Item>
@@ -227,7 +232,7 @@ export default function ReferenceList() {
                 <Select
                   placeholder="选择来源声明"
                   options={[
-                    { label: '公开视频（分析用途）', value: 'public_reference' },
+                    { label: '公开视频', value: 'public_reference' },
                   ]}
                 />
               </Form.Item>

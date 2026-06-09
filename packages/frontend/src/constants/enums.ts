@@ -18,6 +18,19 @@ export const SOURCE_DECLARATION_LABELS: Record<string, string> = {
   reference: '参考素材',
 };
 
+export const REFERENCE_PLATFORM_LABELS: Record<string, string> = {
+  local_upload: '本地上传',
+  tiktok: 'TikTok',
+  douyin: '抖音',
+  youtube: 'YouTube',
+  instagram: 'Instagram',
+};
+
+export const REFERENCE_DECLARATION_LABELS: Record<string, string> = {
+  owned_reference: '自有视频',
+  public_reference: '公开视频',
+};
+
 export const SCRIPT_MODE_LABELS: Record<string, string> = {
   template: '模板生成',
   imitation: '素材生成',
