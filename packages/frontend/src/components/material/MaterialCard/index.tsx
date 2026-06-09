@@ -8,7 +8,7 @@ import {
 } from '@ant-design/icons';
 import type { Material } from '@aigc/shared-types';
 import StatusTag from '../../common/StatusTag';
-import { MATERIAL_STATUS_LABELS } from '../../../constants';
+import { MATERIAL_STATUS_LABELS, MATERIAL_CATEGORY_LABELS, REFERENCE_CATEGORY_LABELS } from '../../../constants';
 import { formatBytes } from '../../../utils/format';
 
 const { Text } = Typography;
@@ -130,7 +130,11 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
               )}
             </Space>
             {material.category && (
-              <Tag>{material.category}</Tag>
+              <Tag>
+                {material.source_declaration === 'reference'
+                  ? REFERENCE_CATEGORY_LABELS[material.category] || material.category
+                  : MATERIAL_CATEGORY_LABELS[material.category] || material.category}
+              </Tag>
             )}
             {material.source_declaration === 'reference' && material.reference_analysis?.hook && (
               <Text type="secondary" ellipsis style={{ fontSize: 12, display: 'block', maxWidth: '100%' }}>
