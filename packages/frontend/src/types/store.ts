@@ -1,6 +1,6 @@
 import type {
   Material, MaterialDetail, MaterialListQuery, MaterialType,
-  Script, Scene, ScriptListQuery, ScriptMode, ScriptStatus,
+  Script, Scene, ScriptListQuery, ScriptMode, ScriptStatus, UpdateScriptRequest,
   CreateScriptRequest, GenerateScriptQueuedResponse, GenerateScriptRequest, ProductInfo,
   GenerationTask, GenerationStatus, GenerationListQuery, ExportResponse,
   TaskProgress, TaskResult, TaskError, VideoOptions, ExportRequest,
@@ -122,7 +122,7 @@ export interface ScriptState {
     factor_variations?: Record<string, string[]>;
   }) => Promise<{ task_id: string; count: number }>;
 
-  updateScript: (id: string, data: { narrative_framework?: string; visual_style?: string }) => Promise<void>;
+  updateScript: (id: string, data: UpdateScriptRequest) => Promise<void>;
   confirm: (id: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
 

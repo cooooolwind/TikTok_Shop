@@ -24,6 +24,7 @@ function makeScript(overrides: Partial<Script> = {}): Script {
     mode: 'free',
     narrativeFramework: '',
     visualStyle: '',
+    scriptBlueprint: null,
     totalDuration: 15,
     status: 'draft',
     scenes: [],
@@ -129,6 +130,23 @@ function makeService(options?: { script?: Script | null; scripts?: Script[] }) {
 }
 
 describe('ScriptsService', () => {
+  const blueprint = {
+    basic_setting: '商品与主角在复古街道中出现，主体设定保持一致。',
+    atmosphere_and_quality: '真实拍摄质感，暖橙与海盐蓝色调。',
+    audio: '仅保留同期声。',
+    scenes: [
+      {
+        order: 1,
+        time_range: '00:00-00:04',
+        shot_size: '大全景',
+        composition: '道路引导线构图',
+        camera_movement: '缓慢上摇',
+        visual_content: '主体从画面下方进入街道。',
+        audio: '风声。',
+      },
+    ],
+  };
+
   it('creates a generating script and queues AI generation', async () => {
     const { service, scriptsRepository, scriptQueue } = makeService();
 
@@ -360,6 +378,42 @@ describe('ScriptsService', () => {
     expect(scenesRepository.save).toHaveBeenCalled();
     expect(scriptQueue.add).not.toHaveBeenCalled();
     expect(result.status).toBe('draft');
+  });
+
+  it('creates and returns a manual draft with script blueprint', async () => {
+    const { service, scriptsRepository } = makeService();
+
+    const result = await service.create({
+      product_info: { name: 'Dress', description: 'Desc', category: 'fashion', selling_points: [] },
+      mode: 'free',
+      script_blueprint: blueprint,
+      scenes: [],
+    });
+
+    expect(scriptsRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scriptBlueprint: blueprint,
+      }),
+    );
+    expect(result.script_blueprint).toEqual(blueprint);
+  });
+
+  it('updates and returns script blueprint without dropping legacy scenes', async () => {
+    const existing = makeScript({ scenes: [makeScene()] });
+    const { service, scriptsRepository } = makeService({ script: existing });
+
+    const result = await service.update('script-1', { script_blueprint: blueprint });
+
+    expect(scriptsRepository.save).toHaveBeenCalledWith(expect.objectContaining({ scriptBlueprint: blueprint }));
+    expect(result.script_blueprint).toEqual(blueprint);
+    expect(result.scenes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          description: 'Show the product',
+          visual_prompt: 'Product close-up',
+        }),
+      ]),
+    );
   });
 
   it('queues manual text import for AI parsing', async () => {

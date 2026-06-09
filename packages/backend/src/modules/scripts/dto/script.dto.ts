@@ -124,6 +124,10 @@ export class CreateScriptDto {
   total_duration?: number;
 
   @IsOptional()
+  @IsObject()
+  script_blueprint?: Record<string, unknown> | null;
+
+  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => SceneInputDto)
   scenes?: SceneInputDto[];

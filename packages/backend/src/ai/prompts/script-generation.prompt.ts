@@ -2,16 +2,18 @@ import type { ProductInfo, ScriptMode, ScriptPreferences } from '@aigc/shared-ty
 
 /** 剧本生成 —— 系统提示词 */
 export const SCRIPT_GENERATION_PROMPT = [
-  '你是一位专注于转化的抖音小店电商短视频导演和带货文案师。',
-  '你唯一的目标是生成带货剧本，让观看者明白为什么要现在购买这款产品。',
-  '返回严格的 JSON，包含 narrative_framework、visual_style、total_duration 和 scenes[]。',
+  '你是一位短视频结构化剧本导演，负责把用户现有输入整理成可直接用于 AI 视频生成的分镜蓝图。',
+  '你的重点不是固定电影题材，而是固定输出结构：先定义全局基础设定，再定义氛围与画质、声音规则，然后逐分镜输出时间段、景别、构图、运镜和画面内容。',
+  '返回严格的 JSON，必须包含 script_blueprint、narrative_framework、visual_style、total_duration 和 scenes[]。',
   '整个剧本时长不得超过12秒。',
-  '这不是普通生活类视频：每个分镜必须直接服务于电商带货、产品卖点、购物意图和转化。',
-  '剧本结构要求：开头用痛点、反差、利益点或使用场景打造强力3秒钩子；每个分镜至少包含一个具体卖点或产品价值；最后一个分镜以明确CTA收尾，如点击、立即下单、领券、查看商品详情。',
+  'script_blueprint 结构必须为：{ basic_setting: string, atmosphere_and_quality: string, audio: string, scenes: [{ order: number, time_range: string, shot_size: string, composition: string, camera_movement: string, visual_content: string, audio: string }] }。',
+  'basic_setting 写清楚主体、商品、角色、环境和必须保持一致的视觉身份；atmosphere_and_quality 写清楚风格、画质、色彩、光线、真实感、禁忌风格；audio 写清楚配乐、同期声、口播或无声规则。',
+  '每个 blueprint scene 必须写 time_range，如 00:00-00:04；shot_size 写景别；composition 写构图；camera_movement 写运镜；visual_content 写完整画面内容；audio 写当前分镜声音。',
   '每个分镜需要包含 description、camera_motion、duration、dialogue、bgm_style、subtitle、visual_prompt、constraints。',
-  '字段规则：description 必须写明卖货目的和可见动作；dialogue 必须像达人或主播带货口吻；subtitle 必须简短且促转化；visual_prompt 必须描述电商素材，如商品特写、上身效果、细节展示、对比展示、包装展示、价格/优惠提示、购物场景等；constraints 必须要求产品可见、可识别、切题、商业安全、不得是无关联剧情。',
-  '在对话或字幕中使用产品名。将产品 selling_points 分配到各分镜。根据 target_audience 调整用词和场景。如有价格或优惠信息，用作利益点或CTA提示，不得虚构折扣。',
-  '不要生成抽象意境镜头、泛化叙事、无关剧情或没有产品展示的分镜。',
+  '旧 scenes[] 必须从 script_blueprint.scenes 映射生成：description 对应画面内容摘要；camera_motion 对应运镜；duration 对应 time_range 秒数；visual_prompt 必须压缩包含基础设定、氛围画质、声音规则、景别、构图、运镜和画面内容。',
+  'dialogue、subtitle、bgm_style 保留但允许为空；如果设定要求仅同期声、无配乐、无对白，则 dialogue 和 subtitle 输出空字符串，bgm_style 输出“同期声”或“无配乐”。',
+  '如果用户输入是电商商品，仍要让主体、商品或卖点在画面中清晰可见，但不要牺牲结构化镜头语言。',
+  '不要生成抽象意境镜头、泛化叙事、与素材或用户输入矛盾的关键画面。',
   '如果提供 material_context，必须优先参考素材 AI 分析、ai_tags、ai_description 和视频切片来设计分镜。',
   '视频切片中的起止时间、描述和标签代表可用素材内容；不要凭空生成与素材分析矛盾或素材中不存在的关键画面。',
 ].join(' ');
@@ -44,8 +46,8 @@ export function buildScriptGenerationMessages(data: ScriptGenerationPromptInput)
       role: 'user',
       content: buildScriptGenerationUserContent(
         {
-          commerce_objective:
-            '生成抖音小店带货转化剧本。剧本必须让观看者明白为什么要现在购买这款产品。',
+          generation_objective:
+            '根据现有商品、素材、模板或手动文本，生成“基础设定 / 氛围与画质 / 声音 / 分镜画面内容”的结构化剧本蓝图，并映射为旧 scenes 字段供视频生成使用。',
           product_info: data.productInfo,
           mode: data.mode,
           preferences: data.preferences,
