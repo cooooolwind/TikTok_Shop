@@ -61,6 +61,11 @@ function makeProcessor(aiContent: string | Error) {
       scriptId: string;
       productInfo: Script['productInfo'];
       mode: string;
+      preferences?: {
+        duration: number;
+        dialogue_mode?: 'auto' | 'enabled' | 'disabled';
+        dialogue_type?: 'mixed';
+      };
       materialContext?: string;
       materialMedia?: { type: 'image' | 'video'; filename: string; imageUrl?: string }[];
     };
@@ -204,6 +209,40 @@ describe('ScriptGenerationProcessor', () => {
     );
   });
 
+  it('keeps dialogue and subtitle when mapping blueprint scenes into legacy scenes', async () => {
+    const dialogueBlueprint = {
+      ...blueprint,
+      audio: '轻快同期声，角色自然说话。',
+      scenes: [
+        {
+          ...blueprint.scenes[0],
+          dialogue: '这台小相机放进口袋就能出门拍摄。',
+          subtitle: '口袋相机，随手开拍',
+          audio: '角色口播与轻微街道环境声。',
+        },
+      ],
+    };
+    const { processor, scenesRepository, job } = makeProcessor(
+      JSON.stringify({
+        script_blueprint: dialogueBlueprint,
+        narrative_framework: '结构化蓝图',
+        visual_style: '真实带货短片',
+        total_duration: 4,
+      }),
+    );
+
+    await processor.process(job as never);
+
+    expect(scenesRepository.query).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO scenes'),
+      expect.arrayContaining([
+        '这台小相机放进口袋就能出门拍摄。',
+        '轻快同期声，角色自然说话。',
+        '口袋相机，随手开拍',
+      ]),
+    );
+  });
+
   it('allows silent dialogue and subtitle fields for sync-sound-only blueprints', async () => {
     const { processor, scenesRepository, job } = makeProcessor(
       JSON.stringify({
@@ -228,6 +267,60 @@ describe('ScriptGenerationProcessor', () => {
     expect(scenesRepository.query).toHaveBeenCalledWith(
       expect.any(String),
       expect.arrayContaining(['', '同期声', '', 'Ambient scene with no spoken line.']),
+    );
+  });
+
+  it('strips dialogue and subtitle before persistence when dialogue generation is disabled', async () => {
+    const dialogueBlueprint = {
+      ...blueprint,
+      audio: '旁白：介绍商品卖点，背景保留街道环境声。',
+      scenes: [
+        {
+          ...blueprint.scenes[0],
+          audio: '角色说：这款商品很好用。',
+          dialogue: 'AI should not keep this line.',
+          subtitle: 'AI should not keep this subtitle.',
+        },
+      ],
+    };
+    const { processor, scenesRepository, scriptsRepository, job } = makeProcessor(
+      JSON.stringify({
+        script_blueprint: dialogueBlueprint,
+        scenes: [
+          {
+            description: 'Product shot',
+            camera_motion: 'push in',
+            duration: 4,
+            dialogue: 'AI should not keep this line.',
+            bgm_style: '旁白口播，配合环境声',
+            subtitle: 'AI should not keep this subtitle.',
+            visual_prompt: 'Product shot',
+          },
+        ],
+      }),
+    );
+    job.data.preferences = { duration: 12, dialogue_mode: 'disabled', dialogue_type: 'mixed' };
+
+    await processor.process(job as never);
+
+    expect(scenesRepository.query).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.arrayContaining(['Product shot', 'push in', 4, '', '仅保留同期声和环境声', '', 'Product shot']),
+    );
+    expect(scriptsRepository.query).toHaveBeenCalledWith(
+      expect.stringContaining('script_blueprint'),
+      expect.arrayContaining([
+        expect.objectContaining({
+          audio: '仅保留同期声和环境声，不包含口播、旁白或对白',
+          scenes: [
+            expect.objectContaining({
+              audio: '仅保留同期声和环境声',
+              dialogue: '',
+              subtitle: '',
+            }),
+          ],
+        }),
+      ]),
     );
   });
 
@@ -296,6 +389,7 @@ describe('ScriptGenerationProcessor', () => {
       target_audience: 'office commuters',
       price: '$29.99',
     };
+    job.data.preferences = { duration: 12, dialogue_mode: 'disabled', dialogue_type: 'mixed' };
 
     await processor.process(job as never);
 
@@ -315,7 +409,7 @@ describe('ScriptGenerationProcessor', () => {
         }),
         expect.objectContaining({
           role: 'user',
-          content: expect.stringContaining('generation_objective'),
+          content: expect.stringContaining('"dialogue_mode":"disabled"'),
         }),
         expect.objectContaining({
           role: 'user',

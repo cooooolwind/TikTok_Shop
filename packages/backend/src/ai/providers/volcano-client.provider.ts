@@ -71,6 +71,7 @@ export interface VolcanoChatCompletionResult {
 }
 
 const DEFAULT_VIDEO_FETCH_TIMEOUT_MS = 60000;
+const DEFAULT_CHAT_TIMEOUT_MS = 180000;
 
 @Injectable()
 export class VolcanoClientProvider {
@@ -79,6 +80,50 @@ export class VolcanoClientProvider {
   constructor(private readonly configService: ConfigService) {}
 
   async generateChat(messages: any[], options?: any): Promise<VolcanoChatCompletionResult> {
+    if (this.configService.get<boolean>('volcano.mockMode')) {
+      this.logger.log('Mock mode: returning simulated chat completion response');
+      const mockContent = JSON.stringify({
+        script_blueprint: {
+          basic_setting: 'Mock 商品短视频基础设定，商品主体清晰可见。',
+          atmosphere_and_quality: '明亮真实的电商短视频质感，画面干净，产品突出。',
+          audio: '轻快同期声，可根据台词生成口播。',
+          scenes: [
+            {
+              order: 1,
+              time_range: '00:00-00:04',
+              shot_size: '近景',
+              composition: '商品居中，背景简洁',
+              camera_movement: '缓慢推进',
+              visual_content: '展示商品外观和核心卖点。',
+              audio: '轻快同期声。',
+              dialogue: '这款商品让日常使用更轻松。',
+              subtitle: '日常使用更轻松',
+            },
+          ],
+        },
+        narrative_framework: 'Hook - 卖点展示 - CTA',
+        visual_style: '真实电商短视频',
+        total_duration: 4,
+        scenes: [
+          {
+            description: '展示商品外观和核心卖点。',
+            camera_motion: '缓慢推进',
+            duration: 4,
+            dialogue: '这款商品让日常使用更轻松。',
+            bgm_style: '轻快同期声',
+            subtitle: '日常使用更轻松',
+            visual_prompt: '近景，商品居中，背景简洁，展示商品外观和核心卖点。',
+            constraints: ['商品清晰可见', '不要生成画面文字'],
+          },
+        ],
+      });
+      return {
+        choices: [{ message: { role: 'assistant', content: mockContent }, finish_reason: 'stop' }],
+        content: mockContent,
+        usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+      };
+    }
+
     const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
     const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
     const model = this.configService.get<string>('volcano.textEndpoint') ?? '';
@@ -100,7 +145,7 @@ export class VolcanoClientProvider {
           messages,
           ...options,
         }),
-        signal: AbortSignal.timeout(this.getVideoFetchTimeoutMs()),
+        signal: AbortSignal.timeout(this.getChatTimeoutMs()),
       });
 
       if (!response.ok) {
@@ -162,7 +207,7 @@ export class VolcanoClientProvider {
           input,
           ...options,
         }),
-        signal: AbortSignal.timeout(this.getVideoFetchTimeoutMs()),
+        signal: AbortSignal.timeout(this.getChatTimeoutMs()),
       });
 
       if (!response.ok) {
@@ -468,7 +513,7 @@ export class VolcanoClientProvider {
             Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify(body),
-          signal: AbortSignal.timeout(this.getVideoFetchTimeoutMs()),
+        signal: AbortSignal.timeout(this.getChatTimeoutMs()),
         });
 
         if (response.status === 404 && useLastFrame) {
@@ -621,6 +666,13 @@ export class VolcanoClientProvider {
     }
 
     return await response.json();
+  }
+
+  private getChatTimeoutMs() {
+    const configured = this.configService.get<number>('volcano.chatTimeoutMs');
+    return Number.isFinite(configured) && configured && configured > 0
+      ? configured
+      : DEFAULT_CHAT_TIMEOUT_MS;
   }
 
   private getVideoFetchTimeoutMs() {

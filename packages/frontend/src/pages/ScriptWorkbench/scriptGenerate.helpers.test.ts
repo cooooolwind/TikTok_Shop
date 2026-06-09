@@ -52,6 +52,29 @@ describe('scriptGenerate helpers', () => {
     expect(payload.material_ids).toEqual(['video-1']);
   });
 
+  it('writes dialogue generation strategy into script preferences', () => {
+    const modes = ['auto', 'enabled', 'disabled'] as const;
+
+    for (const dialogue_mode of modes) {
+      const payload = buildScriptGeneratePayload({
+        entry: 'material',
+        product_name: 'Camera',
+        product_description: 'Pocket camera',
+        product_category: 'electronics',
+        selling_points: ['portable'],
+        duration: 12,
+        dialogue_mode,
+      });
+
+      expect(payload.preferences).toEqual(
+        expect.objectContaining({
+          dialogue_mode,
+          dialogue_type: 'mixed',
+        }),
+      );
+    }
+  });
+
   it('stores selected library materials on manually structured drafts', () => {
     const payload = buildManualDraftPayload({
       entry: 'manual_structured',

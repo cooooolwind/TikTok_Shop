@@ -20,6 +20,7 @@ export interface ScriptGenerateFormValues {
   style?: string;
   tone?: string;
   language?: string;
+  dialogue_mode?: 'auto' | 'enabled' | 'disabled';
 }
 
 const MAX_SCRIPT_DURATION = 12;
@@ -38,6 +39,8 @@ export function buildScriptGeneratePayload(values: ScriptGenerateFormValues): Ge
       style: values.style,
       tone: values.tone,
       language: values.language ?? 'zh',
+      dialogue_mode: values.dialogue_mode ?? 'auto',
+      dialogue_type: 'mixed',
     },
   };
 }

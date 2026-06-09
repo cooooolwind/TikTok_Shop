@@ -92,7 +92,7 @@ export class ScriptsService {
         materialMedia: materialInput.media,
         manualText: data.manual_text,
       },
-      { attempts: 2, removeOnComplete: true, removeOnFail: false },
+      { attempts: 2, removeOnComplete: true, removeOnFail: false, failParentOnFailure: true },
     );
 
     return {
@@ -275,7 +275,7 @@ export class ScriptsService {
         materialContext: materialInput.context,
         materialMedia: materialInput.media,
       },
-      { attempts: 2, removeOnComplete: true, removeOnFail: false },
+      { attempts: 2, removeOnComplete: true, removeOnFail: false, failParentOnFailure: true },
     );
     return { task_id: taskId, status: 'queued' as const };
   }
@@ -457,6 +457,8 @@ export class ScriptsService {
         camera_movement: scene.camera_movement ?? '',
         visual_content: scene.visual_content ?? '',
         audio: scene.audio ?? '',
+        dialogue: scene.dialogue ?? '',
+        subtitle: scene.subtitle ?? '',
       })),
     };
   }

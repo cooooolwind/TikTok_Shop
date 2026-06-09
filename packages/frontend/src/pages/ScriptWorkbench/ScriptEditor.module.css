@@ -227,6 +227,14 @@
   padding: 12px;
 }
 
+.sceneSummary {
+  padding: 12px;
+  color: #344054;
+  font-size: 13px;
+  line-height: 1.55;
+  background: #fcfcfd;
+}
+
 .previewNote {
   border: 1px solid #fde68a;
   background: #fffbeb;

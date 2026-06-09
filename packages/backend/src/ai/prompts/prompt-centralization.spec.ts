@@ -41,7 +41,7 @@ describe('centralized AI prompt builders', () => {
     const messages = buildScriptGenerationMessages({
       productInfo: script.productInfo,
       mode: 'free',
-      preferences: undefined,
+      preferences: { duration: 12, dialogue_mode: 'enabled', dialogue_type: 'mixed' },
       template: undefined,
       materialContext: 'slice 1: Fabric close-up',
       materialMedia: [],
@@ -67,8 +67,16 @@ describe('centralized AI prompt builders', () => {
           content: expect.stringContaining('视频切片'),
         }),
         expect.objectContaining({
+          role: 'system',
+          content: expect.stringContaining('dialogue_mode = enabled'),
+        }),
+        expect.objectContaining({
+          role: 'system',
+          content: expect.stringContaining('dialogue_mode = disabled'),
+        }),
+        expect.objectContaining({
           role: 'user',
-          content: expect.stringContaining('generation_objective'),
+          content: expect.stringContaining('"dialogue_mode":"enabled"'),
         }),
         expect.objectContaining({
           role: 'user',

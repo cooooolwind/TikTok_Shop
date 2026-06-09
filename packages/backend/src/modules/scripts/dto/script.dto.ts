@@ -61,6 +61,14 @@ export class ScriptPreferencesDto {
   @IsOptional()
   @IsString()
   language?: string;
+
+  @IsOptional()
+  @IsIn(['auto', 'enabled', 'disabled'])
+  dialogue_mode?: 'auto' | 'enabled' | 'disabled';
+
+  @IsOptional()
+  @IsIn(['mixed'])
+  dialogue_type?: 'mixed';
 }
 
 export class GenerateScriptDto {

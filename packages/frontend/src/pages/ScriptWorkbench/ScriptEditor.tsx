@@ -56,6 +56,7 @@ export default function ScriptEditor() {
   const [sceneModalOpen, setSceneModalOpen] = useState(false);
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'blueprint' | 'preview'>('blueprint');
+  const [collapsedBlueprintScenes, setCollapsedBlueprintScenes] = useState<Set<number | string>>(new Set());
   const [sceneForm] = Form.useForm();
   const [blueprintForm] = Form.useForm<ScriptBlueprint>();
 
@@ -72,7 +73,7 @@ export default function ScriptEditor() {
       if (event.task_id === taskId) setProgress(event.progress);
     });
     const offFailed = onTaskFailed((event) => {
-      if (event.task_id === taskId && id) fetchDetail(id);
+      if (event.task_id === taskId && taskId.startsWith('script_generation_') && id) fetchDetail(id);
     });
     const offGenerated = onScriptGenerated((event) => {
       if (event.script_id === currentScript.id && id) fetchDetail(id);
@@ -103,6 +104,8 @@ export default function ScriptEditor() {
   const script = currentScript;
   const scenes = sortScenes(script.scenes ?? []);
   const blueprint = script.script_blueprint ?? createBlueprintFromScenes(scenes);
+  const hasGeneratedScriptContent = scenes.length > 0 || Boolean(script.script_blueprint?.scenes?.length);
+  const isScriptGenerationFailed = script.status === 'failed' && !hasGeneratedScriptContent;
 
   const openEditScene = (scene: Scene) => {
     sceneForm.setFieldsValue(scene);
@@ -127,6 +130,18 @@ export default function ScriptEditor() {
       if (!scene) continue;
       await updateScene(script.id, scene.id, blueprintSceneToScenePatch(normalized, blueprintScene));
     }
+  };
+
+  const toggleBlueprintScene = (sceneKey: number | string) => {
+    setCollapsedBlueprintScenes((current) => {
+      const next = new Set(current);
+      if (next.has(sceneKey)) {
+        next.delete(sceneKey);
+      } else {
+        next.add(sceneKey);
+      }
+      return next;
+    });
   };
 
   const deleteScript = () => {
@@ -159,12 +174,12 @@ export default function ScriptEditor() {
                 返回生成任务
               </Button>
             )}
-            {script.status === 'failed' && (
+            {isScriptGenerationFailed && (
               <Button icon={<ReloadOutlined />} onClick={() => retry(script.id)}>
                 重新生成
               </Button>
             )}
-            {script.status === 'draft' && (
+            {(script.status === 'draft' || (script.status === 'failed' && hasGeneratedScriptContent)) && (
               <Button type="primary" icon={<CheckOutlined />} onClick={() => confirm(script.id)}>
                 确认剧本
               </Button>
@@ -192,7 +207,7 @@ export default function ScriptEditor() {
         />
       )}
 
-      {script.status === 'failed' && (
+      {isScriptGenerationFailed && (
         <Alert
           type="error"
           showIcon
@@ -330,7 +345,17 @@ export default function ScriptEditor() {
                 <Form.List name="scenes">
                   {(fields) => (
                     <div className={styles.sceneStack}>
-                      {fields.map((field, index) => (
+                      {fields.map((field, index) => {
+                        const isCollapsed = collapsedBlueprintScenes.has(field.key);
+                        const sceneValues = blueprintForm.getFieldValue(['scenes', field.name]) as
+                          | Partial<BlueprintScene>
+                          | undefined;
+                        const sceneSummary =
+                          sceneValues?.visual_content ||
+                          blueprint.scenes?.[index]?.visual_content ||
+                          '尚未填写画面内容';
+
+                        return (
                         <article className={styles.scene} key={field.key}>
                           <div className={styles.sceneHead}>
                             <div className={styles.sceneIndex}>{index + 1}</div>
@@ -338,8 +363,18 @@ export default function ScriptEditor() {
                               <strong>蓝图分镜 {index + 1}</strong>
                               <span>修改这里会同步生成视频分镜预览</span>
                             </div>
-                            <Button size="small">折叠</Button>
+                            <Button
+                              size="small"
+                              aria-label={isCollapsed ? '展开' : '折叠'}
+                              aria-expanded={!isCollapsed}
+                              onClick={() => toggleBlueprintScene(field.key)}
+                            >
+                              {isCollapsed ? '展开' : '折叠'}
+                            </Button>
                           </div>
+                          {isCollapsed ? (
+                            <div className={styles.sceneSummary}>{sceneSummary}</div>
+                          ) : (
                           <div className={styles.sceneBody}>
                             <Form.Item name={[field.name, 'order']} hidden>
                               <InputNumber />
@@ -363,10 +398,25 @@ export default function ScriptEditor() {
                               <Form.Item className={styles.fieldWide} name={[field.name, 'audio']} label="分镜声音">
                                 <TextArea aria-label={`分镜 ${index + 1} 声音`} rows={2} />
                               </Form.Item>
+                              <Form.Item className={styles.fieldWide} name={[field.name, 'dialogue']} label="台词/旁白">
+                                <TextArea
+                                  aria-label={`分镜 ${index + 1} 台词`}
+                                  rows={2}
+                                  placeholder="生成台词后可在这里直接修改；不需要台词时留空"
+                                />
+                              </Form.Item>
+                              <Form.Item className={styles.fieldWide} name={[field.name, 'subtitle']} label="字幕">
+                                <Input
+                                  aria-label={`分镜 ${index + 1} 字幕`}
+                                  placeholder="默认可与台词一致，也可以改成更短字幕"
+                                />
+                              </Form.Item>
                             </div>
                           </div>
+                          )}
                         </article>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </Form.List>
@@ -389,6 +439,10 @@ export default function ScriptEditor() {
                       <span className={styles.value}>
                         {[scene.camera_motion, scene.bgm_style].filter(Boolean).join(' / ') || '-'}
                       </span>
+                    </div>
+                    <div className={styles.metaRow}>
+                      <span className={styles.label}>台词</span>
+                      <span className={styles.value}>{scene.dialogue || '-'}</span>
                     </div>
                     {script.status !== 'generating' && (
                       <Button size="small" style={{ marginTop: 10 }} onClick={() => openEditScene(scene)}>
@@ -474,6 +528,8 @@ function createBlueprintFromScenes(scenes: Scene[]): ScriptBlueprint {
         camera_movement: scene.camera_motion ?? '',
         visual_content: scene.description ?? '',
         audio: scene.bgm_style ?? '',
+        dialogue: scene.dialogue ?? '',
+        subtitle: scene.subtitle ?? '',
       };
     }),
   };
@@ -492,6 +548,8 @@ function normalizeBlueprint(blueprint: ScriptBlueprint): ScriptBlueprint {
       camera_movement: scene.camera_movement ?? '',
       visual_content: scene.visual_content ?? '',
       audio: scene.audio ?? '',
+      dialogue: scene.dialogue ?? '',
+      subtitle: scene.subtitle ?? '',
     })),
   };
 }
@@ -501,9 +559,9 @@ function blueprintSceneToScenePatch(blueprint: ScriptBlueprint, scene: Blueprint
     description: scene.visual_content,
     camera_motion: scene.camera_movement || 'fixed',
     duration: durationFromTimeRange(scene.time_range),
-    dialogue: '',
+    dialogue: scene.dialogue ?? '',
     bgm_style: scene.audio || blueprint.audio || '同期声',
-    subtitle: '',
+    subtitle: scene.subtitle ?? scene.dialogue ?? '',
     visual_prompt: [
       `基础设定：${blueprint.basic_setting}`,
       `氛围与画质：${blueprint.atmosphere_and_quality}`,

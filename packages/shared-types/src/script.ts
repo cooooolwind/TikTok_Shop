@@ -38,6 +38,8 @@ export interface BlueprintScene {
   camera_movement: string;
   visual_content: string;
   audio: string;
+  dialogue?: string;
+  subtitle?: string;
 }
 
 export interface ScriptBlueprint {
@@ -78,6 +80,8 @@ export interface ScriptPreferences {
   style?: string;
   tone?: string;
   language?: string;
+  dialogue_mode?: 'auto' | 'enabled' | 'disabled';
+  dialogue_type?: 'mixed';
 }
 
 export interface GenerateScriptRequest {

@@ -70,7 +70,7 @@ export class ScriptGenerationProcessor extends WorkerHost {
       const parsed = this.parseAiResponse(aiResponse.content);
 
       await this.updateProgress(job, 3, 4, 'persist', '正在保存分镜...');
-      await this.persistResult(script, parsed);
+      await this.persistResult(script, this.applyDialoguePreferences(parsed, job.data.preferences));
 
       await this.updateProgress(job, 4, 4, 'done', '剧本生成完成');
       this.tasksGateway.emitScriptGenerated(script.id);
@@ -115,7 +115,7 @@ export class ScriptGenerationProcessor extends WorkerHost {
       scene.duration ?? 3,
       scene.dialogue ?? '',
       scene.bgm_style ?? 'upbeat',
-      scene.subtitle ?? scene.dialogue ?? '',
+      scene.subtitle || scene.dialogue || '',
       scene.visual_prompt ?? scene.description ?? '',
     ]);
 
@@ -179,9 +179,9 @@ export class ScriptGenerationProcessor extends WorkerHost {
       description: scene.visual_content || [scene.shot_size, scene.composition, scene.camera_movement].filter(Boolean).join('，'),
       camera_motion: scene.camera_movement || 'fixed',
       duration: this.durationFromTimeRange(scene.time_range),
-      dialogue: '',
+      dialogue: scene.dialogue ?? '',
       bgm_style: blueprint?.audio || scene.audio || '同期声',
-      subtitle: '',
+      subtitle: scene.subtitle || scene.dialogue || '',
       visual_prompt: this.buildVisualPromptFromBlueprint(blueprint, scene),
       constraints: ['保持基础设定、主体身份、场景风格和声音规则一致'],
     }));
@@ -215,6 +215,60 @@ export class ScriptGenerationProcessor extends WorkerHost {
     const sceneTotal = scenes.reduce((sum, scene) => sum + (scene.duration ?? 3), 0);
     if ((!result.scenes || result.scenes.length === 0) && sceneTotal > 0) return Math.min(sceneTotal, 12);
     return Math.min(result.total_duration ?? sceneTotal, 12);
+  }
+
+  private applyDialoguePreferences(result: AiScriptResult, preferences?: ScriptPreferences): AiScriptResult {
+    if (this.isDialogueDisabled(preferences)) {
+      return {
+        ...result,
+        script_blueprint: result.script_blueprint
+          ? {
+              ...result.script_blueprint,
+              audio: this.sanitizeAudioForNoDialogue(result.script_blueprint.audio, true),
+              scenes: (result.script_blueprint.scenes ?? []).map((scene) => ({
+                ...scene,
+                audio: this.sanitizeAudioForNoDialogue(scene.audio),
+                dialogue: '',
+                subtitle: '',
+              })),
+            }
+          : result.script_blueprint,
+        scenes: result.scenes?.map((scene) => ({
+          ...scene,
+          dialogue: '',
+          bgm_style: this.sanitizeAudioForNoDialogue(scene.bgm_style),
+          subtitle: '',
+        })),
+      };
+    }
+
+    return {
+      ...result,
+      script_blueprint: result.script_blueprint
+        ? {
+            ...result.script_blueprint,
+            scenes: (result.script_blueprint.scenes ?? []).map((scene) => ({
+              ...scene,
+              subtitle: scene.dialogue ? scene.subtitle || scene.dialogue : scene.subtitle,
+            })),
+          }
+        : result.script_blueprint,
+      scenes: result.scenes?.map((scene) => ({
+        ...scene,
+        subtitle: scene.dialogue ? scene.subtitle || scene.dialogue : scene.subtitle,
+      })),
+    };
+  }
+
+  private isDialogueDisabled(preferences?: ScriptPreferences) {
+    const maybePreferences = preferences as (ScriptPreferences & { dialogueMode?: string }) | undefined;
+    return maybePreferences?.dialogue_mode === 'disabled' || maybePreferences?.dialogueMode === 'disabled';
+  }
+
+  private sanitizeAudioForNoDialogue(audio: string | undefined, global = false) {
+    const fallback = global ? '仅保留同期声和环境声，不包含口播、旁白或对白' : '仅保留同期声和环境声';
+    if (!audio?.trim()) return fallback;
+    return /台词|口播|旁白|对白|字幕|解说|配音|说[:：]|说话|朗读|TTS/i.test(audio) ? fallback : audio;
   }
 
   private async markFailed(scriptId: string, taskId: string, error: unknown) {
