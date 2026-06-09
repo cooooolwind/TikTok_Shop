@@ -37,11 +37,11 @@ const segment = {
 };
 
 describe('centralized AI prompt builders', () => {
-  it('builds conversion-focused script generation messages with material grounding', () => {
+  it('builds structured script blueprint messages with material grounding', () => {
     const messages = buildScriptGenerationMessages({
       productInfo: script.productInfo,
       mode: 'free',
-      preferences: undefined,
+      preferences: { duration: 12, dialogue_mode: 'enabled', dialogue_type: 'mixed' },
       template: undefined,
       materialContext: 'slice 1: Fabric close-up',
       materialMedia: [],
@@ -52,19 +52,43 @@ describe('centralized AI prompt builders', () => {
       expect.arrayContaining([
         expect.objectContaining({
           role: 'system',
-          content: expect.stringContaining('抖音小店电商短视频导演'),
+          content: expect.stringContaining('短视频结构化剧本导演'),
         }),
         expect.objectContaining({
           role: 'system',
-          content: expect.stringContaining('CTA'),
+          content: expect.stringContaining('带货文案师'),
+        }),
+        expect.objectContaining({
+          role: 'system',
+          content: expect.stringContaining('script_blueprint'),
+        }),
+        expect.objectContaining({
+          role: 'system',
+          content: expect.stringContaining('基础设定'),
         }),
         expect.objectContaining({
           role: 'system',
           content: expect.stringContaining('视频切片'),
         }),
         expect.objectContaining({
+          role: 'system',
+          content: expect.stringContaining('dialogue_mode = enabled'),
+        }),
+        expect.objectContaining({
+          role: 'system',
+          content: expect.stringContaining('dialogue_mode = disabled'),
+        }),
+        expect.objectContaining({
+          role: 'user',
+          content: expect.stringContaining('"dialogue_mode":"enabled"'),
+        }),
+        expect.objectContaining({
           role: 'user',
           content: expect.stringContaining('为什么要现在购买'),
+        }),
+        expect.objectContaining({
+          role: 'user',
+          content: expect.stringContaining('分镜画面内容'),
         }),
       ]),
     );

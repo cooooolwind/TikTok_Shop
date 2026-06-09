@@ -393,6 +393,51 @@ describe('VolcanoClientProvider video generation', () => {
     expect(parsed.description).toContain('Mock');
   });
 
+  it('returns mock chat completion in mock mode without calling fetch', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch');
+    const { provider } = makeProvider({ 'volcano.mockMode': true });
+
+    const result = await provider.generateChat([{ role: 'user', content: 'generate a script' }]);
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(result.content).toContain('script_blueprint');
+    expect(JSON.parse(result.content)).toEqual(
+      expect.objectContaining({
+        script_blueprint: expect.any(Object),
+        scenes: expect.any(Array),
+      }),
+    );
+  });
+
+  it('uses the configured chat timeout for chat completions instead of the video fetch timeout', async () => {
+    const timeoutSpy = jest.spyOn(AbortSignal, 'timeout');
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { role: 'assistant', content: '{"ok":true}' }, finish_reason: 'stop' }],
+        }),
+        { status: 200 },
+      ),
+    );
+    const { provider } = makeProvider({
+      'volcano.mockMode': false,
+      'volcano.textApiKey': 'test-key',
+      'volcano.textBaseUrl': 'https://ark.cn-beijing.volces.com/api/v3',
+      'volcano.textEndpoint': 'ep-test',
+      'volcano.videoFetchTimeoutMs': 60000,
+      'volcano.chatTimeoutMs': 240000,
+    });
+
+    await provider.generateChat([{ role: 'user', content: 'generate a script' }]);
+
+    expect(timeoutSpy).toHaveBeenCalledWith(240000);
+    expect(timeoutSpy).not.toHaveBeenCalledWith(60000);
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
   it('uploads file with purpose=user_data to Volcano Files API', async () => {
     const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValueOnce(
       new Response(JSON.stringify({ id: 'file-abc-123', object: 'file', status: 'uploaded' }), { status: 200 }),

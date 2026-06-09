@@ -17,6 +17,20 @@ type PromptScript = {
     selling_points?: string[];
   };
   visualStyle?: string;
+  scriptBlueprint?: {
+    basic_setting?: string;
+    atmosphere_and_quality?: string;
+    audio?: string;
+    scenes?: {
+      order: number;
+      time_range?: string;
+      shot_size?: string;
+      composition?: string;
+      camera_movement?: string;
+      visual_content?: string;
+      audio?: string;
+    }[];
+  } | null;
 };
 
 type PromptSegment = {
@@ -39,6 +53,7 @@ export function buildSegmentVideoPrompt(
   const scene = sortedScenes[0];
   const visualAction = scene?.visualPrompt || scene?.description || '清晰展示商品。';
   const continuityInstruction = buildContinuityInstruction(continuitySource);
+  const blueprintContext = buildBlueprintContext(script, scene?.order);
 
   return [
     '生成一段抖音小店视频分镜。',
@@ -54,6 +69,8 @@ export function buildSegmentVideoPrompt(
     `品类：${script.productInfo.category || '电商产品'}`,
     `卖点：${(script.productInfo.selling_points ?? []).join('、') || '核心产品优势'}`,
     script.productInfo.description ? `描述：${script.productInfo.description}` : '',
+    '',
+    blueprintContext,
     '',
     '连续性：',
     continuityInstruction,
@@ -90,6 +107,7 @@ export function buildContinuityInstruction(continuitySource: VideoPromptContinui
 export function buildFirstFramePrompt(script: PromptScript, segment: PromptSegment) {
   const scene = [...segment.scenes].sort((a, b) => a.order - b.order)[0];
   const action = scene?.visualPrompt || scene?.description || '产品主视觉';
+  const blueprintContext = buildBlueprintContext(script, scene?.order);
 
   return [
     '为抖音小店生成一张电商视频首帧画面。',
@@ -97,6 +115,7 @@ export function buildFirstFramePrompt(script: PromptScript, segment: PromptSegme
     `品类：${script.productInfo.category || '电商产品'}。`,
     `卖点：${(script.productInfo.selling_points ?? []).join('、') || '核心产品优势'}。`,
     script.productInfo.description ? `描述：${script.productInfo.description}。` : '',
+    blueprintContext,
     `分镜视觉动作：${action}。`,
     `镜头方向：${scene?.cameraMotion || '固定产品镜头'}。`,
     `商业风格：${script.visualStyle || '简洁、转化导向的产品展示'}。`,
@@ -121,4 +140,24 @@ export function buildFirstFrameRetryPrompt(script: PromptScript, segment: Prompt
     '不要在画面中生成字幕、标题、促销文字、说明文字、水印或乱码文字。',
     '使用简洁的商业产品展示构图，不加任何可能改变产品身份的额外元素。',
   ].join('\n');
+}
+
+function buildBlueprintContext(script: PromptScript, sceneOrder?: number) {
+  const blueprint = script.scriptBlueprint;
+  if (!blueprint) return '';
+  const scene = blueprint.scenes?.find((item) => item.order === sceneOrder);
+  return [
+    '结构化剧本蓝图：',
+    blueprint.basic_setting ? `基础设定：${blueprint.basic_setting}` : '',
+    blueprint.atmosphere_and_quality ? `氛围与画质：${blueprint.atmosphere_and_quality}` : '',
+    blueprint.audio ? `声音规则：${blueprint.audio}` : '',
+    scene?.time_range ? `时间段：${scene.time_range}` : '',
+    scene?.shot_size ? `景别：${scene.shot_size}` : '',
+    scene?.composition ? `构图：${scene.composition}` : '',
+    scene?.camera_movement ? `运镜：${scene.camera_movement}` : '',
+    scene?.visual_content ? `蓝图画面内容：${scene.visual_content}` : '',
+    scene?.audio ? `当前分镜声音：${scene.audio}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
 }

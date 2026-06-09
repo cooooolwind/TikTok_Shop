@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   OneToMany,
 } from 'typeorm';
+import type { ScriptBlueprint } from '@aigc/shared-types';
 import { Scene } from './scene.entity';
 
 export type ScriptMode = 'template' | 'imitation' | 'free';
@@ -56,6 +57,9 @@ export class Script {
 
   @Column({ name: 'visual_style', length: 512, nullable: true })
   visualStyle: string;
+
+  @Column({ name: 'script_blueprint', type: 'jsonb', nullable: true })
+  scriptBlueprint: ScriptBlueprint | null;
 
   @Column({ name: 'total_duration', type: 'float', default: 15 })
   totalDuration: number;

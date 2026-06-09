@@ -41,6 +41,7 @@ function makeScript(overrides: Partial<Script> = {}): Script {
     mode: 'free',
     narrativeFramework: 'Hook - benefits - CTA',
     visualStyle: 'clean product demo',
+    scriptBlueprint: null,
     totalDuration: 12,
     status: 'confirmed',
     scenes: [makeScene()],
@@ -589,6 +590,42 @@ describe('VideoGenerationProcessor', () => {
     expect(prompt).not.toContain('Narrative:');
     expect(prompt).not.toContain('Segment scenes:');
     expect(prompt).not.toContain('duration=4s');
+  });
+
+  it('includes structured script blueprint context in Seedance video prompts', async () => {
+    const { processor, volcanoClient, scriptsRepository, job } = makeProcessor('succeeded');
+    scriptsRepository.findOne.mockResolvedValue(
+      makeScript({
+        scriptBlueprint: {
+          basic_setting: '机器人清道夫身穿牛仔帽，在复古街道中保持主体一致。',
+          atmosphere_and_quality: '暖橙和海盐蓝色调，真实拍摄质感，胶片颗粒。',
+          audio: '不需要配乐，仅保留同期声。',
+          scenes: [
+            {
+              order: 1,
+              time_range: '00:00-00:04',
+              shot_size: '大全景',
+              composition: '公路引导线构图',
+              camera_movement: '无人机俯拍后缓慢上摇',
+              visual_content: '主体从画面下方入画，沿街道高速前进。',
+              audio: '风声和脚步声。',
+            },
+          ],
+        },
+      } as Partial<Script>),
+    );
+
+    await processor.process(job as never);
+
+    const firstCreateCall = volcanoClient.createVideoTask.mock.calls[0] as unknown as [{ prompt: string }];
+    const prompt = firstCreateCall[0].prompt;
+    expect(prompt).toContain('结构化剧本蓝图：');
+    expect(prompt).toContain('基础设定：机器人清道夫身穿牛仔帽');
+    expect(prompt).toContain('氛围与画质：暖橙和海盐蓝色调');
+    expect(prompt).toContain('声音规则：不需要配乐，仅保留同期声。');
+    expect(prompt).toContain('景别：大全景');
+    expect(prompt).toContain('构图：公路引导线构图');
+    expect(prompt).toContain('主体从画面下方入画');
   });
 
   it('clamps provider durations to the Seedance 1.5 pro 4-12 second range', async () => {

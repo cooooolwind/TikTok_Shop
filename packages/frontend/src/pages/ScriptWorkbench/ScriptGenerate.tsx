@@ -98,7 +98,7 @@ export default function ScriptGenerate() {
               form={form}
               layout="vertical"
               onFinish={handleSubmit}
-              initialValues={{ duration: 12, language: 'zh', entry: 'material' }}
+              initialValues={{ duration: 12, language: 'zh', dialogue_mode: 'auto', entry: 'material' }}
             >
               <Text strong>创作入口</Text>
               <Divider />
@@ -262,6 +262,17 @@ export default function ScriptGenerate() {
                 <Col xs={24} md={8}>
                   <Form.Item name="language" label="语言">
                     <Select options={[{ label: '中文', value: 'zh' }, { label: 'English', value: 'en' }]} />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={8}>
+                  <Form.Item name="dialogue_mode" label="台词生成">
+                    <Select
+                      options={[
+                        { label: '自动判断', value: 'auto' },
+                        { label: '生成台词', value: 'enabled' },
+                        { label: '不生成台词', value: 'disabled' },
+                      ]}
+                    />
                   </Form.Item>
                 </Col>
               </Row>
