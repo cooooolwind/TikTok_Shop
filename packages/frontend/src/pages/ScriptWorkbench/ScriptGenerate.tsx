@@ -50,7 +50,7 @@ export default function ScriptGenerate() {
   const materialOptions = useMemo(
     () =>
       materials
-        .filter((material) => material.type === 'image' || material.type === 'video')
+        .filter((material) => (material.type === 'image' || material.type === 'video') && material.source_declaration !== 'reference')
         .sort((a, b) => {
           const typeRank = (material: Material) => (material.type === 'video' ? 0 : 1);
           const categoryRank = (material: Material) => (material.category === 'product' ? 0 : 1);
@@ -217,7 +217,7 @@ export default function ScriptGenerate() {
                       options={references
                         .filter((r) => r.status === 'ready')
                         .map((ref) => ({
-                          label: `[${ref.category}] ${ref.source_platform || '未知平台'} · ${ref.reference_analysis?.hook || '无Hook分析'}`,
+                          label: `${ref.name} · ${ref.category}${ref.reference_analysis?.hook ? ` · Hook: ${ref.reference_analysis.hook}` : ''}`,
                           value: ref.id,
                         }))}
                     />
