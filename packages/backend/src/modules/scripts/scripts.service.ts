@@ -15,6 +15,7 @@ import type {
   ReorderScenesRequest,
   Scene as SceneResponse,
   Script as ScriptResponse,
+  ScriptBlueprint,
   ScriptListQuery,
   UpdateSceneRequest,
   UpdateScriptRequest,
@@ -76,6 +77,7 @@ export class ScriptsService {
         mode: data.mode,
         narrativeFramework: template?.strategy ?? reference?.reference_analysis?.style ?? '',
         visualStyle: data.preferences?.style ?? '',
+        scriptBlueprint: null,
         totalDuration: data.preferences?.duration ?? 15,
         status: 'generating',
         scenes: [],
@@ -100,7 +102,7 @@ export class ScriptsService {
         materialMedia: materialInput.media,
         manualText: data.manual_text,
       },
-      { attempts: 2, removeOnComplete: true, removeOnFail: false },
+      { attempts: 2, removeOnComplete: true, removeOnFail: false, failParentOnFailure: true },
     );
 
     return {
@@ -125,6 +127,7 @@ export class ScriptsService {
         mode: data.mode,
         narrativeFramework: data.narrative_framework ?? '',
         visualStyle: data.visual_style ?? '',
+        scriptBlueprint: data.script_blueprint ?? null,
         totalDuration: data.total_duration ?? this.sumSceneDuration(data.scenes ?? []) ?? 15,
         status: 'draft',
       }),
@@ -192,6 +195,7 @@ export class ScriptsService {
     const script = await this.findRawScript(id);
     if (data.narrative_framework !== undefined) script.narrativeFramework = data.narrative_framework;
     if (data.visual_style !== undefined) script.visualStyle = data.visual_style;
+    if (data.script_blueprint !== undefined) script.scriptBlueprint = this.normalizeScriptBlueprint(data.script_blueprint);
     if (data.status !== undefined) {
       script.status = data.status;
       if (data.status !== 'failed') script.generationError = null;
@@ -283,7 +287,7 @@ export class ScriptsService {
         materialContext: materialInput.context,
         materialMedia: materialInput.media,
       },
-      { attempts: 2, removeOnComplete: true, removeOnFail: false },
+      { attempts: 2, removeOnComplete: true, removeOnFail: false, failParentOnFailure: true },
     );
     return { task_id: taskId, status: 'queued' as const };
   }
@@ -428,6 +432,7 @@ export class ScriptsService {
       narrative_framework: script.narrativeFramework ?? '',
       visual_style: script.visualStyle ?? '',
       total_duration: Number(script.totalDuration),
+      script_blueprint: script.scriptBlueprint ?? null,
       scenes: scenes.map((scene) => this.toSceneResponse(scene)),
       status: script.status,
       created_at: script.createdAt.toISOString(),
@@ -447,6 +452,26 @@ export class ScriptsService {
       subtitle: scene.subtitle ?? '',
       visual_prompt: scene.visualPrompt ?? '',
       constraints: scene.constraints ?? [],
+    };
+  }
+
+  private normalizeScriptBlueprint(blueprint: ScriptBlueprint | null | undefined) {
+    if (!blueprint) return null;
+    return {
+      basic_setting: blueprint.basic_setting ?? '',
+      atmosphere_and_quality: blueprint.atmosphere_and_quality ?? '',
+      audio: blueprint.audio ?? '',
+      scenes: (blueprint.scenes ?? []).map((scene, index) => ({
+        order: Number(scene.order ?? index + 1),
+        time_range: scene.time_range ?? '',
+        shot_size: scene.shot_size ?? '',
+        composition: scene.composition ?? '',
+        camera_movement: scene.camera_movement ?? '',
+        visual_content: scene.visual_content ?? '',
+        audio: scene.audio ?? '',
+        dialogue: scene.dialogue ?? '',
+        subtitle: scene.subtitle ?? '',
+      })),
     };
   }
 }

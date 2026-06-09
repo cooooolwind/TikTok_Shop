@@ -1,14 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Alert, Button, Card, Col, Descriptions, Row, Space, Spin, Tag } from 'antd';
 import {
-  DownloadOutlined,
   EditOutlined,
   PlayCircleOutlined,
   ReloadOutlined,
   StopOutlined,
 } from '@ant-design/icons';
-import { useMediaQuery } from '../../hooks/useMediaQuery';
 import PageHeader from '../../components/common/PageHeader';
 import TaskProgressPanel from '../../components/creation/TaskProgressPanel';
 import StatusTag from '../../components/common/StatusTag';
@@ -16,12 +14,10 @@ import { useCreationStore } from '../../stores/useGenerationStore';
 import { useTaskSubscription } from '../../hooks/useTaskSubscription';
 import { TASK_STATUS_LABELS, routePath } from '../../constants';
 import { formatBeijingDateTime, formatBytes, formatDuration, formatGenerationTaskDisplayId } from '../../utils/format';
-import { openExportWindow } from '../../utils/exportWindow';
 
 export default function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
-  const isMobile = useMediaQuery('(max-width: 768px)');
   const {
     currentTask,
     loading,
@@ -29,10 +25,8 @@ export default function TaskDetail() {
     fetchTask,
     retry,
     cancel,
-    exportVideo,
     createVideo,
   } = useCreationStore();
-  const [exporting, setExporting] = useState(false);
 
   useTaskSubscription(taskId);
 
@@ -58,20 +52,6 @@ export default function TaskDetail() {
   const handleCreateAgain = async () => {
     const nextTask = await createVideo({ script_id: task.script_id });
     navigate(`/creation/tasks/${nextTask.id}`);
-  };
-  const handleExport = async () => {
-    setExporting(true);
-    const exportWindow = openExportWindow();
-    try {
-      const result = await exportVideo(task.id, 'mp4', '1080x1920', 'high');
-      exportWindow.redirect(result.download_url);
-      await fetchTask(task.id);
-    } catch (error) {
-      exportWindow.close();
-      throw error;
-    } finally {
-      setExporting(false);
-    }
   };
 
   return (
@@ -105,22 +85,9 @@ export default function TaskDetail() {
                 <Button
                   type="primary"
                   icon={<PlayCircleOutlined />}
-                  onClick={() => navigate(`/creation/tasks/${task.id}/preview`)}
+                  onClick={() => navigate(routePath.editorTask(task.id))}
                 >
                   预览
-                </Button>
-                {!isMobile && (
-                  <Button icon={<EditOutlined />} onClick={() => navigate(routePath.editorTask(task.id))}>
-                    视频剪辑
-                  </Button>
-                )}
-                <Button
-                  aria-label="导出完整视频"
-                  icon={<DownloadOutlined />}
-                  loading={exporting}
-                  onClick={handleExport}
-                >
-                  导出完整视频
                 </Button>
               </>
             )}
@@ -145,7 +112,7 @@ export default function TaskDetail() {
                   showIcon
                   style={{ marginBottom: 16 }}
                   message={`已生成 ${segments.length} 个分镜片段`}
-                  description="完整视频会在点击“导出完整视频”时按需拼接；拼接前可先预览每个分镜片段。"
+                  description="点击“预览”进入剪辑工作台后，可检查完整时间线并导出成片。"
                 />
               )}
               <Descriptions column={{ xs: 1, sm: 2 }} size="small" bordered>

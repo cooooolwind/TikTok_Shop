@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Alert, Button, Empty, Input, InputNumber, Select, Space, Spin, Tag, Typography } from 'antd';
@@ -24,6 +24,7 @@ import { routePath } from '../../constants';
 import { generationApi } from '../../services/generation.api';
 import { formatDuration } from '../../utils/format';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { downloadExportUrl } from '../../utils/exportWindow';
 import { Timeline } from './components/Timeline/Timeline';
 import styles from './VideoEditor.module.css';
 
@@ -118,6 +119,7 @@ export default function VideoEditor() {
     playheadSeconds,
     pixelsPerSecond,
     selection,
+    setClips,
     setPlayhead,
     setSelection,
     setSubtitles,
@@ -139,10 +141,13 @@ export default function VideoEditor() {
   const [transitionNotice, setTransitionNotice] = useState<string>();
   const [isUserSeeking, setIsUserSeeking] = useState(false);
   const [seekVersion, setSeekVersion] = useState(0);
+  const initializedTimelineTaskId = useRef<string | null>(null);
 
   useEffect(() => {
+    initializedTimelineTaskId.current = null;
     if (taskId) fetchTask(taskId);
     return () => {
+      initializedTimelineTaskId.current = null;
       resetEditor();
     };
   }, [fetchTask, taskId, resetEditor]);
@@ -167,7 +172,7 @@ export default function VideoEditor() {
     () =>
       (currentTask?.result?.segments ?? []).filter(
         (segment) => segment.status !== 'failed' && segment.video_url,
-      ),
+      ).sort((a, b) => a.index - b.index),
     [currentTask?.result?.segments],
   );
 
@@ -190,7 +195,7 @@ export default function VideoEditor() {
 
   const canExport =
     currentTask?.status === 'done' &&
-    clips.length > 1 &&
+    clips.length > 0 &&
     !clips.some((clip) => {
       const segment = segmentByIndex.get(clip.segment_index);
       return (
@@ -200,6 +205,21 @@ export default function VideoEditor() {
         clip.end_seconds > segment.duration
       );
     });
+
+  useEffect(() => {
+    if (!currentTask?.id || initializedTimelineTaskId.current === currentTask.id) return;
+    if (clips.length > 0 || sourceSegments.length === 0) return;
+
+    setClips(
+      sourceSegments.map((segment) => ({
+        id: `clip-${segment.index}`,
+        segment_index: segment.index,
+        start_seconds: 0,
+        end_seconds: segment.duration,
+      })),
+    );
+    initializedTimelineTaskId.current = currentTask.id;
+  }, [clips.length, currentTask?.id, setClips, sourceSegments]);
 
   const handleAddSegment = (segment: VideoSegmentResult) => {
     if (clips.some((clip) => clip.segment_index === segment.index)) {
@@ -322,7 +342,8 @@ export default function VideoEditor() {
         source: 'editor',
         cues: subtitles,
       });
-      await generationApi.export(currentTask.id, request);
+      const result = await generationApi.export(currentTask.id, request);
+      downloadExportUrl(result.download_url, `aigc-video-${currentTask.display_id ?? currentTask.id}.mp4`);
       await fetchTask(currentTask.id);
     } catch (error) {
       setExportError(error instanceof Error ? error.message : '转场视频导出失败');
@@ -728,7 +749,7 @@ export default function VideoEditor() {
               <Alert
                 type="info"
                 showIcon
-                message="至少需要两个有效片段才能导出转场视频。"
+                message="至少需要一个有效片段才能导出视频。"
                 className={styles.exportHint}
               />
             )}

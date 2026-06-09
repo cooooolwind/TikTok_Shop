@@ -41,6 +41,8 @@ export type {
 export type {
   ProductInfo,
   Scene,
+  BlueprintScene,
+  ScriptBlueprint,
   ScriptMode,
   ScriptStatus,
   Script,

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Col, Divider, Form, Input, Row, Select, Slider, Space, Tag, Typography } from 'antd';
+import { Button, Card, Col, Divider, Form, Input, InputNumber, Row, Select, Slider, Space, Tag, Typography } from 'antd';
 import { EditOutlined, FileTextOutlined, PictureOutlined, ThunderboltOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import type { Material } from '@aigc/shared-types';
 import PageHeader from '../../components/common/PageHeader';
@@ -34,6 +34,7 @@ export default function ScriptGenerate() {
   const navigate = useNavigate();
   const [form] = Form.useForm<ScriptGenerateFormValues>();
   const [entry, setEntry] = useState<ScriptEntryMode>('material');
+  const durationValue = Form.useWatch('duration', form) ?? 12;
   const { generating, create, generate } = useScriptStore();
   const { items: templates, fetchList: fetchTemplates } = useTemplateStore();
   const { items: materials, fetchList: fetchMaterials } = useMaterialStore();
@@ -98,7 +99,7 @@ export default function ScriptGenerate() {
               form={form}
               layout="vertical"
               onFinish={handleSubmit}
-              initialValues={{ duration: 12, language: 'zh', entry: 'material' }}
+              initialValues={{ duration: 12, language: 'zh', dialogue_mode: 'auto', entry: 'material' }}
             >
               <Text strong>创作入口</Text>
               <Divider />
@@ -237,8 +238,28 @@ export default function ScriptGenerate() {
 
               <Text strong>偏好设置</Text>
               <Divider />
-              <Form.Item name="duration" label="目标时长">
-                <Slider min={5} max={12} step={1} marks={{ 5: '5s', 10: '10s', 12: '12s' }} />
+              <Form.Item label="整条剧本目标时长">
+                <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                  <Form.Item name="duration" noStyle>
+                    <Slider
+                      min={4}
+                      max={30}
+                      step={1}
+                      marks={{ 4: '4s', 12: '12s', 20: '20s', 30: '30s' }}
+                      ariaLabelForHandle="整条剧本目标时长"
+                      style={{ flex: 1 }}
+                    />
+                  </Form.Item>
+                  <InputNumber
+                    aria-label="整条剧本目标时长秒数"
+                    min={4}
+                    max={30}
+                    step={1}
+                    value={durationValue}
+                    onChange={(value) => form.setFieldsValue({ duration: Number(value ?? 12) })}
+                    style={{ width: 96 }}
+                  />
+                </div>
               </Form.Item>
               <Row gutter={16}>
                 <Col xs={24} md={8}>
@@ -262,6 +283,17 @@ export default function ScriptGenerate() {
                 <Col xs={24} md={8}>
                   <Form.Item name="language" label="语言">
                     <Select options={[{ label: '中文', value: 'zh' }, { label: 'English', value: 'en' }]} />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={8}>
+                  <Form.Item name="dialogue_mode" label="台词生成">
+                    <Select
+                      options={[
+                        { label: '自动判断', value: 'auto' },
+                        { label: '生成台词', value: 'enabled' },
+                        { label: '不生成台词', value: 'disabled' },
+                      ]}
+                    />
                   </Form.Item>
                 </Col>
               </Row>

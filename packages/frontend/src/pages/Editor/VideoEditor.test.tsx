@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { StrictMode } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,6 +8,7 @@ import VideoEditor from './VideoEditor';
 import { useCreationStore } from '../../stores/useGenerationStore';
 import { useEditorStore } from '../../stores/useEditorStore';
 import { generationApi } from '../../services/generation.api';
+import { downloadExportUrl } from '../../utils/exportWindow';
 
 vi.mock('./components/Preview/RemotionPreview', () => ({
   default: () => <div data-testid="remotion-preview">整体预览播放器</div>,
@@ -31,6 +33,10 @@ vi.mock('../../services/generation.api', () => ({
       segments_count: 2,
     })),
   },
+}));
+
+vi.mock('../../utils/exportWindow', () => ({
+  downloadExportUrl: vi.fn(),
 }));
 
 const multiSegmentTask: GenerationTask = {
@@ -86,14 +92,16 @@ const multiSegmentTask: GenerationTask = {
   created_at: '2026-05-25T00:00:00.000Z',
 };
 
-function renderEditor() {
-  return render(
+function renderEditor({ strict = false }: { strict?: boolean } = {}) {
+  const view = (
     <MemoryRouter initialEntries={['/editor/task-1']}>
       <Routes>
         <Route path="/editor/:taskId" element={<VideoEditor />} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+
+  return render(strict ? <StrictMode>{view}</StrictMode> : view);
 }
 
 function mockMatchMedia(matches: boolean) {
@@ -145,6 +153,7 @@ describe('VideoEditor', () => {
     vi.mocked(generationApi.getSubtitles).mockClear();
     vi.mocked(generationApi.saveSubtitles).mockClear();
     vi.mocked(generationApi.export).mockClear();
+    vi.mocked(downloadExportUrl).mockClear();
   });
 
   it('渲染正常中文的桌面剪辑工作台', async () => {
@@ -161,7 +170,7 @@ describe('VideoEditor', () => {
     expect(screen.getByRole('button', { name: '转场' })).toBeTruthy();
   });
 
-  it('进入剪辑页后展示素材列表但时间线保持为空', async () => {
+  it('进入剪辑页后默认按分镜顺序铺入时间线', async () => {
     renderEditor();
 
     await waitFor(() => {
@@ -170,23 +179,56 @@ describe('VideoEditor', () => {
       );
     });
     expect(screen.getByLabelText('第 2 段占位缩略图')).toBeTruthy();
-    expect(useEditorStore.getState().clips).toHaveLength(0);
+    expect(useEditorStore.getState().clips).toEqual([
+      { id: 'clip-0', segment_index: 0, start_seconds: 0, end_seconds: 5 },
+      { id: 'clip-1', segment_index: 1, start_seconds: 0, end_seconds: 6 },
+      { id: 'clip-2', segment_index: 2, start_seconds: 0, end_seconds: 7 },
+    ]);
     expect(useEditorStore.getState().transitions).toHaveLength(0);
-    expect(screen.queryByAltText('时间线第 1 段缩略图')).toBeNull();
+    expect(screen.getByAltText('时间线第 1 段缩略图')).toBeTruthy();
   });
 
-  it('点击素材加入后只新增对应片段且不自动创建默认转场', async () => {
+  it('严格模式重新挂载后仍默认铺入时间线', async () => {
+    renderEditor({ strict: true });
+
+    await waitFor(() => {
+      expect(useEditorStore.getState().clips).toEqual([
+        { id: 'clip-0', segment_index: 0, start_seconds: 0, end_seconds: 5 },
+        { id: 'clip-1', segment_index: 1, start_seconds: 0, end_seconds: 6 },
+        { id: 'clip-2', segment_index: 2, start_seconds: 0, end_seconds: 7 },
+      ]);
+    });
+  });
+
+  it('用户删除时间线片段后不会被默认初始化再次填回', async () => {
+    renderEditor();
+
+    await waitFor(() => {
+      expect(useEditorStore.getState().clips).toHaveLength(3);
+    });
+    act(() => {
+      useEditorStore.getState().removeClip('clip-0');
+      useEditorStore.getState().removeClip('clip-1');
+      useEditorStore.getState().removeClip('clip-2');
+    });
+
+    expect(useEditorStore.getState().clips).toHaveLength(0);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(useEditorStore.getState().clips).toHaveLength(0);
+  });
+
+  it('点击已在时间线的素材片段时定位对应片段且不重复添加', async () => {
     renderEditor();
 
     await waitFor(() => {
       expect(screen.getByAltText('第 1 段缩略图')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getAllByRole('button', { name: /加入/ })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /定位/ })[0]);
 
-    await waitFor(() => {
-      expect(useEditorStore.getState().clips).toHaveLength(1);
-    });
+    expect(useEditorStore.getState().clips).toHaveLength(3);
     expect(useEditorStore.getState().clips[0]).toMatchObject({
       id: 'clip-0',
       segment_index: 0,
@@ -194,6 +236,7 @@ describe('VideoEditor', () => {
       end_seconds: 5,
     });
     expect(useEditorStore.getState().transitions).toHaveLength(0);
+    expect(useEditorStore.getState().selection).toEqual({ type: 'clip', id: 'clip-0' });
     expect(screen.getByAltText('时间线第 1 段缩略图').getAttribute('src')).toBe(
       'https://example.com/segment-1.jpg',
     );
@@ -208,12 +251,9 @@ describe('VideoEditor', () => {
       );
     });
     expect(screen.getByLabelText('第 2 段占位缩略图')).toBeTruthy();
-    const addButtons = screen.getAllByRole('button', { name: /加入/ });
-    fireEvent.click(addButtons[0]);
-    fireEvent.click(addButtons[1]);
 
     await waitFor(() => {
-      expect(useEditorStore.getState().clips).toHaveLength(2);
+      expect(useEditorStore.getState().clips).toHaveLength(3);
     });
     expect(screen.getByAltText('时间线第 1 段缩略图').getAttribute('src')).toBe(
       'https://example.com/segment-1.jpg',
@@ -364,6 +404,10 @@ describe('VideoEditor', () => {
             ]),
           }),
         }),
+      );
+      expect(downloadExportUrl).toHaveBeenCalledWith(
+        '/uploads/generated/task-1-remotion.mp4',
+        'aigc-video-task-1.mp4',
       );
     });
   });

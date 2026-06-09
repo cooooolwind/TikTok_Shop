@@ -21,9 +21,18 @@ export interface ScriptGenerateFormValues {
   style?: string;
   tone?: string;
   language?: string;
+  dialogue_mode?: 'auto' | 'enabled' | 'disabled';
 }
 
-const MAX_SCRIPT_DURATION = 12;
+const MIN_SCRIPT_DURATION = 4;
+const MAX_SCRIPT_DURATION = 30;
+
+function clampScriptDuration(duration?: number) {
+  return Math.min(
+    Math.max(Math.round(Number(duration) || MAX_SCRIPT_DURATION), MIN_SCRIPT_DURATION),
+    MAX_SCRIPT_DURATION,
+  );
+}
 
 export function buildScriptGeneratePayload(values: ScriptGenerateFormValues): GenerateScriptRequest {
   const entry = values.entry ?? 'material';
@@ -36,10 +45,12 @@ export function buildScriptGeneratePayload(values: ScriptGenerateFormValues): Ge
     material_ids: materialIds.length > 0 ? materialIds : undefined,
     manual_text: entry === 'manual_text' ? values.manual_text : undefined,
     preferences: {
-      duration: Math.min(values.duration ?? MAX_SCRIPT_DURATION, MAX_SCRIPT_DURATION),
+      duration: clampScriptDuration(values.duration),
       style: values.style,
       tone: values.tone,
       language: values.language ?? 'zh',
+      dialogue_mode: values.dialogue_mode ?? 'auto',
+      dialogue_type: 'mixed',
     },
   };
 }

@@ -26,6 +26,7 @@ function makeScript(overrides: Partial<Script> = {}): Script {
     narrativeFramework: 'Hook - benefits - CTA',
     visualStyle: 'clean',
     totalDuration: 12,
+    scriptBlueprint: null,
     status: 'confirmed',
     scenes: [],
     createdAt: now,

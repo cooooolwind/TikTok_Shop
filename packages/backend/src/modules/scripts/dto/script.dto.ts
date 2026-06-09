@@ -61,6 +61,14 @@ export class ScriptPreferencesDto {
   @IsOptional()
   @IsString()
   language?: string;
+
+  @IsOptional()
+  @IsIn(['auto', 'enabled', 'disabled'])
+  dialogue_mode?: 'auto' | 'enabled' | 'disabled';
+
+  @IsOptional()
+  @IsIn(['mixed'])
+  dialogue_type?: 'mixed';
 }
 
 export class GenerateScriptDto {
@@ -122,6 +130,10 @@ export class CreateScriptDto {
   @IsOptional()
   @IsNumber()
   total_duration?: number;
+
+  @IsOptional()
+  @IsObject()
+  script_blueprint?: Record<string, unknown> | null;
 
   @IsOptional()
   @ValidateNested({ each: true })

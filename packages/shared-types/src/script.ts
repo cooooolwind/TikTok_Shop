@@ -28,6 +28,27 @@ export interface Scene {
   constraints: string[];
 }
 
+// ===== 结构化剧本蓝图 =====
+
+export interface BlueprintScene {
+  order: number;
+  time_range: string;
+  shot_size: string;
+  composition: string;
+  camera_movement: string;
+  visual_content: string;
+  audio: string;
+  dialogue?: string;
+  subtitle?: string;
+}
+
+export interface ScriptBlueprint {
+  basic_setting: string;
+  atmosphere_and_quality: string;
+  audio: string;
+  scenes: BlueprintScene[];
+}
+
 // ===== 剧本 =====
 
 export type ScriptMode = 'template' | 'imitation' | 'free';
@@ -45,6 +66,7 @@ export interface Script {
   narrative_framework: string;
   visual_style: string;
   total_duration: number;
+  script_blueprint?: ScriptBlueprint | null;
   scenes: Scene[];
   status: ScriptStatus;
   created_at: string;
@@ -58,6 +80,8 @@ export interface ScriptPreferences {
   style?: string;
   tone?: string;
   language?: string;
+  dialogue_mode?: 'auto' | 'enabled' | 'disabled';
+  dialogue_type?: 'mixed';
 }
 
 export interface GenerateScriptRequest {
@@ -85,6 +109,7 @@ export interface CreateScriptRequest {
   narrative_framework?: string;
   visual_style?: string;
   total_duration?: number;
+  script_blueprint?: ScriptBlueprint | null;
   scenes?: Omit<Scene, 'id' | 'order'>[];
 }
 
@@ -104,6 +129,7 @@ export interface BatchGenerateResponse {
 export interface UpdateScriptRequest {
   narrative_framework?: string;
   visual_style?: string;
+  script_blueprint?: ScriptBlueprint | null;
   status?: ScriptStatus;
 }
 
