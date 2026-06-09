@@ -8,22 +8,11 @@ import type {
   TemplateGenerateResult,
   TemplateListQuery,
 } from '@aigc/shared-types';
+import { buildTemplatePrompt } from '../../ai/prompts';
 import { Template } from './entities/template.entity';
 
 const DEFAULT_MERCHANT_ID = 'default';
 const BUILTIN_DATE = new Date('2026-01-01T00:00:00.000Z').toISOString();
-
-function buildPrompt(templateName: string, strategy: string, factors: Record<string, string>) {
-  return [
-    '你是一名专业电商短视频编导。',
-    '请根据用户选择的短视频创作模板和商品信息，生成一个适合电商带货场景的视频方案。',
-    `当前模板名称：${templateName}`,
-    `当前模板策略：${strategy}`,
-    `模板因子：${Object.values(factors).join('、')}`,
-    '请输出视频标题、口播脚本、5 个分镜设计、每个分镜的视频生成提示词、发布文案和 3 到 5 个话题标签。',
-    '要求开头吸引注意，语言口语化，分镜清晰，结尾有购买引导，不夸大功效，不使用绝对化表达。',
-  ].join('\n');
-}
 
 function builtin(
   id: string,
@@ -40,7 +29,7 @@ function builtin(
     constraints: ['不要夸大商品功效', '不要虚假宣传', '避免使用绝对化表达'],
     applicable_categories: applicableCategories,
     derived_from: [],
-    prompt: buildPrompt(name, strategy, factors),
+    prompt: buildTemplatePrompt(name, strategy, factors),
     status: 'enabled',
     is_builtin: true,
     created_at: BUILTIN_DATE,
@@ -106,7 +95,7 @@ export class TemplatesService {
       constraints: data.constraints,
       applicableCategories: data.applicable_categories,
       derivedFrom: data.derived_from ?? [],
-      prompt: data.prompt ?? buildPrompt(data.name, data.strategy, data.factors),
+      prompt: data.prompt ?? buildTemplatePrompt(data.name, data.strategy, data.factors),
       status: data.status ?? 'enabled',
       isBuiltin: false,
     });
@@ -273,7 +262,7 @@ export class TemplatesService {
       constraints: template.constraints ?? [],
       applicable_categories: template.applicableCategories ?? [],
       derived_from: template.derivedFrom ?? [],
-      prompt: template.prompt ?? buildPrompt(template.name, template.strategy, template.factors ?? {}),
+      prompt: template.prompt ?? buildTemplatePrompt(template.name, template.strategy, template.factors ?? {}),
       status: template.status ?? 'enabled',
       is_builtin: template.isBuiltin,
       created_at: template.createdAt.toISOString(),
