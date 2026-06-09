@@ -19,7 +19,7 @@ describe('script generation helpers', () => {
     });
 
     expect(payload).toMatchObject({
-      mode: 'imitation',
+      mode: 'free',
       material_ids: ['material-1', 'material-2'],
       product_info: { name: 'Dress' },
     });

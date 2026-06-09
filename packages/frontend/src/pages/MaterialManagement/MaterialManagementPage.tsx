@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Row, Col, Button, Input, Select, Space, Modal,
-  Upload, Form,
+  Upload, Form, Tabs,
 } from 'antd';
 import {
   UploadOutlined, SearchOutlined, DeleteOutlined,
@@ -15,9 +15,9 @@ import SemanticSearchModal from '../../components/material/SemanticSearchModal';
 import { useMaterialStore } from '../../stores/useMaterialStore';
 import { useDebouncedSearch } from '../../hooks/useDebouncedSearch';
 import { usePagination } from '../../hooks/usePagination';
-import { MATERIAL_CATEGORY_LABELS, MATERIAL_STATUS_LABELS } from '../../constants';
+import { MATERIAL_CATEGORY_LABELS, MATERIAL_STATUS_LABELS, REFERENCE_CATEGORY_LABELS } from '../../constants';
 import { routePath } from '../../constants';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const { Dragger } = Upload;
@@ -39,36 +39,65 @@ export default function MaterialManagementPage() {
   const [mobilePage, setMobilePage] = useState(1);
   const [semanticSearchVisible, setSemanticSearchVisible] = useState(false);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') === 'reference' ? 'reference' : 'base';
+  const setActiveTab = (tab: string) => {
+    setSearchParams(prev => {
+      prev.set('tab', tab);
+      return prev;
+    }, { replace: true });
+  };
+
   // 初始加载 + 筛选变化时重新加载
   useEffect(() => {
+    const declarationFilter = activeTab === 'reference' ? 'reference' : undefined;
+    const excludeReference = activeTab === 'base' ? true : undefined;
+    
+    // 我们需要在获取列表时区分 reference 和基础素材。
+    // 这里如果 activeTab = reference，我们指定 source_declaration = reference
+    // 如果是 base，我们需要在后端或者这里过滤掉 reference。由于列表 API 不支持不等于查询，我们只能通过设置 filters 或分类。
+    // 但是现在的 params 里没有 exclude 选项。假设我们可以通过在前端或者后端过滤，或者约定 base 的 source_declaration 不为 reference。
+    // 为了简单，我们只添加 filter 属性。如果需要，我们需要在 backend 增加不支持的功能。
+    // 这里只修改 filter 的部分属性
+    const fetchFilters = { ...filters, keyword: debouncedKeyword || undefined };
+    if (activeTab === 'reference') {
+      fetchFilters.source_declaration = 'reference';
+    } else {
+      (fetchFilters as any).exclude_source_declaration = 'reference';
+    }
     if (isMobile) {
       setMobilePage(1);
       fetchList({
-        ...filters,
-        keyword: debouncedKeyword || undefined,
+        ...fetchFilters,
         page: 1,
         pageSize: 20,
       }, false);
     } else {
       fetchList({
-        ...filters,
-        keyword: debouncedKeyword || undefined,
+        ...fetchFilters,
         ...pagination.query,
       }, false);
     }
-  }, [debouncedKeyword, filters.type, filters.category, filters.status, pagination.page, pagination.pageSize, isMobile]);
+  }, [debouncedKeyword, filters.type, filters.category, filters.status, pagination.page, pagination.pageSize, isMobile, activeTab]);
 
   // 移动端页码变化触发追加加载
   useEffect(() => {
     if (isMobile && mobilePage > 1) {
+      const fetchFilters = { ...filters, keyword: debouncedKeyword || undefined };
+      if (activeTab === 'reference') {
+        fetchFilters.source_declaration = 'reference';
+      } else {
+        // Backend support for excluding reference
+        (fetchFilters as any).exclude_source_declaration = 'reference';
+      }
+      
       fetchList({
-        ...filters,
-        keyword: debouncedKeyword || undefined,
+        ...fetchFilters,
         page: mobilePage,
         pageSize: 20,
       }, true);
     }
-  }, [mobilePage, isMobile]);
+  }, [mobilePage, isMobile, activeTab, debouncedKeyword, filters, fetchList]);
 
   useEffect(() => {
     pagination.setTotal(total);
@@ -123,9 +152,22 @@ export default function MaterialManagementPage() {
           title="素材管理"
           extra={
             <Button type="primary" icon={<UploadOutlined />} onClick={() => setUploadVisible(true)}>
-              上传素材
+              {activeTab === 'reference' ? '上传参考视频' : '上传素材'}
             </Button>
           }
+        />
+
+        <Tabs
+          activeKey={activeTab}
+          onChange={(k) => {
+            setActiveTab(k);
+            setFilters({ page: 1 });
+            pagination.reset();
+          }}
+          items={[
+            { key: 'base', label: '基础素材' },
+            { key: 'reference', label: '参考视频库' },
+          ]}
         />
 
         {/* 筛选栏 */}
@@ -167,7 +209,7 @@ export default function MaterialManagementPage() {
               allowClear
               style={{ width: '100%' }}
               onChange={handleCategoryChange}
-              options={Object.entries(MATERIAL_CATEGORY_LABELS).map(([k, v]) => ({ label: v, value: k }))}
+              options={Object.entries(activeTab === 'reference' ? REFERENCE_CATEGORY_LABELS : MATERIAL_CATEGORY_LABELS).map(([k, v]) => ({ label: v, value: k }))}
             />
           </Col>
           <Col xs={8} sm={5} md={3}>
@@ -261,18 +303,19 @@ export default function MaterialManagementPage() {
 
       {/* 上传 Modal */}
       <Modal
-        title="上传素材"
+        title={activeTab === 'reference' ? '上传参考视频' : '上传素材'}
         open={uploadVisible}
         onCancel={() => setUploadVisible(false)}
         footer={null}
         width={560}
       >
         <UploadForm
+          isReferenceMode={activeTab === 'reference'}
           uploading={uploading}
           uploadProgress={uploadProgress}
-          onUpload={(values: { file: UploadFile | File; name?: string; category: string; source_declaration: string; tags: string[] }) => {
+          onUpload={(values: { file: UploadFile | File; name?: string; category: string; source_declaration: string; tags: string[]; source_platform?: string }) => {
             const file = ('originFileObj' in values.file ? values.file.originFileObj : values.file) as File;
-            upload(file, values.category, values.source_declaration, values.tags, values.name);
+            upload(file, values.category, values.source_declaration, values.tags, values.name, values.source_platform);
           }}
           onCancel={() => setUploadVisible(false)}
         />
@@ -288,15 +331,26 @@ export default function MaterialManagementPage() {
 
 /** 上传表单子组件 */
 function UploadForm({
-  uploading, uploadProgress, onUpload, onCancel,
+  uploading, uploadProgress, onUpload, onCancel, isReferenceMode,
 }: {
   uploading: boolean;
   uploadProgress: number;
-  onUpload: (values: { file: File; name?: string; category: string; source_declaration: string; tags: string[] }) => void;
+  onUpload: (values: { file: File; name?: string; category: string; source_declaration: string; tags: string[]; source_platform?: string }) => void;
   onCancel: () => void;
+  isReferenceMode?: boolean;
 }) {
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const sourceDeclaration = Form.useWatch('source_declaration', form);
+  const [activeUploadTab, setActiveUploadTab] = useState('upload');
+
+  useEffect(() => {
+    if (isReferenceMode) {
+      form.setFieldsValue({ source_declaration: 'reference' });
+    } else if (form.getFieldValue('source_declaration') === 'reference') {
+      form.setFieldsValue({ source_declaration: 'owned' });
+    }
+  }, [isReferenceMode, form]);
 
   const handleSubmit = () => {
     form.validateFields().then((values) => {
@@ -306,14 +360,15 @@ function UploadForm({
         file: originFile as unknown as File,
         name: values.name,
         category: values.category,
-        source_declaration: values.source_declaration,
+        source_declaration: isReferenceMode ? 'reference' : values.source_declaration,
+        source_platform: values.source_platform,
         tags: values.tags || [],
       });
     });
   };
 
-  return (
-    <Form form={form} layout="vertical" initialValues={{ category: 'product', source_declaration: 'owned' }}>
+  const renderFormContent = () => (
+    <>
       <Form.Item name="name" label="素材名称">
         <Input placeholder="如果不填写，将默认使用原始文件名" />
       </Form.Item>
@@ -324,35 +379,86 @@ function UploadForm({
           onChange={({ fileList: fl }) => setFileList(fl)}
           beforeUpload={() => false}
           maxCount={1}
-          accept="image/*,video/*"
+          accept={isReferenceMode ? "video/*" : "image/*,video/*"}
         >
           <p className="ant-upload-drag-icon"><InboxOutlined /></p>
           <p className="ant-upload-text">点击或拖拽文件到此处上传</p>
-          <p className="ant-upload-hint">支持 jpg/png/webp/mp4/mov/webm，图片最大 20MB，视频最大 500MB</p>
+          <p className="ant-upload-hint">
+            {isReferenceMode 
+              ? '支持 mp4/mov/webm 等视频格式，最大 500MB' 
+              : '支持 jpg/png/webp/mp4/mov/webm，图片最大 20MB，视频最大 500MB'}
+          </p>
         </Dragger>
       </Form.Item>
 
       <Form.Item name="category" label="分类" rules={[{ required: true }]}>
         <Select
-          options={Object.entries(MATERIAL_CATEGORY_LABELS).map(([k, v]) => ({ label: v, value: k }))}
+          options={Object.entries(isReferenceMode ? REFERENCE_CATEGORY_LABELS : MATERIAL_CATEGORY_LABELS).map(([k, v]) => ({ label: v, value: k }))}
         />
       </Form.Item>
 
-      <Form.Item name="source_declaration" label="来源声明" rules={[{ required: true, message: '请选择素材来源' }]}>
-        <Select
-          options={[
-            { label: '自有素材', value: 'owned' },
-            { label: '公开可商用', value: 'public_commercial' },
-            { label: '参考素材', value: 'reference' },
-          ]}
-        />
-      </Form.Item>
+      {!isReferenceMode && (
+        <Form.Item name="source_declaration" label="来源声明" rules={[{ required: true, message: '请选择素材来源' }]}>
+          <Select
+            options={[
+              { label: '自有素材', value: 'owned' },
+              { label: '公开可商用', value: 'public_commercial' },
+              { label: '参考素材', value: 'reference' },
+            ]}
+          />
+        </Form.Item>
+      )}
+
+      {(sourceDeclaration === 'reference' || isReferenceMode) && (
+        <Form.Item name="source_platform" label="来源平台 (选填)">
+          <Select
+            allowClear
+            options={[
+              { label: 'TikTok', value: 'tiktok' },
+              { label: '抖音', value: 'douyin' },
+              { label: 'YouTube', value: 'youtube' },
+              { label: 'Instagram', value: 'instagram' },
+              { label: '本地上传', value: 'local_upload' },
+            ]}
+          />
+        </Form.Item>
+      )}
 
       <Form.Item name="tags" label="标签">
         <Select mode="tags" placeholder="输入标签后回车" />
       </Form.Item>
+    </>
+  );
 
-      <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+  return (
+    <Form form={form} layout="vertical" initialValues={{ category: isReferenceMode ? 'beauty' : 'product', source_declaration: isReferenceMode ? 'reference' : 'owned' }}>
+      {isReferenceMode ? (
+        <Tabs activeKey={activeUploadTab} onChange={setActiveUploadTab} items={[
+          { key: 'upload', label: '本地上传', children: renderFormContent() },
+          { key: 'link', label: '链接提取 (暂未开放)', disabled: true, children: (
+            <>
+              <Form.Item name="source_url" label="视频链接" rules={[{ required: true, message: '请输入视频链接' }]}>
+                <Input placeholder="TikTok / YouTube / 其他平台链接" disabled />
+              </Form.Item>
+              <Form.Item name="source_platform" label="来源平台" rules={[{ required: true }]}>
+                <Select placeholder="选择平台" disabled options={[
+                    { label: 'TikTok', value: 'tiktok' },
+                    { label: '抖音', value: 'douyin' },
+                    { label: 'YouTube', value: 'youtube' },
+                    { label: 'Instagram', value: 'instagram' },
+                ]} />
+              </Form.Item>
+              <Form.Item name="category" label="分类" rules={[{ required: true, message: '请输入类目' }]}>
+                <Select disabled options={Object.entries(REFERENCE_CATEGORY_LABELS).map(([k, v]) => ({ label: v, value: k }))} />
+              </Form.Item>
+            </>
+          ) },
+        ]} />
+      ) : (
+        renderFormContent()
+      )}
+
+      <Space style={{ width: '100%', justifyContent: 'flex-end', marginTop: 16 }}>
         <Button onClick={onCancel}>取消</Button>
         <Button type="primary" onClick={handleSubmit} loading={uploading}>
           {uploading ? `上传中 ${uploadProgress}%` : '确认上传'}

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Col, Divider, Form, Input, Row, Select, Slider, Space, Tag, Typography } from 'antd';
-import { EditOutlined, FileTextOutlined, PictureOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { EditOutlined, FileTextOutlined, PictureOutlined, ThunderboltOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import type { Material } from '@aigc/shared-types';
 import PageHeader from '../../components/common/PageHeader';
 import { useMaterialStore } from '../../stores/useMaterialStore';
 import { useScriptStore } from '../../stores/useScriptStore';
 import { useTemplateStore } from '../../stores/useTemplateStore';
+import { materialsApi } from '../../services/materials.api';
 import {
   buildManualDraftPayload,
   buildScriptGeneratePayload,
@@ -20,6 +21,7 @@ const { Text } = Typography;
 const ENTRY_OPTIONS = [
   { label: '选择素材生成', value: 'material', icon: <PictureOutlined /> },
   { label: '剧本模板生成', value: 'template', icon: <FileTextOutlined /> },
+  { label: '爆款仿写生成', value: 'imitation', icon: <VideoCameraOutlined /> },
   { label: '粘贴文本解析', value: 'manual_text', icon: <ThunderboltOutlined /> },
   { label: '自己写剧本', value: 'manual_structured', icon: <EditOutlined /> },
 ] as const;
@@ -35,16 +37,20 @@ export default function ScriptGenerate() {
   const { generating, create, generate } = useScriptStore();
   const { items: templates, fetchList: fetchTemplates } = useTemplateStore();
   const { items: materials, fetchList: fetchMaterials } = useMaterialStore();
+  const [references, setReferences] = useState<Material[]>([]);
 
   useEffect(() => {
     fetchTemplates({ pageSize: 100 });
     fetchMaterials({ pageSize: 100 });
+    materialsApi.list({ source_declaration: 'reference', pageSize: 100 }).then((res: any) => {
+      setReferences(res.items);
+    });
   }, [fetchTemplates, fetchMaterials]);
 
   const materialOptions = useMemo(
     () =>
       materials
-        .filter((material) => material.type === 'image' || material.type === 'video')
+        .filter((material) => (material.type === 'image' || material.type === 'video') && material.source_declaration !== 'reference')
         .sort((a, b) => {
           const typeRank = (material: Material) => (material.type === 'video' ? 0 : 1);
           const categoryRank = (material: Material) => (material.category === 'product' ? 0 : 1);
@@ -166,7 +172,7 @@ export default function ScriptGenerate() {
                 label="选择图片或视频素材"
                 rules={[
                   {
-                    required: entry === 'material',
+                    required: entry === 'material' || entry === 'imitation',
                     message: '请选择至少一个图片或视频素材',
                   },
                 ]}
@@ -194,6 +200,26 @@ export default function ScriptGenerate() {
                         label: `${template.name}${template.is_builtin ? ' · 内置' : ''}`,
                         value: template.id,
                       }))}
+                    />
+                  </Form.Item>
+                </>
+              )}
+
+              {entry === 'imitation' && (
+                <>
+                  <Text strong>参考视频</Text>
+                  <Divider />
+                  <Form.Item name="reference_id" label="选择参考视频" rules={[{ required: true, message: '请选择参考视频' }]}>
+                    <Select
+                      showSearch
+                      placeholder="搜索参考视频类目或特征"
+                      optionFilterProp="label"
+                      options={references
+                        .filter((r) => r.status === 'ready')
+                        .map((ref) => ({
+                          label: `${ref.name} · ${ref.category}${ref.reference_analysis?.hook ? ` · Hook: ${ref.reference_analysis.hook}` : ''}`,
+                          value: ref.id,
+                        }))}
                     />
                   </Form.Item>
                 </>

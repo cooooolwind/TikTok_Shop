@@ -29,6 +29,7 @@ import StatusTag from '../../components/common/StatusTag';
 import { SCRIPT_MODE_LABELS, SCRIPT_STATUS_LABELS } from '../../constants';
 import { subscribeTask, unsubscribeTask, onScriptGenerated, onTaskFailed, onTaskProgress } from '../../services/socket';
 import { sortScenes, useScriptStore } from '../../stores/useScriptStore';
+import { useMaterialStore } from '../../stores/useMaterialStore';
 
 const { TextArea } = Input;
 const { Text, Title } = Typography;
@@ -52,15 +53,21 @@ export default function ScriptEditor() {
     regenerateScene,
     resetCurrentScript,
   } = useScriptStore();
+  const { selectedMaterial: selectedReference, fetchDetail: fetchReferenceDetail } = useMaterialStore();
   const [progress, setProgress] = useState<TaskProgress | null>(null);
   const [sceneModalOpen, setSceneModalOpen] = useState(false);
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
   const [sceneForm] = Form.useForm();
 
   useEffect(() => {
-    if (id) fetchDetail(id);
-    return () => resetCurrentScript();
-  }, [id, fetchDetail, resetCurrentScript]);
+    fetchDetail(id!);
+  }, [id, fetchDetail]);
+
+  useEffect(() => {
+    if (currentScript?.reference_id) {
+      fetchReferenceDetail(currentScript.reference_id);
+    }
+  }, [currentScript?.reference_id, fetchReferenceDetail]);
 
   useEffect(() => {
     const taskId = currentScript?.generation_task_id;
@@ -251,6 +258,28 @@ export default function ScriptEditor() {
             )}
             {isDirty && <Tag color="warning" style={{ marginTop: 12 }}>有未保存的本地修改</Tag>}
           </Card>
+
+          {script.reference_id && (
+            <Card title="原爆款参考" style={{ marginBottom: 16 }}>
+              {selectedReference ? (
+                <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                  <Space>
+                    {selectedReference.source_platform && <Tag color="blue">{selectedReference.source_platform}</Tag>}
+                    <Tag>{selectedReference.category}</Tag>
+                  </Space>
+                  <Text strong>Hook 拆解:</Text>
+                  <Text type="secondary">{selectedReference.reference_analysis?.hook || '暂无数据'}</Text>
+                  <Button type="link" size="small" onClick={() => navigate(`/materials/${script.reference_id}`)} style={{ padding: 0 }}>
+                    查看完整解析报告 &rarr;
+                  </Button>
+                </Space>
+              ) : (
+                <Button type="link" onClick={() => navigate(`/materials/${script.reference_id}`)}>
+                  查看参考素材详情
+                </Button>
+              )}
+            </Card>
+          )}
         </Col>
 
         <Col xs={{ span: 24, order: 1 }} lg={{ span: 16, order: 2 }}>

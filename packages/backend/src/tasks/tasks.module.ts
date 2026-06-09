@@ -8,6 +8,7 @@ import { Material } from '../modules/materials/entities/material.entity';
 import { VideoSlice } from '../modules/materials/entities/video-slice.entity';
 import { GenerationTask } from '../modules/generation/entities/generation-task.entity';
 import { Video } from '../modules/generation/entities/video.entity';
+import { MaterialAnalysis } from '../modules/materials/entities/material-analysis.entity';
 import { WebsocketModule } from '../websocket/websocket.module';
 import { MaterialsModule } from '../modules/materials/materials.module';
 import { ScriptGenerationProcessor } from './processors/script-generation.processor';
@@ -27,9 +28,8 @@ import { QUEUES } from './queues';
       { name: QUEUES.MATERIAL_ANALYSIS },
       { name: QUEUES.SCRIPT_GENERATION },
       { name: QUEUES.VIDEO_GENERATION },
-      { name: QUEUES.REFERENCE_ANALYSIS },
     ),
-    TypeOrmModule.forFeature([Script, Scene, Material, VideoSlice, GenerationTask, Video]),
+    TypeOrmModule.forFeature([Script, Scene, Material, VideoSlice, MaterialAnalysis, GenerationTask, Video]),
     WebsocketModule,
     MaterialsModule,
   ],

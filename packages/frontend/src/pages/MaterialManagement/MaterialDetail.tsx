@@ -188,7 +188,10 @@ export default function MaterialDetail() {
           </Space>
         }
         breadcrumbs={[
-          { title: '素材管理', path: '/materials' },
+          { 
+            title: material.source_declaration === 'reference' ? '参考视频' : '基础素材', 
+            path: `/materials?tab=${material.source_declaration === 'reference' ? 'reference' : 'base'}` 
+          },
           { title: material.name },
         ]}
         extra={

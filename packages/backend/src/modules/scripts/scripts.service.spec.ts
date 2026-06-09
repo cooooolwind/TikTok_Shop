@@ -94,6 +94,9 @@ function makeService(options?: { script?: Script | null; scripts?: Script[] }) {
   const templatesService = {
     findRawById: jest.fn(async () => null),
   };
+  const referencesService = {
+    findOne: jest.fn(async () => null),
+  };
   const configService = {
     get: jest.fn((key: string) => {
       if (key === 'storage') return { localPath: 'uploads-test' };
@@ -111,6 +114,7 @@ function makeService(options?: { script?: Script | null; scripts?: Script[] }) {
     generationTasksRepository as never,
     videosRepository as never,
     templatesService as never,
+    referencesService as never,
     configService as never,
     scriptQueue as never,
   );
@@ -123,6 +127,7 @@ function makeService(options?: { script?: Script | null; scripts?: Script[] }) {
     generationTasksRepository,
     videosRepository,
     templatesService,
+    referencesService,
     scriptQueue,
     queryBuilder,
   };
@@ -160,7 +165,7 @@ describe('ScriptsService', () => {
 
     await service.generate({
       product_info: { name: 'Dress', description: 'Desc', category: 'fashion', selling_points: [] },
-      mode: 'imitation',
+      mode: 'free',
       material_ids: ['material-1'],
     });
 
@@ -205,7 +210,7 @@ describe('ScriptsService', () => {
 
     await service.generate({
       product_info: { name: 'Dress', description: 'Desc', category: 'fashion', selling_points: [] },
-      mode: 'imitation',
+      mode: 'free',
       material_ids: ['material-1'],
     });
 
@@ -257,7 +262,7 @@ describe('ScriptsService', () => {
 
     await service.generate({
       product_info: { name: 'Dress', description: 'Desc', category: 'fashion', selling_points: [] },
-      mode: 'imitation',
+      mode: 'free',
       material_ids: ['material-1', 'material-2'],
     });
 
@@ -318,7 +323,7 @@ describe('ScriptsService', () => {
 
     await service.generate({
       product_info: { name: 'Dress', description: 'Desc', category: 'fashion', selling_points: [] },
-      mode: 'imitation',
+      mode: 'free',
       material_ids: ['material-1'],
     });
 

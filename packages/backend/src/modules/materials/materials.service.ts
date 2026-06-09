@@ -21,6 +21,7 @@ import { UploadMaterialDto } from './dto/upload-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
 import { EmbeddingService } from './embedding.service';
 import { QUEUES } from '../../tasks/queues';
+import type { MaterialCategory } from '@aigc/shared-types';
 
 type MaterialResponse = {
   id: string;
@@ -46,6 +47,7 @@ type MaterialResponse = {
 type MaterialDetailResponse = MaterialResponse & {
   slices?: ReturnType<MaterialsService['toSliceResponse']>[];
   metadata: Record<string, unknown>;
+  reference_analysis?: any;
 };
 
 const DEFAULT_MERCHANT_ID = 'default';
@@ -80,6 +82,18 @@ export class MaterialsService {
     }
 
     const type = this.getMaterialType(file);
+
+    if (dto.source_declaration === 'reference' && type !== 'video') {
+      throw new BadRequestException('Reference materials must be videos');
+    }
+
+    const BASE_CATEGORIES = ['product', 'scene', 'model', 'other'];
+    const REFERENCE_CATEGORIES = ['beauty', 'apparel', '3c', 'other'];
+    const validCategories = dto.source_declaration === 'reference' ? REFERENCE_CATEGORIES : BASE_CATEGORIES;
+    if (dto.category && !validCategories.includes(dto.category)) {
+      throw new BadRequestException(`Invalid category for source_declaration ${dto.source_declaration}`);
+    }
+
     this.validateFile(file, type);
 
     const uploadDir = this.getMaterialsUploadDir();
@@ -129,9 +143,10 @@ export class MaterialsService {
       filename: originalFilename,
       size: file.size,
       mimeType: file.mimetype,
-      category: dto.category ?? 'other',
+      category: (dto.category as MaterialCategory) ?? 'other',
       tags: dto.tags ?? [],
       sourceDeclaration: dto.source_declaration,
+      sourcePlatform: dto.source_platform,
       aiTags: [],
       aiDescription: '',
       status: 'uploaded',
@@ -182,6 +197,12 @@ export class MaterialsService {
     if (query.tags?.length) {
       qb.andWhere('material.tags @> :tags::jsonb', { tags: JSON.stringify(query.tags) });
     }
+    if (query.source_declaration) {
+      qb.andWhere('material.sourceDeclaration = :sourceDeclaration', { sourceDeclaration: query.source_declaration });
+    }
+    if (query.exclude_source_declaration) {
+      qb.andWhere('material.sourceDeclaration != :excludeSourceDeclaration', { excludeSourceDeclaration: query.exclude_source_declaration });
+    }
     if (query.keyword?.trim()) {
       const keyword = `%${query.keyword.trim()}%`;
       qb.andWhere(
@@ -213,7 +234,7 @@ export class MaterialsService {
   async findOne(id: string): Promise<MaterialDetailResponse> {
     const material = await this.materialsRepository.findOne({
       where: { id, merchantId: DEFAULT_MERCHANT_ID },
-      relations: { slices: true },
+      relations: { slices: true, analysis: true },
     });
     if (!material) {
       throw new NotFoundException('material not found');
@@ -230,8 +251,17 @@ export class MaterialsService {
     }
 
     if (dto.name !== undefined) material.name = dto.name;
-    if (dto.category !== undefined) material.category = dto.category;
     if (dto.tags !== undefined) material.tags = dto.tags;
+
+    if (dto.category !== undefined) {
+      const BASE_CATEGORIES = ['product', 'scene', 'model', 'other'];
+      const REFERENCE_CATEGORIES = ['beauty', 'apparel', '3c', 'other'];
+      const validCategories = material.sourceDeclaration === 'reference' ? REFERENCE_CATEGORIES : BASE_CATEGORIES;
+      if (!validCategories.includes(dto.category)) {
+        throw new BadRequestException(`Invalid category for source_declaration ${material.sourceDeclaration}`);
+      }
+      material.category = dto.category as MaterialCategory;
+    }
 
     const saved = await this.materialsRepository.save(material);
     return this.toMaterialResponse(saved);
@@ -542,6 +572,13 @@ export class MaterialsService {
       ...this.toMaterialResponse(material),
       slices: material.slices?.map((slice) => this.toSliceResponse(slice)) ?? [],
       metadata: material.metadata ?? { format: '' },
+      reference_analysis: material.analysis ? {
+        hook: material.analysis.hook,
+        selling_points: material.analysis.sellingPoints,
+        style: material.analysis.style,
+        duration: material.analysis.duration,
+        storyboard: material.analysis.storyboard,
+      } : undefined,
     };
   }
 

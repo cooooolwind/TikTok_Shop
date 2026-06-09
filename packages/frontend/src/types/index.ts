@@ -1,6 +1,5 @@
 export type {
   MaterialState,
-  ReferenceState,
   TemplateState,
   ScriptState,
   CreationState,

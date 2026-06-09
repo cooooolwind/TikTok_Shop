@@ -9,6 +9,8 @@ export type {
   MaterialStatus,
   SourceDeclaration,
   VideoSlice,
+  StoryboardItem,
+  ReferenceAnalysis,
   Material,
   MaterialMetadata,
   MaterialDetail,
@@ -21,16 +23,6 @@ export type {
   EmbeddingBackfillResponse,
   MaterialListQuery,
 } from './material';
-
-// 参考视频
-export type {
-  StoryboardItem,
-  ReferenceAnalysis,
-  AnalysisStatus,
-  ReferenceVideo,
-  CreateReferenceRequest,
-  ReferenceListQuery,
-} from './reference';
 
 // 模板
 export type {

@@ -12,10 +12,29 @@ export const MATERIAL_CATEGORY_LABELS: Record<string, string> = {
   other: '其他',
 };
 
+export const REFERENCE_CATEGORY_LABELS: Record<string, string> = {
+  beauty: '美妆',
+  apparel: '服饰',
+  '3c': '3C',
+};
+
 export const SOURCE_DECLARATION_LABELS: Record<string, string> = {
   owned: '自有素材',
   public_commercial: '公开可商用',
   reference: '参考素材',
+};
+
+export const REFERENCE_PLATFORM_LABELS: Record<string, string> = {
+  local_upload: '本地上传',
+  tiktok: 'TikTok',
+  douyin: '抖音',
+  youtube: 'YouTube',
+  instagram: 'Instagram',
+};
+
+export const REFERENCE_DECLARATION_LABELS: Record<string, string> = {
+  owned_reference: '自有视频',
+  public_reference: '公开视频',
 };
 
 export const SCRIPT_MODE_LABELS: Record<string, string> = {

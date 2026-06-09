@@ -3,7 +3,9 @@ import { IsArray, IsIn, IsOptional, IsString } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
 
 const MATERIAL_TYPES = ['image', 'video'] as const;
-const MATERIAL_CATEGORIES = ['product', 'scene', 'model', 'other'] as const;
+const BASE_CATEGORIES = ['product', 'scene', 'model', 'other'] as const;
+const REFERENCE_CATEGORIES = ['beauty', 'apparel', '3c', 'other'] as const;
+const MATERIAL_CATEGORIES = [...BASE_CATEGORIES, ...REFERENCE_CATEGORIES];
 const MATERIAL_STATUSES = ['uploaded', 'processing', 'ready', 'failed'] as const;
 
 function toTags(value: unknown): string[] | undefined {
@@ -22,7 +24,7 @@ export class MaterialListQueryDto extends PaginationQueryDto {
 
   @IsOptional()
   @IsIn(MATERIAL_CATEGORIES)
-  category?: 'product' | 'scene' | 'model' | 'other';
+  category?: string;
 
   @IsOptional()
   @Transform(({ value }) => toTags(value))
@@ -37,4 +39,12 @@ export class MaterialListQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsIn(MATERIAL_STATUSES)
   status?: 'uploaded' | 'processing' | 'ready' | 'failed';
+
+  @IsOptional()
+  @IsString()
+  source_declaration?: string;
+
+  @IsOptional()
+  @IsString()
+  exclude_source_declaration?: string;
 }

@@ -20,6 +20,7 @@ function makeMaterial(overrides: Partial<Material> = {}): Material {
     category: 'product',
     tags: ['shoe'],
     sourceDeclaration: 'owned',
+    sourcePlatform: '',
     aiTags: [],
     aiDescription: '',
     aiEmbedding: [],
@@ -28,6 +29,7 @@ function makeMaterial(overrides: Partial<Material> = {}): Material {
     createdAt: now,
     updatedAt: now,
     slices: [],
+    analysis: null as any,
     ...overrides,
   };
 }

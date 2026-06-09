@@ -59,7 +59,7 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
     }
   },
 
-  upload: async (file, category, sourceDeclaration, tags, name) => {
+  upload: async (file, category, sourceDeclaration, tags, name, sourcePlatform) => {
     set({ uploading: true, uploadProgress: 0 });
     try {
       const formData = new FormData();
@@ -67,6 +67,7 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       if (name) formData.append('name', name);
       formData.append('category', category);
       formData.append('source_declaration', sourceDeclaration);
+      if (sourcePlatform) formData.append('source_platform', sourcePlatform);
       if (tags?.length) formData.append('tags', tags.join(','));
       await materialsApi.upload(formData);
       set({ uploading: false, uploadVisible: false, uploadProgress: 100 });
