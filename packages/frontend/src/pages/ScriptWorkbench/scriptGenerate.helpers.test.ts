@@ -75,6 +75,20 @@ describe('scriptGenerate helpers', () => {
     }
   });
 
+  it('clamps generated script target duration to 4-30 seconds', () => {
+    const baseValues = {
+      entry: 'material' as const,
+      product_name: 'Camera',
+      product_description: 'Pocket camera',
+      product_category: 'electronics',
+      selling_points: ['portable'],
+    };
+
+    expect(buildScriptGeneratePayload({ ...baseValues, duration: 30 }).preferences?.duration).toBe(30);
+    expect(buildScriptGeneratePayload({ ...baseValues, duration: 45 }).preferences?.duration).toBe(30);
+    expect(buildScriptGeneratePayload({ ...baseValues, duration: 2 }).preferences?.duration).toBe(4);
+  });
+
   it('stores selected library materials on manually structured drafts', () => {
     const payload = buildManualDraftPayload({
       entry: 'manual_structured',

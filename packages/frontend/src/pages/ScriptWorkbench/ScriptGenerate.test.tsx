@@ -103,4 +103,32 @@ describe('ScriptGenerate', () => {
       }),
     );
   });
+
+  it('shows whole-script duration control and can submit a 30 second target', async () => {
+    renderPage();
+
+    expect(screen.getByText('整条剧本目标时长')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('商品名称'), { target: { value: 'Pocket Camera' } });
+    fireEvent.change(screen.getByLabelText('商品类目'), { target: { value: 'electronics' } });
+    fireEvent.change(screen.getByLabelText('商品描述'), { target: { value: 'Tiny camera for travel' } });
+    fireEvent.mouseDown(screen.getByLabelText('选择图片或视频素材'));
+    fireEvent.click(await screen.findByText('Travel clip · 视频 · product · ready'));
+
+    expect(screen.getByRole('slider', { name: '整条剧本目标时长' })).toHaveAttribute(
+      'aria-valuemax',
+      '30',
+    );
+    fireEvent.change(screen.getByLabelText('整条剧本目标时长秒数'), { target: { value: '30' } });
+    fireEvent.click(screen.getByRole('button', { name: /提交生成任务/ }));
+
+    await waitFor(() => expect(generateMock).toHaveBeenCalledTimes(1));
+    expect(generateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        preferences: expect.objectContaining({
+          duration: 30,
+        }),
+      }),
+    );
+  });
 });

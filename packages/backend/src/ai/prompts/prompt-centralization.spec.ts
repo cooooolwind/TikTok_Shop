@@ -79,6 +79,14 @@ describe('centralized AI prompt builders', () => {
           content: expect.stringContaining('dialogue_mode = disabled'),
         }),
         expect.objectContaining({
+          role: 'system',
+          content: expect.stringContaining('4-30 秒'),
+        }),
+        expect.objectContaining({
+          role: 'system',
+          content: expect.stringContaining('每个分镜时长必须控制在 4-12 秒'),
+        }),
+        expect.objectContaining({
           role: 'user',
           content: expect.stringContaining('"dialogue_mode":"enabled"'),
         }),

@@ -517,7 +517,7 @@ export default function ScriptEditor() {
             </Col>
             <Col span={12}>
               <Form.Item name="duration" label="时长（秒）">
-                <InputNumber min={1} max={12} step={0.5} style={{ width: '100%' }} />
+                <InputNumber min={4} max={12} step={0.5} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
           </Row>
@@ -622,7 +622,7 @@ function durationFromTimeRange(timeRange: string) {
 }
 
 function clampDuration(duration: number) {
-  return Math.min(Math.max(Math.round(Number(duration) || 4), 1), 12);
+  return Math.min(Math.max(Math.round(Number(duration) || 4), 4), 12);
 }
 
 function formatTime(totalSeconds: number) {

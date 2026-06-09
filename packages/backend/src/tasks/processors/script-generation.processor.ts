@@ -43,6 +43,11 @@ interface AiScriptResult {
   scenes?: AiScene[];
 }
 
+const MIN_SCRIPT_DURATION = 4;
+const MAX_SCRIPT_DURATION = 30;
+const MIN_SCENE_DURATION = 4;
+const MAX_SCENE_DURATION = 12;
+
 @Processor(QUEUES.SCRIPT_GENERATION)
 export class ScriptGenerationProcessor extends WorkerHost {
   private readonly logger = new Logger(ScriptGenerationProcessor.name);
@@ -71,7 +76,7 @@ export class ScriptGenerationProcessor extends WorkerHost {
       const parsed = this.parseAiResponse(aiResponse.content);
 
       await this.updateProgress(job, 3, 4, 'persist', '正在保存分镜...');
-      await this.persistResult(script, this.applyDialoguePreferences(parsed, job.data.preferences));
+      await this.persistResult(script, this.applyDialoguePreferences(parsed, job.data.preferences), job.data.preferences);
 
       await this.updateProgress(job, 4, 4, 'done', '剧本生成完成');
       this.tasksGateway.emitScriptGenerated(script.id);
@@ -94,12 +99,13 @@ export class ScriptGenerationProcessor extends WorkerHost {
     }
   }
 
-  private async persistResult(script: Script, result: AiScriptResult) {
+  private async persistResult(script: Script, result: AiScriptResult, preferences?: ScriptPreferences) {
     await this.scenesRepository.delete({ scriptId: script.id });
     const scenes = this.normalizeScenes(
       result.scenes && result.scenes.length > 0
         ? result.scenes
         : this.mapBlueprintScenesToAiScenes(result.script_blueprint),
+      preferences,
     );
     const columnsPerScene = 9;
     const valuesSql = scenes
@@ -148,26 +154,36 @@ export class ScriptGenerationProcessor extends WorkerHost {
       [
         result.narrative_framework ?? script.narrativeFramework ?? '',
         result.visual_style ?? script.visualStyle ?? '',
-        this.resolveTotalDuration(result, scenes),
+        this.resolveTotalDuration(scenes),
         result.script_blueprint ?? null,
         script.id,
       ],
     );
   }
 
-  private normalizeScenes(scenes: AiScene[]) {
+  private normalizeScenes(scenes: AiScene[], preferences?: ScriptPreferences) {
     if (scenes.length === 0) return [];
-    let remaining = 12;
+    let remaining = this.resolveScriptTargetDuration(preferences);
     const normalized: AiScene[] = [];
 
     for (const scene of scenes) {
-      if (remaining <= 0) break;
-      const duration = Math.min(Math.max(Math.round(Number(scene.duration) || 3), 1), remaining);
+      if (remaining < MIN_SCENE_DURATION) break;
+      const requestedDuration = Math.round(Number(scene.duration) || MIN_SCENE_DURATION);
+      const duration = Math.min(
+        Math.max(requestedDuration, MIN_SCENE_DURATION),
+        MAX_SCENE_DURATION,
+        remaining,
+      );
       normalized.push({ ...scene, duration });
       remaining -= duration;
     }
 
-    return normalized.length > 0 ? normalized : [{ description: '商品展示', duration: 5 }];
+    return normalized.length > 0 ? normalized : [{ description: '商品展示', duration: MIN_SCRIPT_DURATION }];
+  }
+
+  private resolveScriptTargetDuration(preferences?: ScriptPreferences) {
+    const requested = Math.round(Number(preferences?.duration) || MAX_SCRIPT_DURATION);
+    return Math.min(Math.max(requested, MIN_SCRIPT_DURATION), MAX_SCRIPT_DURATION);
   }
 
   private hasBlueprintScenes(blueprint: ScriptBlueprint | null | undefined) {
@@ -209,13 +225,12 @@ export class ScriptGenerationProcessor extends WorkerHost {
     if (!match) return 4;
     const start = Number(match[1]) * 60 + Number(match[2]);
     const end = Number(match[3]) * 60 + Number(match[4]);
-    return Math.max(1, end - start);
+    return Math.max(MIN_SCENE_DURATION, end - start);
   }
 
-  private resolveTotalDuration(result: AiScriptResult, scenes: AiScene[]) {
+  private resolveTotalDuration(scenes: AiScene[]) {
     const sceneTotal = scenes.reduce((sum, scene) => sum + (scene.duration ?? 3), 0);
-    if ((!result.scenes || result.scenes.length === 0) && sceneTotal > 0) return Math.min(sceneTotal, 12);
-    return Math.min(result.total_duration ?? sceneTotal, 12);
+    return Math.min(Math.max(sceneTotal, MIN_SCRIPT_DURATION), MAX_SCRIPT_DURATION);
   }
 
   private applyDialoguePreferences(result: AiScriptResult, preferences?: ScriptPreferences): AiScriptResult {
@@ -248,10 +263,9 @@ export class ScriptGenerationProcessor extends WorkerHost {
       script_blueprint: result.script_blueprint
         ? {
             ...result.script_blueprint,
-            scenes: (result.script_blueprint.scenes ?? []).map((scene) => ({
-              ...scene,
-              subtitle: scene.dialogue ? scene.subtitle || scene.dialogue : scene.subtitle,
-            })),
+            scenes: (result.script_blueprint.scenes ?? []).map((scene) =>
+              scene.dialogue ? { ...scene, subtitle: scene.subtitle || scene.dialogue } : scene,
+            ),
           }
         : result.script_blueprint,
       scenes: result.scenes?.map((scene) => ({

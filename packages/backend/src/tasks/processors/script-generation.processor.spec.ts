@@ -131,7 +131,7 @@ describe('ScriptGenerationProcessor', () => {
     );
     expect(scriptsRepository.query).toHaveBeenCalledWith(
       expect.stringContaining('UPDATE scripts'),
-      expect.arrayContaining(['Hook - benefits - CTA', 'clean product demo', 6, 'script-1']),
+      expect.arrayContaining(['Hook - benefits - CTA', 'clean product demo', 4, 'script-1']),
     );
     expect(tasksGateway.emitScriptGenerated).toHaveBeenCalledWith('script-1');
     expect(result).toEqual({ script_id: 'script-1', status: 'draft' });
@@ -167,10 +167,10 @@ describe('ScriptGenerationProcessor', () => {
     );
     expect(scriptsRepository.query).toHaveBeenCalledWith(
       expect.stringContaining('script_blueprint'),
-      expect.arrayContaining([
-        '基础设定 -> 反差动作 -> 收束',
-        '复古真实质感',
-        6,
+        expect.arrayContaining([
+          '基础设定 -> 反差动作 -> 收束',
+          '复古真实质感',
+        4,
         blueprint,
         'script-1',
       ]),
@@ -206,6 +206,113 @@ describe('ScriptGenerationProcessor', () => {
     expect(scriptsRepository.query).toHaveBeenCalledWith(
       expect.stringContaining('script_blueprint'),
       expect.arrayContaining(['结构化蓝图', '复古真实质感', 4, blueprint, 'script-1']),
+    );
+  });
+
+  it('persists a 30 second script total without clipping the whole script to 12 seconds', async () => {
+    const { processor, scenesRepository, scriptsRepository, job } = makeProcessor(
+      JSON.stringify({
+        narrative_framework: 'Hook - demo - CTA',
+        visual_style: 'cinematic commerce',
+        total_duration: 30,
+        scenes: [
+          { description: 'Scene 1', camera_motion: 'push in', duration: 10 },
+          { description: 'Scene 2', camera_motion: 'pan', duration: 10 },
+          { description: 'Scene 3', camera_motion: 'tilt', duration: 10 },
+        ],
+      }),
+    );
+    job.data.preferences = { duration: 30 };
+
+    await processor.process(job as never);
+
+    expect(scenesRepository.query).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO scenes'),
+      expect.arrayContaining(['Scene 1', 'push in', 10, 'Scene 2', 'pan', 10, 'Scene 3', 'tilt', 10]),
+    );
+    expect(scriptsRepository.query).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE scripts'),
+      expect.arrayContaining(['Hook - demo - CTA', 'cinematic commerce', 30, 'script-1']),
+    );
+  });
+
+  it('clamps each scene to 12 seconds while allowing the script total up to 30 seconds', async () => {
+    const { processor, scenesRepository, scriptsRepository, job } = makeProcessor(
+      JSON.stringify({
+        narrative_framework: 'Long single segment',
+        visual_style: 'clean',
+        total_duration: 18,
+        scenes: [{ description: 'Long scene', camera_motion: 'fixed', duration: 18 }],
+      }),
+    );
+    job.data.preferences = { duration: 30 };
+
+    await processor.process(job as never);
+
+    expect(scenesRepository.query).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO scenes'),
+      expect.arrayContaining(['Long scene', 'fixed', 12]),
+    );
+    expect(scriptsRepository.query).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE scripts'),
+      expect.arrayContaining(['Long single segment', 'clean', 12, 'script-1']),
+    );
+  });
+
+  it('clips normalized scene totals to the requested script duration when it is below 30 seconds', async () => {
+    const { processor, scenesRepository, scriptsRepository, job } = makeProcessor(
+      JSON.stringify({
+        narrative_framework: 'Twenty second target',
+        visual_style: 'clean',
+        total_duration: 30,
+        scenes: [
+          { description: 'Scene 1', camera_motion: 'push in', duration: 10 },
+          { description: 'Scene 2', camera_motion: 'pan', duration: 10 },
+          { description: 'Scene 3', camera_motion: 'tilt', duration: 10 },
+        ],
+      }),
+    );
+    job.data.preferences = { duration: 20 };
+
+    await processor.process(job as never);
+
+    expect(scenesRepository.query).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO scenes'),
+      expect.not.arrayContaining(['Scene 3']),
+    );
+    expect(scriptsRepository.query).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE scripts'),
+      expect.arrayContaining(['Twenty second target', 'clean', 20, 'script-1']),
+    );
+  });
+
+  it('applies 4-12 second scene rules when mapping blueprint-only responses', async () => {
+    const longBlueprint = {
+      ...blueprint,
+      scenes: [
+        { ...blueprint.scenes[0], time_range: '00:00-00:15', visual_content: 'Long blueprint scene' },
+        { ...blueprint.scenes[0], order: 2, time_range: '00:15-00:18', visual_content: 'Short blueprint scene' },
+      ],
+    };
+    const { processor, scenesRepository, scriptsRepository, job } = makeProcessor(
+      JSON.stringify({
+        script_blueprint: longBlueprint,
+        narrative_framework: 'Blueprint only',
+        visual_style: 'cinematic',
+        total_duration: 18,
+      }),
+    );
+    job.data.preferences = { duration: 30 };
+
+    await processor.process(job as never);
+
+    expect(scenesRepository.query).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO scenes'),
+      expect.arrayContaining(['Long blueprint scene', '无人机俯拍后缓慢上摇', 12, 'Short blueprint scene', '无人机俯拍后缓慢上摇', 4]),
+    );
+    expect(scriptsRepository.query).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE scripts'),
+      expect.arrayContaining(['Blueprint only', 'cinematic', 16, longBlueprint, 'script-1']),
     );
   });
 
