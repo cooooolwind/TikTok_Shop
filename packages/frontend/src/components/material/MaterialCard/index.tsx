@@ -28,7 +28,7 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
 
   const handlePreview = (event?: React.MouseEvent) => {
     event?.stopPropagation();
-    if (isVideo || !previewSrc) {
+    if (!previewSrc) {
       onClick?.();
       return;
     }
@@ -60,12 +60,10 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
                 style={{ objectFit: 'cover', cursor: 'pointer' }}
                 fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
               />
-              {!isVideo && previewSrc && (
-                <>
                   <Button
                     type="text"
-                    icon={<EyeOutlined />}
-                    aria-label="预览图片"
+                    icon={isVideo ? <VideoCameraOutlined /> : <EyeOutlined />}
+                    aria-label={isVideo ? "播放视频" : "预览图片"}
                     onClick={handlePreview}
                     style={{
                       position: 'absolute',
@@ -73,7 +71,7 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
                       width: '100%',
                       height: '100%',
                       color: '#fff',
-                      fontSize: 24, // Increased size for better visibility
+                      fontSize: 48,
                       background: isHovered ? 'rgba(0, 0, 0, 0.45)' : 'rgba(0, 0, 0, 0)',
                       opacity: isHovered ? 1 : 0,
                       transition: 'all 0.3s ease',
@@ -83,35 +81,6 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
                       border: 'none',
                     }}
                   />
-                  <Modal
-                    open={previewOpen}
-                    title={material.name}
-                    footer={null}
-                    centered
-                    width="min(92vw, 960px)"
-                    onCancel={(event) => {
-                      event.stopPropagation();
-                      setPreviewOpen(false);
-                    }}
-                    modalRender={(node) => (
-                      <div onClick={handlePreview}>{node}</div>
-                    )}
-                  >
-                    <img
-                      src={previewSrc}
-                      alt={material.name}
-                      onClick={handlePreview}
-                      style={{
-                        display: 'block',
-                        maxWidth: '100%',
-                        maxHeight: '76vh',
-                        margin: '0 auto',
-                        objectFit: 'contain',
-                      }}
-                    />
-                  </Modal>
-                </>
-              )}
             </>
           ) : (
             <div
@@ -171,6 +140,50 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
           </Space>
         }
       />
+      {previewSrc && (
+        <Modal
+          open={previewOpen}
+          title={material.name}
+          footer={null}
+          centered
+          destroyOnClose
+          width="min(92vw, 960px)"
+          onCancel={(event) => {
+            event.stopPropagation();
+            setPreviewOpen(false);
+          }}
+          modalRender={(node) => (
+            <div onClick={(e) => e.stopPropagation()}>{node}</div>
+          )}
+        >
+          {isVideo ? (
+            <video
+              src={material.url}
+              controls
+              autoPlay
+              style={{
+                display: 'block',
+                maxWidth: '100%',
+                maxHeight: '76vh',
+                margin: '0 auto',
+              }}
+            />
+          ) : (
+            <img
+              src={previewSrc}
+              alt={material.name}
+              onClick={handlePreview}
+              style={{
+                display: 'block',
+                maxWidth: '100%',
+                maxHeight: '76vh',
+                margin: '0 auto',
+                objectFit: 'contain',
+              }}
+            />
+          )}
+        </Modal>
+      )}
     </Card>
   );
 }
