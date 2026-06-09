@@ -17,7 +17,7 @@ import { useDebouncedSearch } from '../../hooks/useDebouncedSearch';
 import { usePagination } from '../../hooks/usePagination';
 import { MATERIAL_CATEGORY_LABELS, MATERIAL_STATUS_LABELS, REFERENCE_CATEGORY_LABELS } from '../../constants';
 import { routePath } from '../../constants';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const { Dragger } = Upload;
@@ -38,7 +38,15 @@ export default function MaterialManagementPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [mobilePage, setMobilePage] = useState(1);
   const [semanticSearchVisible, setSemanticSearchVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState('base');
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') === 'reference' ? 'reference' : 'base';
+  const setActiveTab = (tab: string) => {
+    setSearchParams(prev => {
+      prev.set('tab', tab);
+      return prev;
+    }, { replace: true });
+  };
 
   // 初始加载 + 筛选变化时重新加载
   useEffect(() => {
