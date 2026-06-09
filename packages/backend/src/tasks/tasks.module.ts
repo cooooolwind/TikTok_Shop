@@ -8,6 +8,7 @@ import { Material } from '../modules/materials/entities/material.entity';
 import { VideoSlice } from '../modules/materials/entities/video-slice.entity';
 import { GenerationTask } from '../modules/generation/entities/generation-task.entity';
 import { Video } from '../modules/generation/entities/video.entity';
+import { MaterialAnalysis } from '../modules/materials/entities/material-analysis.entity';
 import { WebsocketModule } from '../websocket/websocket.module';
 import { MaterialsModule } from '../modules/materials/materials.module';
 import { ScriptGenerationProcessor } from './processors/script-generation.processor';
@@ -15,9 +16,6 @@ import { VideoGenerationProcessor } from './processors/video-generation.processo
 import { MaterialAnalysisProcessor } from './processors/material-analysis.processor';
 import { VideoStitchingService } from './services/video-stitching.service';
 import { QUEUES } from './queues';
-
-import { ReferenceVideo } from '../modules/references/entities/reference-video.entity';
-import { ReferenceAnalysisProcessor } from './processors/reference-analysis.processor';
 
 @Global()
 @Module({
@@ -30,9 +28,8 @@ import { ReferenceAnalysisProcessor } from './processors/reference-analysis.proc
       { name: QUEUES.MATERIAL_ANALYSIS },
       { name: QUEUES.SCRIPT_GENERATION },
       { name: QUEUES.VIDEO_GENERATION },
-      { name: QUEUES.REFERENCE_ANALYSIS },
     ),
-    TypeOrmModule.forFeature([Script, Scene, Material, VideoSlice, GenerationTask, Video, ReferenceVideo]),
+    TypeOrmModule.forFeature([Script, Scene, Material, VideoSlice, MaterialAnalysis, GenerationTask, Video]),
     WebsocketModule,
     MaterialsModule,
   ],
@@ -40,7 +37,6 @@ import { ReferenceAnalysisProcessor } from './processors/reference-analysis.proc
     ScriptGenerationProcessor,
     VideoGenerationProcessor,
     MaterialAnalysisProcessor,
-    ReferenceAnalysisProcessor,
     VideoStitchingService,
   ],
   exports: [BullModule, VideoStitchingService],

@@ -53,7 +53,7 @@
 
 | #  | 任务                                   | 状态 | 说明                                                                                                                                                          |
 | -- | -------------------------------------- | :--: | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| C1 | 参考视频录入 + 结构化拆解 API          |  ✅  | Entity/类型定义完整，前端 UI 支持本地视频上传，后端提供 `POST /references/upload` 接口，结合火山引擎 File API 和大模型实现异步多模态拆解及 Hook 提取 |
+| C1 | 参考视频合入素材系统（结构化拆解） |  ✅  | 参考视频直接通过 `POST /materials/upload`（`source_declaration=reference`）上传并录入，复用多模态大模型异步拆解架构，结合 Hook 提取与 `MaterialAnalysis` 副表实现统一管理，废除了原有的独立表及接口 |
 | C2 | 灵感模板 CRUD                          |  ✅  | 完整 CRUD 及测试用例，包含内置模板                                                                                                                            |
 | C3 | 剧本生成核心 Prompt 链                 |  ✅  | `ScriptsService.generate` 入队，BullMQ Processor 完整调用多模态模型；Prompt 已强化为电商强转化导向，要求 3 秒 Hook、卖点分配、商品可见、购买理由和 CTA 收尾；素材 AI 分析与视频语义切片已进入剧本生成上下文；剧本、素材、视频和模板提示词已统一收敛到 `packages/backend/src/ai/prompts` 并补充集中 builder 测试 |
 | C4 | 分镜脚本结构化输出（JSON Schema）      |  ✅  | AI 返回 `AiScriptResult` 结构化数据，`persistResult` 持久化入库                                                                                           |

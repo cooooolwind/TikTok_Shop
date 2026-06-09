@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { MaterialAnalysisProcessor } from './material-analysis.processor';
 import { Material } from '../../modules/materials/entities/material.entity';
 import { VideoSlice } from '../../modules/materials/entities/video-slice.entity';
+import { MaterialAnalysis } from '../../modules/materials/entities/material-analysis.entity';
 import { VolcanoClientProvider } from '../../ai/providers/volcano-client.provider';
 import { EmbeddingService } from '../../modules/materials/embedding.service';
 import { TasksGateway } from '../../websocket/tasks.gateway';
@@ -16,6 +17,7 @@ describe('MaterialAnalysisProcessor', () => {
   let processor: MaterialAnalysisProcessor;
   let materialsRepository: any;
   let videoSlicesRepository: any;
+  let analysisRepository: any;
   let volcanoClient: any;
   let tasksGateway: any;
   let configService: any;
@@ -29,6 +31,12 @@ describe('MaterialAnalysisProcessor', () => {
     };
 
     videoSlicesRepository = {
+      create: jest.fn((data) => data),
+      save: jest.fn(async (data) => data),
+      delete: jest.fn().mockResolvedValue({}),
+    };
+
+    analysisRepository = {
       create: jest.fn((data) => data),
       save: jest.fn(async (data) => data),
       delete: jest.fn().mockResolvedValue({}),
@@ -72,6 +80,10 @@ describe('MaterialAnalysisProcessor', () => {
         {
           provide: getRepositoryToken(VideoSlice),
           useValue: videoSlicesRepository,
+        },
+        {
+          provide: getRepositoryToken(MaterialAnalysis),
+          useValue: analysisRepository,
         },
         {
           provide: VolcanoClientProvider,

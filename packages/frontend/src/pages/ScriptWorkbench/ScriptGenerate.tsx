@@ -7,7 +7,7 @@ import PageHeader from '../../components/common/PageHeader';
 import { useMaterialStore } from '../../stores/useMaterialStore';
 import { useScriptStore } from '../../stores/useScriptStore';
 import { useTemplateStore } from '../../stores/useTemplateStore';
-import { useReferenceStore } from '../../stores/useReferenceStore';
+import { materialsApi } from '../../services/materials.api';
 import {
   buildManualDraftPayload,
   buildScriptGeneratePayload,
@@ -37,13 +37,15 @@ export default function ScriptGenerate() {
   const { generating, create, generate } = useScriptStore();
   const { items: templates, fetchList: fetchTemplates } = useTemplateStore();
   const { items: materials, fetchList: fetchMaterials } = useMaterialStore();
-  const { items: references, fetchList: fetchReferences } = useReferenceStore();
+  const [references, setReferences] = useState<Material[]>([]);
 
   useEffect(() => {
     fetchTemplates({ pageSize: 100 });
     fetchMaterials({ pageSize: 100 });
-    fetchReferences({ pageSize: 100 });
-  }, [fetchTemplates, fetchMaterials, fetchReferences]);
+    materialsApi.list({ source_declaration: 'reference', pageSize: 100 }).then((res: any) => {
+      setReferences(res.items);
+    });
+  }, [fetchTemplates, fetchMaterials]);
 
   const materialOptions = useMemo(
     () =>
@@ -213,9 +215,9 @@ export default function ScriptGenerate() {
                       placeholder="搜索参考视频类目或特征"
                       optionFilterProp="label"
                       options={references
-                        .filter((r) => r.analysis_status === 'done')
+                        .filter((r) => r.status === 'ready')
                         .map((ref) => ({
-                          label: `[${ref.category}] ${ref.source_platform} · ${ref.analysis?.hook || '无Hook分析'}`,
+                          label: `[${ref.category}] ${ref.source_platform || '未知平台'} · ${ref.reference_analysis?.hook || '无Hook分析'}`,
                           value: ref.id,
                         }))}
                     />

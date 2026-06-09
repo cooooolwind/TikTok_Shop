@@ -163,6 +163,11 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
             {material.category && (
               <Tag>{material.category}</Tag>
             )}
+            {material.source_declaration === 'reference' && material.reference_analysis?.hook && (
+              <Text type="secondary" ellipsis style={{ fontSize: 12, display: 'block', maxWidth: '100%' }}>
+                Hook: {material.reference_analysis.hook}
+              </Text>
+            )}
           </Space>
         }
       />

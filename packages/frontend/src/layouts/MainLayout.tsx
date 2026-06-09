@@ -62,11 +62,7 @@ const menuItems: MenuItem[] = [
         icon: <FileTextOutlined />,
         label: '剧本列表',
       },
-      {
-        key: ROUTES.REFERENCES,
-        icon: <BookOutlined />,
-        label: '参考视频库',
-      },
+
       {
         key: ROUTES.TEMPLATES,
         icon: <BulbOutlined />,
@@ -310,7 +306,6 @@ export default function MainLayout() {
                 items: [
                   { key: ROUTES.MATERIALS, icon: <PictureOutlined />, label: '素材管理' },
                   { key: ROUTES.TEMPLATE_MARKET, icon: <ShopOutlined />, label: '模板广场' },
-                  { key: ROUTES.REFERENCES, icon: <BookOutlined />, label: '参考视频' },
                   { key: ROUTES.TEMPLATES, icon: <BulbOutlined />, label: '灵感模板' },
                 ]
               },

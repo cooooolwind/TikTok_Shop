@@ -10,11 +10,12 @@ import { MaterialsService } from './materials.service';
 import { EmbeddingService } from './embedding.service';
 import { Material } from './entities/material.entity';
 import { VideoSlice } from './entities/video-slice.entity';
+import { MaterialAnalysis } from './entities/material-analysis.entity';
 import { WebsocketModule } from '../../websocket/websocket.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Material, VideoSlice]),
+    TypeOrmModule.forFeature([Material, VideoSlice, MaterialAnalysis]),
     WebsocketModule,
     MulterModule.registerAsync({
       imports: [ConfigModule],
