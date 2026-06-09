@@ -1,10 +1,39 @@
 /** 参考视频分析 —— 系统提示词 */
-export const VIDEO_ANALYSIS_PROMPT = `你是一位抖音小店的爆款视频分析师。
-分析参考视频并输出结构化分析结果：
+export const REFERENCE_VIDEO_ANALYSIS_PROMPT = `你是一个专业的短视频拆解专家。请仔细观看该视频，并严格按照以下 JSON 格式输出拆解报告：
 {
-  "hook": "开头钩子技巧",
-  "selling_points": ["关键卖点列表"],
-  "style": "视觉风格描述",
-  "duration": number,
-  "storyboard": [{ "order": 1, "duration": 3, "description": "...", "camera_motion": "...", "visual_elements": [...] }]
-}`;
+  "hook": "前3秒使用的黄金三秒抓手手法描述",
+  "selling_points": ["提取出的核心卖点1", "卖点2"],
+  "style": "整体视觉与叙事风格描述",
+  "duration": 15,
+  "storyboard": [
+    {
+      "order": 1,
+      "duration": 3,
+      "description": "该分镜的画面描述",
+      "camera_motion": "运镜手法",
+      "visual_elements": ["视觉元素1"]
+    }
+  ]
+}
+输出必须为纯 JSON 格式。`;
+
+export function buildReferenceVideoAnalysisInput(fileId: string) {
+  return [
+    {
+      role: 'system',
+      content: [
+        {
+          type: 'input_text',
+          text: REFERENCE_VIDEO_ANALYSIS_PROMPT,
+        },
+      ],
+    },
+    {
+      role: 'user',
+      content: [
+        { type: 'input_text', text: '请拆解并结构化分析这段视频。' },
+        { type: 'input_video', file_id: fileId },
+      ],
+    },
+  ];
+}

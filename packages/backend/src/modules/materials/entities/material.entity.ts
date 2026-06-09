@@ -7,11 +7,11 @@ import {
   OneToMany,
   OneToOne,
 } from 'typeorm';
+import type { MaterialCategory } from '@aigc/shared-types';
 import { VideoSlice } from './video-slice.entity';
 import { MaterialAnalysis } from './material-analysis.entity';
 
 export type MaterialType = 'image' | 'video';
-export type MaterialCategory = 'product' | 'scene' | 'model' | 'other';
 export type MaterialStatus = 'uploaded' | 'processing' | 'ready' | 'failed';
 
 @Entity('materials')
@@ -45,7 +45,7 @@ export class Material {
 
   @Column({
     type: 'enum',
-    enum: ['product', 'scene', 'model', 'other'],
+    enum: ['product', 'scene', 'model', 'beauty', 'apparel', '3c', 'other'],
     default: 'other',
   })
   category: MaterialCategory;
