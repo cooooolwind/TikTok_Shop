@@ -8,7 +8,6 @@ import { DatabaseModule } from './database/database.module';
 import { CommonModule } from './common/common.module';
 
 import { MaterialsModule } from './modules/materials/materials.module';
-import { ReferencesModule } from './modules/references/references.module';
 import { TemplatesModule } from './modules/templates/templates.module';
 import { ScriptsModule } from './modules/scripts/scripts.module';
 import { GenerationModule } from './modules/generation/generation.module';
@@ -42,7 +41,6 @@ import { WebsocketModule } from './websocket/websocket.module';
     DatabaseModule,
     CommonModule,
     MaterialsModule,
-    ReferencesModule,
     TemplatesModule,
     ScriptsModule,
     GenerationModule,

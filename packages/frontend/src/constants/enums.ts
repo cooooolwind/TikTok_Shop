@@ -12,6 +12,12 @@ export const MATERIAL_CATEGORY_LABELS: Record<string, string> = {
   other: '其他',
 };
 
+export const REFERENCE_CATEGORY_LABELS: Record<string, string> = {
+  beauty: '美妆',
+  apparel: '服饰',
+  '3c': '3C',
+};
+
 export const SOURCE_DECLARATION_LABELS: Record<string, string> = {
   owned: '自有素材',
   public_commercial: '公开可商用',

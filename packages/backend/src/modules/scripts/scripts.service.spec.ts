@@ -165,7 +165,7 @@ describe('ScriptsService', () => {
 
     await service.generate({
       product_info: { name: 'Dress', description: 'Desc', category: 'fashion', selling_points: [] },
-      mode: 'imitation',
+      mode: 'free',
       material_ids: ['material-1'],
     });
 
@@ -210,7 +210,7 @@ describe('ScriptsService', () => {
 
     await service.generate({
       product_info: { name: 'Dress', description: 'Desc', category: 'fashion', selling_points: [] },
-      mode: 'imitation',
+      mode: 'free',
       material_ids: ['material-1'],
     });
 
@@ -262,7 +262,7 @@ describe('ScriptsService', () => {
 
     await service.generate({
       product_info: { name: 'Dress', description: 'Desc', category: 'fashion', selling_points: [] },
-      mode: 'imitation',
+      mode: 'free',
       material_ids: ['material-1', 'material-2'],
     });
 
@@ -323,7 +323,7 @@ describe('ScriptsService', () => {
 
     await service.generate({
       product_info: { name: 'Dress', description: 'Desc', category: 'fashion', selling_points: [] },
-      mode: 'imitation',
+      mode: 'free',
       material_ids: ['material-1'],
     });
 

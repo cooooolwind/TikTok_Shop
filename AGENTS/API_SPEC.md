@@ -234,75 +234,11 @@ interface SimilarSearchResult {
 
 ---
 
-## 二、参考视频与模板 `/references` `/templates`
+## 二、灵感模板 `/templates`
 
-### 2.1 添加参考视频
 
-`POST /references`
 
-**请求体：**
-
-```typescript
-interface CreateReferenceRequest {
-  source_url: string;           // 原始视频链接
-  source_platform: string;      // 来源平台：tiktok / douyin / youtube
-  category: string;             // 商品类目
-  source_declaration: string;   // 来源声明
-}
-```
-
-**响应：**
-
-```typescript
-interface ReferenceVideo {
-  id: string;
-  source_url: string;
-  source_platform: string;
-  category: string;
-  source_declaration: string;
-  analysis_status: "pending" | "analyzing" | "done" | "failed";
-  analysis?: ReferenceAnalysis;
-  created_at: string;
-}
-
-interface ReferenceAnalysis {
-  hook: string;                 // 开头钩子
-  selling_points: string[];     // 卖点提炼
-  style: string;                // 视频风格
-  duration: number;
-  storyboard: StoryboardItem[];
-}
-
-interface StoryboardItem {
-  order: number;
-  duration: number;
-  description: string;
-  camera_motion: string;
-  visual_elements: string[];
-}
-```
-
-### 2.2 参考视频列表
-
-`GET /references`
-
-**查询参数：**
-
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| category | string | 类目筛选 |
-| source_platform | string | 平台筛选 |
-| analysis_status | string | 分析状态筛选 |
-
-### 2.3 参考视频详情
-
-`GET /references/:id`
-
-### 2.4 删除参考视频
-
-`DELETE /references/:id`
-
-### 2.5 创建灵感模板
+### 2.1 创建灵感模板
 
 `POST /templates`
 
@@ -315,7 +251,7 @@ interface CreateTemplateRequest {
   factors: Record<string, string>; // 因子键值对
   constraints: string[];        // 约束条件
   applicable_categories: string[];
-  derived_from?: string[];      // 关联的参考视频 ID
+  derived_from?: string[];      // 关联的素材 ID
 }
 ```
 
@@ -335,7 +271,7 @@ interface Template {
 }
 ```
 
-### 2.6 模板列表
+### 2.2 模板列表
 
 `GET /templates`
 
@@ -346,15 +282,15 @@ interface Template {
 | category | string | 适用类目筛选 |
 | keyword | string | 名称/策略关键词搜索 |
 
-### 2.7 模板详情
+### 2.3 模板详情
 
 `GET /templates/:id`
 
-### 2.8 更新模板
+### 2.4 更新模板
 
 `PUT /templates/:id`
 
-### 2.9 删除模板
+### 2.5 删除模板
 
 `DELETE /templates/:id`
 

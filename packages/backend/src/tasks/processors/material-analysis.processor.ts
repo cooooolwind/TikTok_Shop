@@ -10,6 +10,7 @@ import { VolcanoClientProvider } from '../../ai/providers/volcano-client.provide
 import { buildImageAnalysisMessages, buildVideoAnalysisInput } from '../../ai/prompts';
 import { Material } from '../../modules/materials/entities/material.entity';
 import { VideoSlice } from '../../modules/materials/entities/video-slice.entity';
+import { MaterialAnalysis } from '../../modules/materials/entities/material-analysis.entity';
 import { TasksGateway } from '../../websocket/tasks.gateway';
 import { VideoUtil } from '../../common/utils/video.util';
 import { EmbeddingService } from '../../modules/materials/embedding.service';
@@ -32,6 +33,14 @@ interface AiAnalysisResult {
   slices?: AiSliceResult[];
 }
 
+interface ReferenceAnalysisResult {
+  hook: string;
+  selling_points: string[];
+  style: string;
+  duration: number;
+  storyboard: any[];
+}
+
 @Processor(QUEUES.MATERIAL_ANALYSIS)
 export class MaterialAnalysisProcessor extends WorkerHost {
   private readonly logger = new Logger(MaterialAnalysisProcessor.name);
@@ -41,6 +50,8 @@ export class MaterialAnalysisProcessor extends WorkerHost {
     private readonly materialsRepository: Repository<Material>,
     @InjectRepository(VideoSlice)
     private readonly videoSlicesRepository: Repository<VideoSlice>,
+    @InjectRepository(MaterialAnalysis)
+    private readonly analysisRepository: Repository<MaterialAnalysis>,
     private readonly volcanoClient: VolcanoClientProvider,
     private readonly tasksGateway: TasksGateway,
     private readonly configService: ConfigService,
@@ -129,13 +140,68 @@ export class MaterialAnalysisProcessor extends WorkerHost {
         
         // 2. Prepare input for Responses API (Supports file_id correctly)
         this.tasksGateway.emitMaterialAnalysisStep(materialId, 'analyzing');
-        const input = buildVideoAnalysisInput(fileId);
+        if (material.sourceDeclaration === 'reference') {
+          const input = [
+            {
+              role: 'system',
+              content: [
+                {
+                  type: 'input_text',
+                  text: `你是一个专业的短视频拆解专家。请仔细观看该视频，并严格按照以下 JSON 格式输出拆解报告：
+{
+  "hook": "前3秒使用的黄金三秒抓手手法描述",
+  "selling_points": ["提取出的核心卖点1", "卖点2"],
+  "style": "整体视觉与叙事风格描述",
+  "duration": 15,
+  "storyboard": [
+    {
+      "order": 1,
+      "duration": 3,
+      "description": "该分镜的画面描述",
+      "camera_motion": "运镜手法",
+      "visual_elements": ["视觉元素1"]
+    }
+  ]
+}
+输出必须为纯 JSON 格式。`,
+                },
+              ],
+            },
+            {
+              role: 'user',
+              content: [
+                { type: 'input_text', text: '请拆解并结构化分析这段视频。' },
+                { type: 'input_video', file_id: fileId },
+              ],
+            },
+          ];
+          const aiResponse = await this.volcanoClient.createResponse(input, {
+            text: { format: { type: 'json_object' } },
+          });
+          this.logger.debug(`Responses API raw content length: ${aiResponse.content?.length ?? 0}`);
+          const refResult = this.parseReferenceAiResponse(aiResponse.content);
+          
+          await this.analysisRepository.delete({ materialId: material.id });
+          const analysisRecord = this.analysisRepository.create({
+            materialId: material.id,
+            hook: refResult.hook,
+            style: refResult.style,
+            duration: refResult.duration,
+            sellingPoints: refResult.selling_points,
+            storyboard: refResult.storyboard,
+          });
+          await this.analysisRepository.save(analysisRecord);
+          
+          result = { tags: ['reference'], description: refResult.hook || '参考视频', slices: [] };
+        } else {
+          const input = buildVideoAnalysisInput(fileId);
 
-        const aiResponse = await this.volcanoClient.createResponse(input, {
-          text: { format: { type: 'json_object' } },
-        });
-        this.logger.debug(`Responses API raw content length: ${aiResponse.content?.length ?? 0}`);
-        result = this.parseAiResponse(aiResponse.content);
+          const aiResponse = await this.volcanoClient.createResponse(input, {
+            text: { format: { type: 'json_object' } },
+          });
+          this.logger.debug(`Responses API raw content length: ${aiResponse.content?.length ?? 0}`);
+          result = this.parseAiResponse(aiResponse.content);
+        }
       } else {
         // 3. Use Base64 for images (Fast and no double-hop)
         this.tasksGateway.emitMaterialAnalysisStep(materialId, 'analyzing');
@@ -262,6 +328,29 @@ export class MaterialAnalysisProcessor extends WorkerHost {
       return {
         tags: ['auto-tagged'],
         description: '未能解析详细的 AI 分析结果。',
+      };
+    }
+  }
+
+  private parseReferenceAiResponse(content: string): ReferenceAnalysisResult {
+    try {
+      const jsonStr = content.replace(/```json\n?|\n?```/g, '').trim();
+      const parsed = JSON.parse(jsonStr);
+      return {
+        hook: typeof parsed.hook === 'string' ? parsed.hook : '',
+        selling_points: Array.isArray(parsed.selling_points) ? parsed.selling_points : [],
+        style: typeof parsed.style === 'string' ? parsed.style : '',
+        duration: typeof parsed.duration === 'number' ? parsed.duration : 0,
+        storyboard: Array.isArray(parsed.storyboard) ? parsed.storyboard : [],
+      };
+    } catch (error) {
+      this.logger.error(`Failed to parse Reference AI response: ${content}`);
+      return {
+        hook: '未能解析参考视频结构',
+        selling_points: [],
+        style: '未知',
+        duration: 0,
+        storyboard: [],
       };
     }
   }

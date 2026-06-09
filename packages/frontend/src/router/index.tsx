@@ -26,8 +26,6 @@ const MaterialDetail = lazy(() => import('../pages/MaterialManagement/MaterialDe
 const ScriptWorkbenchPage = lazy(() => import('../pages/ScriptWorkbench/ScriptWorkbenchPage'));
 const ScriptGenerate = lazy(() => import('../pages/ScriptWorkbench/ScriptGenerate'));
 const ScriptEditor = lazy(() => import('../pages/ScriptWorkbench/ScriptEditor'));
-const ReferenceList = lazy(() => import('../pages/ScriptWorkbench/ReferenceList'));
-const ReferenceDetail = lazy(() => import('../pages/ScriptWorkbench/ReferenceDetail'));
 const TemplateManager = lazy(() => import('../pages/ScriptWorkbench/TemplateManager'));
 const TemplateMarketPage = lazy(() => import('../pages/TemplateMarket/TemplateMarketPage'));
 const TemplateUsePage = lazy(() => import('../pages/TemplateMarket/TemplateUsePage'));
@@ -70,8 +68,6 @@ export const router: Router = createBrowserRouter([
       { path: 'scripts', element: <LazyPage Component={ScriptWorkbenchPage} /> },
       { path: 'scripts/generate', element: <LazyPage Component={ScriptGenerate} /> },
       { path: 'scripts/:id', element: <LazyPage Component={ScriptEditor} /> },
-      { path: 'references', element: <LazyPage Component={ReferenceList} /> },
-      { path: 'references/:id', element: <LazyPage Component={ReferenceDetail} /> },
       { path: 'templates', element: <LazyPage Component={TemplateManager} /> },
       { path: 'template-market', element: <LazyPage Component={TemplateMarketPage} /> },
       { path: 'template-market/:id/use', element: <LazyPage Component={TemplateUsePage} /> },

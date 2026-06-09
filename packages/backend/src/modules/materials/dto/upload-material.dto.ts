@@ -1,7 +1,9 @@
 import { Transform } from 'class-transformer';
 import { IsArray, IsIn, IsOptional, IsString } from 'class-validator';
 
-const MATERIAL_CATEGORIES = ['product', 'scene', 'model', 'other'] as const;
+const BASE_CATEGORIES = ['product', 'scene', 'model', 'other'] as const;
+const REFERENCE_CATEGORIES = ['beauty', 'apparel', '3c', 'other'] as const;
+const MATERIAL_CATEGORIES = [...BASE_CATEGORIES, ...REFERENCE_CATEGORIES];
 const SOURCE_DECLARATIONS = ['owned', 'public_commercial', 'reference'] as const;
 
 function toTags(value: unknown): string[] | undefined {
@@ -20,10 +22,14 @@ export class UploadMaterialDto {
 
   @IsOptional()
   @IsIn(MATERIAL_CATEGORIES)
-  category?: 'product' | 'scene' | 'model' | 'other' = 'other';
+  category?: string = 'other';
 
   @IsIn(SOURCE_DECLARATIONS)
   source_declaration: 'owned' | 'public_commercial' | 'reference';
+
+  @IsOptional()
+  @IsString()
+  source_platform?: string;
 
   @IsOptional()
   @Transform(({ value }) => toTags(value))

@@ -3,7 +3,9 @@ import type { PaginationQuery } from './common';
 // ===== 枚举类型 =====
 
 export type MaterialType = 'image' | 'video';
-export type MaterialCategory = 'product' | 'scene' | 'model' | 'other';
+export type BaseMaterialCategory = 'product' | 'scene' | 'model' | 'other';
+export type ReferenceMaterialCategory = 'beauty' | 'apparel' | '3c' | 'other';
+export type MaterialCategory = BaseMaterialCategory | ReferenceMaterialCategory;
 export type MaterialStatus = 'uploaded' | 'processing' | 'ready' | 'failed';
 export type SourceDeclaration = 'owned' | 'public_commercial' | 'reference';
 
@@ -16,6 +18,22 @@ export interface VideoSlice {
   description: string;
   thumbnail_url: string;
   tags: string[];
+}
+
+export interface StoryboardItem {
+  order: number;
+  duration: number;
+  description: string;
+  camera_motion: string;
+  visual_elements: string[];
+}
+
+export interface ReferenceAnalysis {
+  hook: string;
+  selling_points: string[];
+  style: string;
+  duration: number;
+  storyboard: StoryboardItem[];
 }
 
 // ===== 素材 =====
@@ -31,9 +49,11 @@ export interface Material {
   category: MaterialCategory;
   tags: string[];
   source_declaration: SourceDeclaration;
+  source_platform?: string;
   ai_tags: string[];
   ai_description: string;
   has_embedding: boolean;
+  reference_analysis?: ReferenceAnalysis;
   duration?: number;
   resolution?: { width: number; height: number };
   status: MaterialStatus;
@@ -102,4 +122,6 @@ export interface MaterialListQuery extends PaginationQuery {
   tags?: string[];
   keyword?: string;
   status?: MaterialStatus;
+  source_declaration?: SourceDeclaration | string;
+  exclude_source_declaration?: SourceDeclaration | string;
 }

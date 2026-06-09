@@ -4,7 +4,7 @@ import type {
   CreateScriptRequest, GenerateScriptQueuedResponse, GenerateScriptRequest, ProductInfo,
   GenerationTask, GenerationStatus, GenerationListQuery, ExportResponse,
   TaskProgress, TaskResult, TaskError, VideoOptions, ExportRequest,
-  ReferenceVideo, ReferenceListQuery,
+
   Template, TemplateListQuery,
   Voice, BGM, BGMListQuery,
   OverviewData, TrendData, AttributionData, DurationDistribution,
@@ -37,7 +37,7 @@ export interface MaterialState {
   fetchList: (params?: MaterialListQuery, append?: boolean) => Promise<void>;
   fetchDetail: (id: string) => Promise<void>;
   updateMaterial: (id: string, data: Partial<Material>) => Promise<void>;
-  upload: (file: File, category: string, sourceDeclaration: string, tags?: string[], name?: string) => Promise<void>;
+  upload: (file: File, category: string, sourceDeclaration: string, tags?: string[], name?: string, sourcePlatform?: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
   batchRemove: (ids: string[]) => Promise<void>;
   triggerAnalysis: (id: string) => Promise<void>;
@@ -58,24 +58,6 @@ export interface MaterialState {
   clearSelection: () => void;
 }
 
-// ==============================
-// Reference Store
-// ==============================
-
-export interface ReferenceState {
-  items: ReferenceVideo[];
-  total: number;
-  loading: boolean;
-  selectedReference: ReferenceVideo | null;
-  filters: ReferenceListQuery;
-
-  fetchList: (params?: ReferenceListQuery) => Promise<void>;
-  fetchDetail: (id: string) => Promise<void>;
-  create: (data: { source_url: string; source_platform: string; category: string; source_declaration: string }) => Promise<void>;
-  upload: (file: File, category: string, sourceDeclaration: string) => Promise<void>;
-  remove: (id: string) => Promise<void>;
-  setFilters: (filters: Partial<ReferenceListQuery>) => void;
-}
 
 // ==============================
 // Template Store
