@@ -30,6 +30,9 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends ffmpeg chromium ca-certificates fonts-noto-cjk \
   && rm -rf /var/lib/apt/lists/*
 ENV REMOTION_BROWSER_EXECUTABLE=/usr/bin/chromium
+ENV REMOTION_FFMPEG_EXECUTABLE=/usr/bin/ffmpeg
+ENV FFMPEG_PATH=/usr/bin/ffmpeg
+RUN corepack enable && corepack prepare pnpm@8.15.0 --activate
 RUN ffmpeg -version
 COPY --from=builder /app/deploy ./
 # In case pnpm deploy misses dist due to missing 'files' in package.json
