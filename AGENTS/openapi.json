@@ -1,0 +1,1700 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/materials/upload": {
+      "post": {
+        "operationId": "MaterialsController_upload",
+        "summary": "上传素材",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadMaterialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "素材管理 /materials"
+        ]
+      }
+    },
+    "/api/v1/materials": {
+      "get": {
+        "operationId": "MaterialsController_findAll",
+        "summary": "素材列表",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "素材管理 /materials"
+        ]
+      }
+    },
+    "/api/v1/materials/batch": {
+      "delete": {
+        "operationId": "MaterialsController_batchRemove",
+        "summary": "批量删除素材",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchDeleteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "素材管理 /materials"
+        ]
+      }
+    },
+    "/api/v1/materials/search/similar": {
+      "post": {
+        "operationId": "MaterialsController_searchSimilar",
+        "summary": "相似素材搜索",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimilarSearchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "素材管理 /materials"
+        ]
+      }
+    },
+    "/api/v1/materials/search/backfill": {
+      "post": {
+        "operationId": "MaterialsController_backfillEmbeddings",
+        "summary": "回填向量嵌入（批量）",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "素材管理 /materials"
+        ]
+      }
+    },
+    "/api/v1/materials/{id}": {
+      "get": {
+        "operationId": "MaterialsController_findOne",
+        "summary": "素材详情",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "素材管理 /materials"
+        ]
+      },
+      "put": {
+        "operationId": "MaterialsController_update",
+        "summary": "更新素材信息",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMaterialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "素材管理 /materials"
+        ]
+      },
+      "delete": {
+        "operationId": "MaterialsController_remove",
+        "summary": "删除素材",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "素材管理 /materials"
+        ]
+      }
+    },
+    "/api/v1/materials/{id}/analyze": {
+      "post": {
+        "operationId": "MaterialsController_analyze",
+        "summary": "触发 AI 打标",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "素材管理 /materials"
+        ]
+      }
+    },
+    "/api/v1/materials/{id}/re-embed": {
+      "post": {
+        "operationId": "MaterialsController_reEmbed",
+        "summary": "仅重新语义向量化（不重新 AI 分析）",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "素材管理 /materials"
+        ]
+      }
+    },
+    "/api/v1/materials/{id}/slices": {
+      "get": {
+        "operationId": "MaterialsController_findSlices",
+        "summary": "视频切片列表",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "素材管理 /materials"
+        ]
+      }
+    },
+    "/api/v1/templates": {
+      "post": {
+        "operationId": "TemplatesController_create",
+        "summary": "创建灵感模板",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertTemplateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "灵感模板 /templates"
+        ]
+      },
+      "get": {
+        "operationId": "TemplatesController_findAll",
+        "summary": "模板列表",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "灵感模板 /templates"
+        ]
+      }
+    },
+    "/api/v1/inspiration-templates": {
+      "post": {
+        "operationId": "TemplatesController_create",
+        "summary": "创建灵感模板",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertTemplateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "灵感模板 /templates"
+        ]
+      },
+      "get": {
+        "operationId": "TemplatesController_findAll",
+        "summary": "模板列表",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "灵感模板 /templates"
+        ]
+      }
+    },
+    "/api/v1/templates/{id}": {
+      "get": {
+        "operationId": "TemplatesController_findOne",
+        "summary": "模板详情",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "灵感模板 /templates"
+        ]
+      },
+      "put": {
+        "operationId": "TemplatesController_update",
+        "summary": "更新模板",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "灵感模板 /templates"
+        ]
+      },
+      "delete": {
+        "operationId": "TemplatesController_remove",
+        "summary": "删除模板",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "灵感模板 /templates"
+        ]
+      }
+    },
+    "/api/v1/inspiration-templates/{id}": {
+      "get": {
+        "operationId": "TemplatesController_findOne",
+        "summary": "模板详情",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "灵感模板 /templates"
+        ]
+      },
+      "put": {
+        "operationId": "TemplatesController_update",
+        "summary": "更新模板",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "灵感模板 /templates"
+        ]
+      },
+      "delete": {
+        "operationId": "TemplatesController_remove",
+        "summary": "删除模板",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "灵感模板 /templates"
+        ]
+      }
+    },
+    "/api/v1/templates/{id}/generate": {
+      "post": {
+        "operationId": "TemplatesController_generate",
+        "summary": "使用模板生成带货视频方案",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateTemplateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "灵感模板 /templates"
+        ]
+      }
+    },
+    "/api/v1/inspiration-templates/{id}/generate": {
+      "post": {
+        "operationId": "TemplatesController_generate",
+        "summary": "使用模板生成带货视频方案",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateTemplateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "灵感模板 /templates"
+        ]
+      }
+    },
+    "/api/v1/scripts/generate": {
+      "post": {
+        "operationId": "ScriptsController_generate",
+        "summary": "3.1 生成剧本",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateScriptDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "剧本 /scripts"
+        ]
+      }
+    },
+    "/api/v1/scripts": {
+      "post": {
+        "operationId": "ScriptsController_create",
+        "summary": "创建手写剧本草稿",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateScriptDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "剧本 /scripts"
+        ]
+      },
+      "get": {
+        "operationId": "ScriptsController_findAll",
+        "summary": "3.3 剧本列表",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "剧本 /scripts"
+        ]
+      }
+    },
+    "/api/v1/scripts/generate/batch": {
+      "post": {
+        "operationId": "ScriptsController_batchGenerate",
+        "summary": "3.2 批量生成剧本",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "剧本 /scripts"
+        ]
+      }
+    },
+    "/api/v1/scripts/{id}": {
+      "get": {
+        "operationId": "ScriptsController_findOne",
+        "summary": "3.4 剧本详情",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "剧本 /scripts"
+        ]
+      },
+      "put": {
+        "operationId": "ScriptsController_update",
+        "summary": "3.5 更新剧本（整体）",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "剧本 /scripts"
+        ]
+      },
+      "delete": {
+        "operationId": "ScriptsController_remove",
+        "summary": "3.12 删除剧本",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "剧本 /scripts"
+        ]
+      }
+    },
+    "/api/v1/scripts/{id}/scenes/{sceneId}": {
+      "put": {
+        "operationId": "ScriptsController_updateScene",
+        "summary": "3.6 更新单个分镜",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sceneId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "剧本 /scripts"
+        ]
+      },
+      "delete": {
+        "operationId": "ScriptsController_removeScene",
+        "summary": "3.8 删除分镜",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sceneId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "剧本 /scripts"
+        ]
+      }
+    },
+    "/api/v1/scripts/{id}/scenes": {
+      "post": {
+        "operationId": "ScriptsController_addScene",
+        "summary": "3.7 添加分镜",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "剧本 /scripts"
+        ]
+      }
+    },
+    "/api/v1/scripts/{id}/scenes/reorder": {
+      "put": {
+        "operationId": "ScriptsController_reorderScenes",
+        "summary": "3.9 分镜排序",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "剧本 /scripts"
+        ]
+      }
+    },
+    "/api/v1/scripts/{id}/scenes/{sceneId}/regenerate": {
+      "post": {
+        "operationId": "ScriptsController_regenerateScene",
+        "summary": "3.10 重新生成分镜台词",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sceneId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "剧本 /scripts"
+        ]
+      }
+    },
+    "/api/v1/scripts/{id}/retry": {
+      "post": {
+        "operationId": "ScriptsController_retry",
+        "summary": "重新生成失败剧本",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "剧本 /scripts"
+        ]
+      }
+    },
+    "/api/v1/scripts/{id}/confirm": {
+      "post": {
+        "operationId": "ScriptsController_confirm",
+        "summary": "3.11 确认剧本",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "剧本 /scripts"
+        ]
+      }
+    },
+    "/api/v1/generation/create": {
+      "post": {
+        "operationId": "GenerationController_create",
+        "summary": "4.1 一键成片",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "视频创作 /generation"
+        ]
+      }
+    },
+    "/api/v1/generation/quick": {
+      "post": {
+        "operationId": "GenerationController_quickCreate",
+        "summary": "4.2 快速成片（跳过剧本步骤）",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "视频创作 /generation"
+        ]
+      }
+    },
+    "/api/v1/generation/tasks": {
+      "get": {
+        "operationId": "GenerationController_findTasks",
+        "summary": "4.3 任务列表",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "视频创作 /generation"
+        ]
+      }
+    },
+    "/api/v1/generation/tasks/{taskId}": {
+      "get": {
+        "operationId": "GenerationController_findTask",
+        "summary": "4.4 任务详情",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "视频创作 /generation"
+        ]
+      },
+      "delete": {
+        "operationId": "GenerationController_remove",
+        "summary": "删除创作任务",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "视频创作 /generation"
+        ]
+      }
+    },
+    "/api/v1/generation/tasks/{taskId}/retry": {
+      "post": {
+        "operationId": "GenerationController_retry",
+        "summary": "4.5 重试失败任务",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "视频创作 /generation"
+        ]
+      }
+    },
+    "/api/v1/generation/tasks/{taskId}/cancel": {
+      "post": {
+        "operationId": "GenerationController_cancel",
+        "summary": "4.6 取消任务",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "视频创作 /generation"
+        ]
+      }
+    },
+    "/api/v1/generation/tasks/{taskId}/scenes/{sceneId}/regenerate": {
+      "post": {
+        "operationId": "GenerationController_regenerateScene",
+        "summary": "4.7 单分镜重新生成",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sceneId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "视频创作 /generation"
+        ]
+      }
+    },
+    "/api/v1/generation/tasks/{taskId}/export": {
+      "post": {
+        "operationId": "GenerationController_export",
+        "summary": "4.8 视频导出",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "视频创作 /generation"
+        ]
+      }
+    },
+    "/api/v1/generation/tasks/{taskId}/subtitles": {
+      "get": {
+        "operationId": "GenerationController_getSubtitles",
+        "summary": "读取任务字幕工程文件",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "视频创作 /generation"
+        ]
+      },
+      "put": {
+        "operationId": "GenerationController_saveSubtitles",
+        "summary": "保存任务字幕工程文件",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "视频创作 /generation"
+        ]
+      }
+    },
+    "/api/v1/tts/voices": {
+      "get": {
+        "operationId": "TtsController_getVoices",
+        "summary": "5.1 获取可用音色列表",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TTS 配音 /tts"
+        ]
+      }
+    },
+    "/api/v1/tts/preview": {
+      "post": {
+        "operationId": "TtsController_preview",
+        "summary": "5.2 试听合成",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TTS 配音 /tts"
+        ]
+      }
+    },
+    "/api/v1/bgm": {
+      "get": {
+        "operationId": "BgmController_findAll",
+        "summary": "6.1 BGM 列表",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "BGM 配乐 /bgm"
+        ]
+      }
+    },
+    "/api/v1/analytics/overview": {
+      "get": {
+        "operationId": "AnalyticsController_overview",
+        "summary": "概览数据",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/trends": {
+      "get": {
+        "operationId": "AnalyticsController_trends",
+        "summary": "生成趋势",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/attribution": {
+      "get": {
+        "operationId": "AnalyticsController_attribution",
+        "summary": "因子归因分析",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/duration-distribution": {
+      "get": {
+        "operationId": "AnalyticsController_durationDistribution",
+        "summary": "耗时分布",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/material-distribution": {
+      "get": {
+        "operationId": "AnalyticsController_materialDistribution",
+        "summary": "素材分布",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/cost/overview": {
+      "get": {
+        "operationId": "AnalyticsController_costOverview",
+        "summary": "成本概览",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/cost/trends": {
+      "get": {
+        "operationId": "AnalyticsController_costTrends",
+        "summary": "成本趋势",
+        "parameters": [
+          {
+            "name": "granularity",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/cost/breakdown": {
+      "get": {
+        "operationId": "AnalyticsController_costBreakdown",
+        "summary": "成本模型拆解",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/cost/by-template": {
+      "get": {
+        "operationId": "AnalyticsController_templateCost",
+        "summary": "模板成本对比",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/cost/high-cost-videos": {
+      "get": {
+        "operationId": "AnalyticsController_highCostVideos",
+        "summary": "高成本视频 Top10",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/conversion/overview": {
+      "get": {
+        "operationId": "AnalyticsController_conversionOverview",
+        "summary": "转化概览",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/conversion/trends": {
+      "get": {
+        "operationId": "AnalyticsController_conversionTrends",
+        "summary": "转化趋势",
+        "parameters": [
+          {
+            "name": "granularity",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/conversion/by-category": {
+      "get": {
+        "operationId": "AnalyticsController_categoryConversion",
+        "summary": "品类转化对比",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/conversion/funnel": {
+      "get": {
+        "operationId": "AnalyticsController_funnel",
+        "summary": "转化漏斗",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/conversion/duration-cvr": {
+      "get": {
+        "operationId": "AnalyticsController_durationCVR",
+        "summary": "时长与转化率",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/strategy/factors": {
+      "get": {
+        "operationId": "AnalyticsController_strategyFactors",
+        "summary": "策略因子效果",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/strategy/formula": {
+      "get": {
+        "operationId": "AnalyticsController_strategyFormula",
+        "summary": "黄金配方",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/strategy/ab-comparison": {
+      "get": {
+        "operationId": "AnalyticsController_abComparison",
+        "summary": "A/B 版本对比",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/strategy/rhythm": {
+      "get": {
+        "operationId": "AnalyticsController_rhythmCompleteness",
+        "summary": "节奏与完播率",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/strategy/subtitle": {
+      "get": {
+        "operationId": "AnalyticsController_subtitleStrategy",
+        "summary": "字幕策略效果",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/strategy/cta": {
+      "get": {
+        "operationId": "AnalyticsController_ctaPosition",
+        "summary": "CTA 位置效果",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/strategy/bgm": {
+      "get": {
+        "operationId": "AnalyticsController_bgmEffect",
+        "summary": "BGM 风格效果",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/home-stats": {
+      "get": {
+        "operationId": "AnalyticsController_homeStats",
+        "summary": "首页统计数据",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "数据看板 /analytics"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "SystemController_health",
+        "summary": "8.1 健康检查",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "系统 /system"
+        ]
+      }
+    },
+    "/api/v1/upload": {
+      "post": {
+        "operationId": "SystemController_upload",
+        "summary": "8.2 文件上传（通用）",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "系统 /system"
+        ]
+      }
+    },
+    "/api/v1/my-videos": {
+      "post": {
+        "operationId": "MyVideosController_create",
+        "summary": "保存生成的带货视频方案",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveMyVideoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "我的作品 /my-videos"
+        ]
+      },
+      "get": {
+        "operationId": "MyVideosController_findAll",
+        "summary": "我的作品列表",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "我的作品 /my-videos"
+        ]
+      }
+    },
+    "/api/v1/ai/settings/temp-key": {
+      "get": {
+        "operationId": "AiSettingsController_getTempKey",
+        "summary": "获取临时 API Key 状态",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "成功获取"
+          }
+        },
+        "tags": [
+          "ai-settings"
+        ]
+      },
+      "post": {
+        "operationId": "AiSettingsController_setTempKey",
+        "summary": "设置或清除临时 API Key 配置",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetTempApiKeyRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功设置"
+          }
+        },
+        "tags": [
+          "ai-settings"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "AIGC 带货视频生成系统 API",
+    "description": "电商场景 AIGC 带货视频生成系统接口文档。",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "UploadMaterialDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "BatchDeleteDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "SimilarSearchDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateMaterialDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpsertTemplateDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "GenerateTemplateDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "GenerateScriptDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateScriptDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "SaveMyVideoDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "SetTempApiKeyRequestDto": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  }
+}

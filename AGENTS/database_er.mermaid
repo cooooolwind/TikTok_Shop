@@ -1,0 +1,101 @@
+erDiagram
+    SCRIPT ||--o{ SCENE : "包含多段分镜"
+    SCRIPT }o--o| TEMPLATE : "可选基于模板生成"
+    SCRIPT ||--o| GENERATION_TASK : "生成视频任务"
+    MATERIAL ||--o{ VIDEO_SLICE : "切分成多个视频片段"
+    MATERIAL ||--o| MATERIAL_ANALYSIS : "拥有一份 AI 分析结果"
+
+    MATERIAL {
+        uuid id PK
+        varchar filename "文件名"
+        varchar url "访问路径"
+        enum type "image / video"
+        int size "文件大小"
+        float duration "视频时长"
+        enum category "商品/场景/模特等"
+        enum status "uploaded/processing/ready/failed"
+        jsonb tags "自定义标签"
+        jsonb ai_tags "AI 打标结果"
+        datetime created_at
+        datetime updated_at
+    }
+
+    VIDEO_SLICE {
+        uuid id PK
+        uuid material_id FK
+        float start_time "开始时间"
+        float end_time "结束时间"
+        text description "片段描述"
+        varchar thumbnail_url "缩略图"
+        datetime created_at
+    }
+
+    MATERIAL_ANALYSIS {
+        uuid id PK
+        uuid material_id FK
+        text analysis_result "AI 深度理解结果"
+        datetime created_at
+    }
+
+    TEMPLATE {
+        uuid id PK
+        varchar merchant_id "商户ID"
+        varchar name "模板名称"
+        text strategy "策略描述"
+        jsonb factors "因子键值对"
+        jsonb constraints "约束条件"
+        varchar status "enabled / disabled"
+        boolean is_builtin "是否内置"
+        datetime created_at
+    }
+
+    SCRIPT {
+        uuid id PK
+        varchar merchant_id "商户ID"
+        jsonb product_info "商品信息"
+        uuid template_id FK "模板ID（可选）"
+        uuid reference_id FK "参考视频ID（可选）"
+        enum mode "template/imitation/free"
+        enum status "draft/confirmed"
+        float total_duration "总时长"
+        jsonb script_blueprint "蓝图结构"
+        datetime created_at
+        datetime updated_at
+    }
+
+    SCENE {
+        uuid id PK
+        uuid script_id FK
+        int order_num "排序序号"
+        text description "分镜描述"
+        float duration "分镜时长"
+        text dialogue "台词/旁白"
+        text visual_prompt "视觉生成 Prompt"
+        varchar bgm_style "BGM 风格"
+        text subtitle "字幕"
+        datetime created_at
+    }
+
+    GENERATION_TASK {
+        uuid id PK
+        uuid script_id FK
+        varchar display_id "展示用的任务编号"
+        enum status "queued/processing/done/failed"
+        jsonb options "分辨率/TTS/BGM参数"
+        jsonb progress "生成进度"
+        jsonb result "生成结果URL等"
+        jsonb error "错误信息"
+        int retry_count "重试次数"
+        datetime created_at
+    }
+
+    MY_VIDEO {
+        uuid id PK
+        varchar merchant_id "商户ID"
+        varchar product_name "商品名"
+        uuid template_id FK
+        enum status "generated / saved"
+        jsonb product_info "商品及生成配置"
+        jsonb result "生成结果内容"
+        datetime created_at
+    }

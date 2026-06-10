@@ -42,7 +42,7 @@ flowchart LR
 ### 核心技术栈
 
 - **前端**：React 18、Vite、Ant Design、Zustand、Socket.IO client、Remotion Player、Vitest
-- **后端**：NestJS、TypeORM、BullMQ、Socket.IO、Swagger、Jest
+- **后端**：NestJS、TypeORM、BullMQ、Socket.IO、Swagger、Jest（详细接口见 [`AGENTS/openapi.json`](./AGENTS/openapi.json)，数据库 ER 图见 [`AGENTS/database_er.mermaid`](./AGENTS/database_er.mermaid)）
 - **共享契约**：TypeScript shared-types，API 响应字段使用 snake_case
 - **基础设施**：PostgreSQL 16 + pgvector、Redis 7、Docker Compose、Turborepo、pnpm workspace
 - **AI 能力**：火山引擎大模型 ChatCompletion 与视频生成 API，开发阶段支持 `MOCK_MODE=true`

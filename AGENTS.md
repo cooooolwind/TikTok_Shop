@@ -116,6 +116,8 @@ The `AGENTS/` directory contains detailed design docs:
 - `API_SPEC.md` — full API contract
 - `PROJECT_DOC.md` /  — project requirements, roadmap
 - `PROJECT_PROGRESS.md` - current progress tracker
+- `openapi.json` - Swagger API specifications
+- `database_er.mermaid` - Database ER diagram
 - `火山方舟_API参考/AGENTS.md` - Specialized guide for AI agents to efficiently use the Volcano Ark API local documentation.
 
 ## ⚠️ Documentation Updates (CRITICAL)
