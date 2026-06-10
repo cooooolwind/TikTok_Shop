@@ -1,11 +1,15 @@
 import { ConfigService } from '@nestjs/config';
 import { VolcanoClientProvider } from './volcano-client.provider';
+import { AiSettingsService } from '../services/ai-settings.service';
 
 function makeProvider(config: Record<string, unknown>) {
   const configService = {
     get: jest.fn((key: string) => config[key]),
   };
-  return { provider: new VolcanoClientProvider(configService as unknown as ConfigService), configService };
+  const aiSettingsService = {
+    getTempSettings: jest.fn(() => ({})),
+  };
+  return { provider: new VolcanoClientProvider(configService as unknown as ConfigService, aiSettingsService as unknown as AiSettingsService), configService, aiSettingsService };
 }
 
 describe('VolcanoClientProvider video generation', () => {

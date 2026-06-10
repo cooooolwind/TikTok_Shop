@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+import { AiSettingsService } from '../services/ai-settings.service';
+
 export interface CreateVideoTaskInput {
   prompt: string;
   ratio: string;
@@ -77,7 +79,10 @@ const DEFAULT_CHAT_TIMEOUT_MS = 180000;
 export class VolcanoClientProvider {
   private readonly logger = new Logger(VolcanoClientProvider.name);
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly aiSettingsService: AiSettingsService,
+  ) {}
 
   async generateChat(messages: any[], options?: any): Promise<VolcanoChatCompletionResult> {
     if (this.configService.get<boolean>('volcano.mockMode')) {
@@ -124,9 +129,9 @@ export class VolcanoClientProvider {
       };
     }
 
-    const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
+    const apiKey = this.getTextApiKey();
     const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
-    const model = this.configService.get<string>('volcano.textEndpoint') ?? '';
+    const model = this.getTextEndpoint();
 
     if (!apiKey || !model) {
       this.logger.error('VOLCANO_TEXT_API_KEY or VOLCANO_TEXT_ENDPOINT is missing');
@@ -186,9 +191,9 @@ export class VolcanoClientProvider {
       };
     }
 
-    const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
+    const apiKey = this.getTextApiKey();
     const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
-    const model = this.configService.get<string>('volcano.textEndpoint') ?? '';
+    const model = this.getTextEndpoint();
 
     if (!apiKey || !model) {
       this.logger.error('VOLCANO_TEXT_API_KEY or VOLCANO_TEXT_ENDPOINT is missing');
@@ -260,9 +265,9 @@ export class VolcanoClientProvider {
       return Array.from({ length: dim }, () => Math.random() * 0.01);
     }
 
-    const apiKey = this.configService.get<string>('volcano.embeddingApiKey') ?? '';
+    const apiKey = this.getEmbeddingApiKey();
     const baseUrl = this.configService.get<string>('volcano.embeddingBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
-    const model = this.configService.get<string>('volcano.embeddingEndpoint') ?? '';
+    const model = this.getEmbeddingEndpoint();
 
     if (!apiKey || !model) {
       throw new Error('VOLCANO_EMBEDDING_API_KEY and VOLCANO_EMBEDDING_ENDPOINT are required for embedding generation');
@@ -319,7 +324,7 @@ export class VolcanoClientProvider {
       return `mock-file-${Date.now()}`;
     }
 
-    const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
+    const apiKey = this.getTextApiKey();
     const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
 
     if (!apiKey) throw new Error('VOLCANO_TEXT_API_KEY is required for file upload');
@@ -358,7 +363,7 @@ export class VolcanoClientProvider {
       return { id: fileId, status: 'active' };
     }
 
-    const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
+    const apiKey = this.getTextApiKey();
     const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
 
     if (!apiKey) throw new Error('VOLCANO_TEXT_API_KEY is required for file retrieval');
@@ -394,7 +399,7 @@ export class VolcanoClientProvider {
       return { id: fileId, deleted: true };
     }
 
-    const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
+    const apiKey = this.getTextApiKey();
     const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
 
     if (!apiKey) throw new Error('VOLCANO_TEXT_API_KEY is missing');
@@ -421,7 +426,7 @@ export class VolcanoClientProvider {
   }
 
   async listFiles(): Promise<any> {
-    const apiKey = this.configService.get<string>('volcano.textApiKey') ?? '';
+    const apiKey = this.getTextApiKey();
     const baseUrl = this.configService.get<string>('volcano.textBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
 
     if (!apiKey) return;
@@ -453,9 +458,9 @@ export class VolcanoClientProvider {
       return { url: mockUrl, imageUrl: mockUrl } as any;
     }
 
-    const apiKey = this.configService.get<string>('volcano.imageApiKey') ?? '';
+    const apiKey = this.getImageApiKey();
     const baseUrl = this.configService.get<string>('volcano.imageBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
-    const model = this.configService.get<string>('volcano.imageEndpoint') ?? '';
+    const model = this.getImageEndpoint();
 
     if (!apiKey || !model) {
       this.logger.error('VOLCANO_IMAGE_API_KEY or VOLCANO_IMAGE_ENDPOINT is missing');
@@ -484,9 +489,9 @@ export class VolcanoClientProvider {
       return { id: 'mock_video_task' } as any;
     }
 
-    const apiKey = this.configService.get<string>('volcano.videoApiKey') ?? '';
+    const apiKey = this.getVideoApiKey();
     const baseUrl = this.configService.get<string>('volcano.videoBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
-    const model = this.configService.get<string>('volcano.videoEndpoint') ?? '';
+    const model = this.getVideoEndpoint();
 
     if (!apiKey || !model) {
       throw new Error('VOLCANO_VIDEO_API_KEY and VOLCANO_VIDEO_ENDPOINT are required');
@@ -569,7 +574,7 @@ export class VolcanoClientProvider {
       } as any;
     }
 
-    const apiKey = this.configService.get<string>('volcano.videoApiKey') ?? '';
+    const apiKey = this.getVideoApiKey();
     const baseUrl = this.configService.get<string>('volcano.videoBaseUrl') ?? 'https://ark.cn-beijing.volces.com/api/v3';
 
     try {
@@ -689,5 +694,45 @@ export class VolcanoClientProvider {
 
   private sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private getTextApiKey(): string {
+    const temp = this.aiSettingsService.getTempSettings();
+    return temp.volcano_text_api_key || temp.volcano_api_key || this.configService.get<string>('volcano.textApiKey') || '';
+  }
+
+  private getTextEndpoint(): string {
+    const temp = this.aiSettingsService.getTempSettings();
+    return temp.volcano_text_endpoint || this.configService.get<string>('volcano.textEndpoint') || '';
+  }
+
+  private getImageApiKey(): string {
+    const temp = this.aiSettingsService.getTempSettings();
+    return temp.volcano_image_api_key || temp.volcano_api_key || this.configService.get<string>('volcano.imageApiKey') || '';
+  }
+
+  private getImageEndpoint(): string {
+    const temp = this.aiSettingsService.getTempSettings();
+    return temp.volcano_image_endpoint || this.configService.get<string>('volcano.imageEndpoint') || '';
+  }
+
+  private getVideoApiKey(): string {
+    const temp = this.aiSettingsService.getTempSettings();
+    return temp.volcano_video_api_key || temp.volcano_api_key || this.configService.get<string>('volcano.videoApiKey') || '';
+  }
+
+  private getVideoEndpoint(): string {
+    const temp = this.aiSettingsService.getTempSettings();
+    return temp.volcano_video_endpoint || this.configService.get<string>('volcano.videoEndpoint') || '';
+  }
+
+  private getEmbeddingApiKey(): string {
+    const temp = this.aiSettingsService.getTempSettings();
+    return temp.volcano_embedding_api_key || temp.volcano_api_key || this.configService.get<string>('volcano.embeddingApiKey') || '';
+  }
+
+  private getEmbeddingEndpoint(): string {
+    const temp = this.aiSettingsService.getTempSettings();
+    return temp.volcano_embedding_endpoint || this.configService.get<string>('volcano.embeddingEndpoint') || '';
   }
 }

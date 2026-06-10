@@ -20,13 +20,15 @@ import {
   RiseOutlined,
   ExperimentOutlined,
   ShopOutlined,
+  KeyOutlined,
 } from '@ant-design/icons';
 import { useUIStore } from '../stores/useAppStore';
 import { ROUTES } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useMaterialSubscription } from '../hooks/useMaterialSubscription';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { TempApiKeyModal } from '../components/TempApiKeyModal';
 
 const { Sider, Content, Header } = Layout;
 
@@ -159,6 +161,7 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { token } = theme.useToken();
+  const [tempApiKeyOpen, setTempApiKeyOpen] = useState(false);
 
   useMaterialSubscription();
 
@@ -282,6 +285,24 @@ export default function MainLayout() {
                   {!collapsed && '主题切换'}
                 </Button>
               </Dropdown>
+              <Button
+                type="text"
+                icon={<KeyOutlined />}
+                block
+                onClick={() => setTempApiKeyOpen(true)}
+                style={{
+                  color: token.colorText,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  padding: collapsed ? 0 : '4px 15px',
+                  height: 32,
+                  marginTop: 8,
+                  borderRadius: collapsed ? 0 : token.borderRadius,
+                }}
+              >
+                {!collapsed && '临时 API Key'}
+              </Button>
             </div>
           </div>
         </Sider>
@@ -319,9 +340,10 @@ export default function MainLayout() {
                 ]
               },
               {
-                title: '主题设置',
+                title: '系统设置',
                 items: [
                   { key: 'THEME_TOGGLE', icon: themeMode === 'dark' ? <SunOutlined /> : <MoonOutlined />, label: themeMode === 'dark' ? '开灯' : '关灯' },
+                  { key: 'TEMP_API_KEY', icon: <KeyOutlined />, label: '临时 API Key' },
                 ]
               }
             ].flatMap((group, groupIndex) => {
@@ -349,6 +371,8 @@ export default function MainLayout() {
                       onClick={() => {
                         if (item.key === 'THEME_TOGGLE') {
                           setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
+                        } else if (item.key === 'TEMP_API_KEY') {
+                          setTempApiKeyOpen(true);
                         } else if (item.key) {
                           navigate(item.key);
                         }
@@ -419,6 +443,7 @@ export default function MainLayout() {
           <Outlet />
         </Content>
       </Layout>
+      <TempApiKeyModal open={tempApiKeyOpen} onCancel={() => setTempApiKeyOpen(false)} />
     </Layout>
   );
 }

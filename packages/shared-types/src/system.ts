@@ -19,3 +19,24 @@ export interface UploadResponse {
   filename: string;
   size: number;
 }
+
+// ===== 系统设置 =====
+
+export interface AiSettingsDto {
+  volcano_api_key?: string;
+  volcano_text_api_key?: string;
+  volcano_text_endpoint?: string;
+  volcano_image_api_key?: string;
+  volcano_image_endpoint?: string;
+  volcano_video_api_key?: string;
+  volcano_video_endpoint?: string;
+  volcano_embedding_api_key?: string;
+  volcano_embedding_endpoint?: string;
+}
+
+export type SetTempApiKeyDto = AiSettingsDto;
+
+export interface TempApiKeyResponse {
+  has_temp_settings: boolean;
+  settings: AiSettingsDto;
+}

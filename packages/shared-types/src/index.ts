@@ -121,6 +121,7 @@ export type {
 } from './analytics';
 
 // 系统
+export * from './system';
 export type { ServiceStatus, HealthResponse, UploadResponse } from './system';
 
 // WebSocket
