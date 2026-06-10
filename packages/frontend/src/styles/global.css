@@ -182,3 +182,69 @@ body {
     transform: scale(1) translateY(0);
   }
 }
+
+/* AI Shimmer Text Animation */
+.ai-shimmer-text {
+  background: linear-gradient(
+    120deg,
+    var(--shimmer-base, #1677ff) 40%,
+    var(--shimmer-highlight, #87e8de) 50%,
+    var(--shimmer-base, #1677ff) 60%
+  );
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: ai-shimmer 2s linear infinite;
+  display: inline-block;
+  font-weight: 500;
+}
+
+@keyframes ai-shimmer {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* Card fade-in animation */
+.card-fade-in {
+  animation: cardFadeIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes cardFadeIn {
+  0% {
+    opacity: 0.5;
+    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.5);
+    transform: scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(22, 119, 255, 0);
+    transform: scale(1);
+  }
+}
+
+/* Remove focus shadow for search box input and default buttons */
+.no-highlight-search .ant-input:hover,
+.no-highlight-search .ant-input:focus,
+.no-highlight-search .ant-input-focused,
+.no-highlight-search .ant-btn-default:hover,
+.no-highlight-search .ant-btn-default:focus {
+  box-shadow: none !important;
+}
+.no-highlight-search .ant-input:hover,
+.no-highlight-search .ant-input:focus,
+.no-highlight-search .ant-input-focused {
+  border-color: #424242 !important;
+}
+.no-highlight-search .ant-btn-default:hover,
+.no-highlight-search .ant-btn-default:focus {
+  border-color: #424242 !important;
+}
+:root[data-theme='light'] .no-highlight-search .ant-input:hover,
+:root[data-theme='light'] .no-highlight-search .ant-input:focus,
+:root[data-theme='light'] .no-highlight-search .ant-input-focused,
+:root[data-theme='light'] .no-highlight-search .ant-btn-default:hover,
+:root[data-theme='light'] .no-highlight-search .ant-btn-default:focus {
+  border-color: #d9d9d9 !important;
+}

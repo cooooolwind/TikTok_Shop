@@ -16,7 +16,7 @@ export function useMaterialSubscription() {
   useEffect(() => {
     const unsub1 = onMaterialAnalyzed((data) => {
       if (data.material_id) {
-        setMaterialAnalyzed(data.material_id, data.ai_tags, data.ai_description);
+        setMaterialAnalyzed(data.material_id, data.ai_tags, data.ai_description, data.name);
       }
     });
 

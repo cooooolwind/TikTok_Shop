@@ -16,8 +16,10 @@ import { VideoUtil } from '../../common/utils/video.util';
 import { EmbeddingService } from '../../modules/materials/embedding.service';
 import { QUEUES } from '../queues';
 
-interface MaterialAnalysisJob {
+interface AnalyzeJobData {
   materialId: string;
+  autoGenerateName?: boolean;
+  autoGenerateCategory?: boolean;
 }
 
 interface AiSliceResult {
@@ -28,17 +30,20 @@ interface AiSliceResult {
 }
 
 interface AiAnalysisResult {
+  name?: string;
   tags: string[];
   description: string;
   slices?: AiSliceResult[];
 }
 
 interface ReferenceAnalysisResult {
+  name?: string;
   hook: string;
   selling_points: string[];
   style: string;
   duration: number;
   storyboard: any[];
+  category?: string;
 }
 
 @Processor(QUEUES.MATERIAL_ANALYSIS)
@@ -60,12 +65,12 @@ export class MaterialAnalysisProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<MaterialAnalysisJob>): Promise<AiAnalysisResult> {
-    const { materialId } = job.data;
+  async process(job: Job<AnalyzeJobData>) {
+    const { materialId, autoGenerateName, autoGenerateCategory } = job.data;
     this.logger.log(`Starting multimodal analysis for material: ${materialId}`);
 
     let fileId: string | null = null;
-    let result: AiAnalysisResult;
+    let result: AiAnalysisResult | any;
     try {
       const material = await this.materialsRepository.findOne({ where: { id: materialId } });
       if (!material) {
@@ -159,7 +164,11 @@ export class MaterialAnalysisProcessor extends WorkerHost {
           });
           await this.analysisRepository.save(analysisRecord);
           
-          result = { tags: ['reference'], description: refResult.hook || '参考视频', slices: [] };
+          result = { name: refResult.name, tags: ['reference'], description: refResult.hook || '参考视频', slices: [] };
+          if (autoGenerateCategory && refResult.category && refResult.category !== 'other') {
+            material.category = refResult.category as any;
+            this.logger.log(`Auto-generated category for material ${materialId}: ${refResult.category}`);
+          }
         } else {
           const input = buildVideoAnalysisInput(fileId);
 
@@ -184,6 +193,10 @@ export class MaterialAnalysisProcessor extends WorkerHost {
       }
 
       // 4. Update Material
+      if (autoGenerateName && result.name && result.name !== 'auto-tagged') {
+        material.name = result.name;
+        this.logger.log(`Auto-generated name for material ${materialId}: ${result.name}`);
+      }
       material.aiTags = result.tags;
       material.aiDescription = result.description;
       const isFallback = result.tags.length === 1 && result.tags[0] === 'auto-tagged';
@@ -200,7 +213,7 @@ export class MaterialAnalysisProcessor extends WorkerHost {
       if (isFallback) {
         this.tasksGateway.emitMaterialAnalysisFailed(material.id, result.description);
       } else {
-        this.tasksGateway.emitMaterialAnalyzed(material.id, material.aiTags, material.aiDescription);
+        this.tasksGateway.emitMaterialAnalyzed(material.id, material.aiTags, material.aiDescription, autoGenerateName ? material.name : undefined);
       }
 
       // 8. Generate embeddings (semantic vectorization)
@@ -286,6 +299,7 @@ export class MaterialAnalysisProcessor extends WorkerHost {
       const jsonStr = content.replace(/```json\n?|\n?```/g, '').trim();
       const parsed = JSON.parse(jsonStr);
       return {
+        name: typeof parsed.name === 'string' ? parsed.name : undefined,
         tags: Array.isArray(parsed.tags) ? parsed.tags : [],
         description: typeof parsed.description === 'string' ? parsed.description : 'No description provided.',
         slices: Array.isArray(parsed.slices) ? parsed.slices : undefined,
@@ -299,11 +313,13 @@ export class MaterialAnalysisProcessor extends WorkerHost {
     }
   }
 
-  private parseReferenceAiResponse(content: string): ReferenceAnalysisResult {
+  private parseReferenceAiResponse(content: string): ReferenceAnalysisResult & { category?: string } {
     try {
       const jsonStr = content.replace(/```json\n?|\n?```/g, '').trim();
       const parsed = JSON.parse(jsonStr);
       return {
+        name: typeof parsed.name === 'string' ? parsed.name : undefined,
+        category: typeof parsed.category === 'string' ? parsed.category : undefined,
         hook: typeof parsed.hook === 'string' ? parsed.hook : '',
         selling_points: Array.isArray(parsed.selling_points) ? parsed.selling_points : [],
         style: typeof parsed.style === 'string' ? parsed.style : '',

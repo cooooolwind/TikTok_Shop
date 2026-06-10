@@ -32,7 +32,11 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
         loading: false,
       }));
     } catch {
-      set({ loading: false });
+      set((s) => ({
+        loading: false,
+        items: append ? s.items : [],
+        total: append ? s.total : 0,
+      }));
       useUIStore.getState().pushNotification({ type: 'error', title: '加载素材列表失败' });
     }
   },
@@ -72,7 +76,6 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       await materialsApi.upload(formData);
       set({ uploading: false, uploadVisible: false, uploadProgress: 100 });
       useUIStore.getState().pushNotification({ type: 'success', title: '上传成功', message: file.name });
-      get().fetchList();
     } catch {
       set({ uploading: false, uploadProgress: 0 });
       useUIStore.getState().pushNotification({ type: 'error', title: '上传失败' });
@@ -128,16 +131,16 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
     }
   },
 
-  setMaterialAnalyzed: (id, tags, description) => {
+  setMaterialAnalyzed: (id, tags, description, name) => {
     set((s) => {
       const updateDetail = (m: MaterialDetail | null) => {
         if (m?.id !== id) return m;
-        return { ...m, ai_tags: tags, ai_description: description, status: 'processing' as const };
+        return { ...m, ai_tags: tags, ai_description: description, status: 'processing' as const, ...(name ? { name } : {}) };
       };
 
       const updateItem = (m: Material) => {
         if (m.id !== id) return m;
-        return { ...m, ai_tags: tags, ai_description: description, status: 'processing' as const };
+        return { ...m, ai_tags: tags, ai_description: description, status: 'processing' as const, ...(name ? { name } : {}) };
       };
 
       return {

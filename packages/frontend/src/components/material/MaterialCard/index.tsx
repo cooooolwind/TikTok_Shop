@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button, Card, Image, Modal, Tag, Space, Typography } from 'antd';
 import {
   FileImageOutlined,
   VideoCameraOutlined,
   DeleteOutlined,
   EyeOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons';
 import type { Material } from '@aigc/shared-types';
 import StatusTag from '../../common/StatusTag';
@@ -35,9 +36,22 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
     setPreviewOpen(true);
   };
 
+  const [justAnalyzed, setJustAnalyzed] = useState(false);
+  const prevStatus = useRef(material.status);
+
+  useEffect(() => {
+    if (prevStatus.current === 'processing' && material.status === 'ready') {
+      setJustAnalyzed(true);
+      const timer = setTimeout(() => setJustAnalyzed(false), 800);
+      return () => clearTimeout(timer);
+    }
+    prevStatus.current = material.status;
+  }, [material.status]);
+
   return (
     <Card
       hoverable
+      className={justAnalyzed ? 'card-fade-in' : ''}
       style={{
         borderColor: selected ? '#1677ff' : undefined,
         borderWidth: selected ? 2 : 1,
@@ -114,9 +128,15 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
     >
       <Card.Meta
         title={
-          <Text ellipsis style={{ maxWidth: '100%' }} title={material.name}>
-            {material.name}
-          </Text>
+          material.status === 'processing' && material.name === material.filename ? (
+            <Text ellipsis style={{ maxWidth: '100%' }} title="AI 智能命名中...">
+              <span className="ai-shimmer-text" style={{ '--shimmer-base': isVideo ? '#1677ff' : '#52c41a', '--shimmer-highlight': isVideo ? '#87e8de' : '#b7eb8f' } as React.CSSProperties}>AI 智能命名中...</span>
+            </Text>
+          ) : (
+            <Text ellipsis style={{ maxWidth: '100%', color: isVideo ? '#1677ff' : '#52c41a' }} title={material.name}>
+              {material.name}
+            </Text>
+          )
         }
         description={
           <Space direction="vertical" size={4} style={{ width: '100%' }}>

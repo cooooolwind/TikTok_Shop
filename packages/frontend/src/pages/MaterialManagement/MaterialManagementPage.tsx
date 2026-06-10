@@ -30,7 +30,7 @@ export default function MaterialManagementPage() {
     items, total, loading, filters,
     uploadVisible, uploading, uploadProgress,
     fetchList, setFilters, remove, batchRemove,
-    setUploadVisible, upload,
+    setUploadVisible, upload, semanticSearch,
   } = useMaterialStore();
 
   const { value: keyword, debouncedValue: debouncedKeyword, setValue: setKeyword } = useDebouncedSearch(500);
@@ -165,7 +165,7 @@ export default function MaterialManagementPage() {
           activeKey={activeTab}
           onChange={(k) => {
             setActiveTab(k);
-            setFilters({ page: 1 });
+            setFilters({ page: 1, category: undefined, type: undefined, status: undefined });
             pagination.reset();
           }}
           items={[
@@ -176,62 +176,83 @@ export default function MaterialManagementPage() {
 
         {/* 筛选栏 */}
         <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={8} md={6}>
-            <Input
-              placeholder="搜索素材名称 / 描述 / 标签..."
-              prefix={<SearchOutlined />}
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              allowClear
-            />
-          </Col>
-          <Col xs={8} sm={5} md={3}>
-            <Select
-              placeholder="类型"
-              allowClear
-              style={{ width: '100%' }}
-              onChange={handleTypeChange}
-              options={[
-                { label: '图片', value: 'image' },
-                { label: '视频', value: 'video' },
-              ]}
-            />
-          </Col>
-          <Col xs={8} sm={5} md={3}>
-            <Button
-              type="primary"
-              ghost
-              icon={<ThunderboltOutlined />}
-              onClick={() => setSemanticSearchVisible(true)}
-            >
-              语义搜索
-            </Button>
-          </Col>
-          <Col xs={8} sm={5} md={3}>
-            <Select
-              placeholder="分类"
-              allowClear
-              style={{ width: '100%' }}
-              onChange={handleCategoryChange}
-              options={Object.entries(activeTab === 'reference' ? REFERENCE_CATEGORY_LABELS : MATERIAL_CATEGORY_LABELS).map(([k, v]) => ({ label: v, value: k }))}
-            />
-          </Col>
-          <Col xs={8} sm={5} md={3}>
-            <Select
-              placeholder="状态"
-              allowClear
-              style={{ width: '100%' }}
-              onChange={handleStatusChange}
-              options={Object.entries(MATERIAL_STATUS_LABELS).map(([k, v]) => ({ label: v, value: k }))}
-            />
-          </Col>
-          {selectedIds.length > 0 && (
-            <Col>
-              <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete}>
-                删除 ({selectedIds.length})
+          <Col xs={24} sm={24} md={24} lg={12} xl={10}>
+            <div style={{ display: 'flex', gap: 8, width: '100%' }} className="no-highlight-search">
+              <Input
+                style={{ flex: 1 }}
+                placeholder="搜索素材名称 / 描述 / 标签..."
+                prefix={<SearchOutlined />}
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                onPressEnter={() => {
+                  if (keyword.trim()) {
+                    semanticSearch(keyword.trim(), filters.type);
+                    setSemanticSearchVisible(true);
+                  }
+                }}
+                allowClear
+              />
+              <Button
+                icon={<SearchOutlined />}
+                onClick={() => {
+                  if (keyword !== debouncedKeyword) {
+                    setKeyword(keyword);
+                  }
+                }}
+              >
+                文本搜索
               </Button>
-            </Col>
-          )}
+              <Button
+                type="primary"
+                ghost
+                icon={<ThunderboltOutlined />}
+                onClick={() => {
+                  if (keyword.trim()) {
+                    semanticSearch(keyword.trim(), filters.type);
+                    setSemanticSearchVisible(true);
+                  }
+                }}
+              >
+                语义搜索
+              </Button>
+            </div>
+          </Col>
+
+          <Col flex="auto">
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              {activeTab !== 'reference' && (
+                <Select
+                  placeholder="类型"
+                  allowClear
+                  style={{ width: 100 }}
+                  onChange={handleTypeChange}
+                  options={[
+                    { label: '图片', value: 'image' },
+                    { label: '视频', value: 'video' },
+                  ]}
+                />
+              )}
+              <Select
+                placeholder="分类"
+                allowClear
+                style={{ width: 140 }}
+                onChange={handleCategoryChange}
+                options={Object.entries(activeTab === 'reference' ? REFERENCE_CATEGORY_LABELS : MATERIAL_CATEGORY_LABELS).map(([k, v]) => ({ label: v, value: k }))}
+              />
+              <Select
+                placeholder="状态"
+                allowClear
+                style={{ width: 120 }}
+                onChange={handleStatusChange}
+                options={Object.entries(MATERIAL_STATUS_LABELS).map(([k, v]) => ({ label: v, value: k }))}
+              />
+              {selectedIds.length > 0 && (
+                <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete}>
+                  删除 ({selectedIds.length})
+                </Button>
+              )}
+            </div>
+          </Col>
         </Row>
 
         {/* 素材列表 */}
@@ -318,9 +339,18 @@ export default function MaterialManagementPage() {
           isReferenceMode={activeTab === 'reference'}
           uploading={uploading}
           uploadProgress={uploadProgress}
-          onUpload={(values: { file: UploadFile | File; name?: string; category: string; source_declaration: string; tags: string[]; source_platform?: string }) => {
+          onUpload={async (values: { file: UploadFile | File; name?: string; category: string; source_declaration: string; tags: string[]; source_platform?: string }) => {
             const file = ('originFileObj' in values.file ? values.file.originFileObj : values.file) as File;
-            upload(file, values.category, values.source_declaration, values.tags, values.name, values.source_platform);
+            await upload(file, values.category, values.source_declaration, values.tags, values.name, values.source_platform);
+            
+            // 手动触发刷新以保留当前 tab 状态的正确参数
+            const fetchFilters = { ...filters, keyword: debouncedKeyword || undefined };
+            if (activeTab === 'reference') {
+              fetchFilters.source_declaration = 'reference';
+            } else {
+              (fetchFilters as any).exclude_source_declaration = 'reference';
+            }
+            fetchList({ ...fetchFilters, page: 1, pageSize: 20 }, false);
           }}
           onCancel={() => setUploadVisible(false)}
         />
@@ -374,8 +404,8 @@ function UploadForm({
 
   const renderFormContent = () => (
     <>
-      <Form.Item name="name" label="素材名称">
-        <Input placeholder="如果不填写，将默认使用原始文件名" />
+      <Form.Item name="name" label={isReferenceMode ? "参考视频名称" : "素材名称"}>
+        <Input placeholder="如果不填写，将由 AI 根据内容自动智能命名" />
       </Form.Item>
 
       <Form.Item label="选择文件" required>
@@ -398,7 +428,9 @@ function UploadForm({
 
       <Form.Item name="category" label="分类" rules={[{ required: true }]}>
         <Select
-          options={Object.entries(isReferenceMode ? REFERENCE_CATEGORY_LABELS : MATERIAL_CATEGORY_LABELS).map(([k, v]) => ({ label: v, value: k }))}
+          options={isReferenceMode 
+            ? [{ label: 'AI自动分析', value: 'auto' }, ...Object.entries(REFERENCE_CATEGORY_LABELS).map(([k, v]) => ({ label: v, value: k }))]
+            : Object.entries(MATERIAL_CATEGORY_LABELS).map(([k, v]) => ({ label: v, value: k }))}
         />
       </Form.Item>
 
@@ -436,7 +468,7 @@ function UploadForm({
   );
 
   return (
-    <Form form={form} layout="vertical" initialValues={{ category: isReferenceMode ? 'beauty_skincare' : 'product', source_declaration: isReferenceMode ? 'reference' : 'owned' }}>
+    <Form form={form} layout="vertical" initialValues={{ category: isReferenceMode ? 'auto' : 'product', source_declaration: isReferenceMode ? 'reference' : 'owned' }}>
       {isReferenceMode ? (
         <Tabs activeKey={activeUploadTab} onChange={setActiveUploadTab} items={[
           { key: 'upload', label: '本地上传', children: renderFormContent() },
