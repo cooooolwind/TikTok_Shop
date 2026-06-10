@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Card, Progress, Space, Steps, Tag, Typography } from 'antd';
+import { Alert, Card, Progress, Space, Tag, Typography } from 'antd';
+import { CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined } from '@ant-design/icons';
 import type { GenerationTask, VideoSegmentResult } from '@aigc/shared-types';
 import StatusTag from '../../common/StatusTag';
 import { TASK_STATUS_LABELS } from '../../../constants';
@@ -46,8 +47,22 @@ function getSegmentStepStatus(
 ) {
   if (segment?.status === 'failed') return 'error' as const;
   if (isSegmentSucceeded(segment)) return 'finish' as const;
+  if (segment?.status === 'submitted' || segment?.status === 'running') return 'process' as const;
   if (current && taskStatus !== 'failed') return 'process' as const;
   return 'wait' as const;
+}
+
+function getSegmentTagProps(status: ReturnType<typeof getSegmentStepStatus>) {
+  switch (status) {
+    case 'error':
+      return { color: 'error' as const, icon: <CloseCircleOutlined /> };
+    case 'finish':
+      return { color: 'success' as const, icon: <CheckCircleOutlined /> };
+    case 'process':
+      return { color: 'processing' as const, icon: <LoadingOutlined spin /> };
+    default:
+      return { color: 'default' as const };
+  }
 }
 
 function getSegmentDurationSeconds(segment: VideoSegmentResult) {
@@ -120,18 +135,16 @@ export default function TaskProgressPanel({ task }: TaskProgressPanelProps) {
               strokeColor={task.status === 'failed' ? undefined : { from: '#1677ff', to: '#52c41a' }}
             />
             {segmentItems.length > 0 && (
-              <Steps size="small" current={Math.max((progress.segment_index ?? 1) - 1, 0)} items={segmentItems} />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+                {segmentItems.map((item, index) => (
+                  <Tag key={index} {...getSegmentTagProps(item.status)}>
+                    镜头 {index + 1}
+                  </Tag>
+                ))}
+                <Tag>已用时 {formatProgressTime(displayElapsedSeconds)}</Tag>
+                <Tag>预计剩余 {formatProgressTime(displayRemainingSeconds)}</Tag>
+              </div>
             )}
-            <Space wrap size={[8, 8]}>
-              <Tag color="blue">{progress.phase_label ?? progress.step_name}</Tag>
-              {progress.segment_index && progress.segment_total && (
-                <Tag>
-                  镜头 {progress.segment_index}/{progress.segment_total}
-                </Tag>
-              )}
-              <Tag>已用时 {formatProgressTime(displayElapsedSeconds)}</Tag>
-              <Tag>预计剩余 {formatProgressTime(displayRemainingSeconds)}</Tag>
-            </Space>
             <Text type="secondary">{formatDisplayProgress(progress)}</Text>
           </>
         )}
@@ -144,7 +157,15 @@ export default function TaskProgressPanel({ task }: TaskProgressPanelProps) {
               message={`已生成 ${totalSegments || 1} 个分镜片段`}
               description="完整视频会在点击“导出完整视频”时按需拼接。"
             />
-            {segmentItems.length > 0 && <Steps size="small" current={segmentItems.length - 1} items={segmentItems} />}
+            {segmentItems.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+                {segmentItems.map((item, index) => (
+                  <Tag key={index} {...getSegmentTagProps(item.status)}>
+                    镜头 {index + 1}
+                  </Tag>
+                ))}
+              </div>
+            )}
             <Space wrap>
               <Tag>总时长 {task.result.duration}s</Tag>
               <Tag>{task.result.resolution}</Tag>
