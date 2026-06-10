@@ -39,6 +39,7 @@ function makeTask(overrides: Partial<GenerationTask> = {}): GenerationTask {
   return {
     id: 'task-1',
     scriptId: 'script-1',
+    displayName: null,
     status: 'queued',
     progress: {
       current_step: 0,
@@ -159,6 +160,23 @@ describe('GenerationService', () => {
       expect.objectContaining({ attempts: 1 }),
     );
     expect(result).toEqual(expect.objectContaining({ id: 'task-1', script_id: 'script-1', status: 'queued' }));
+  });
+
+  it('uses a user provided task name as the returned display id', async () => {
+    const { service, tasksRepository } = makeService();
+
+    const result = await service.create({
+      script_id: 'script-1',
+      display_name: '夏季连衣裙主推视频',
+      options: { resolution: '1080x1920' },
+    });
+
+    expect(tasksRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        displayName: '夏季连衣裙主推视频',
+      }),
+    );
+    expect(result.display_id).toBe('夏季连衣裙主推视频');
   });
 
   it('rejects video generation when the script is not confirmed', async () => {

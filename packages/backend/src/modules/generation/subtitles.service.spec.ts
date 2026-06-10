@@ -12,6 +12,7 @@ function makeTask(overrides: Partial<GenerationTask> = {}): GenerationTask {
   return {
     id: 'task-1',
     scriptId: 'script-1',
+    displayName: null,
     status: 'done',
     progress: null,
     result: null,

@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import PageHeader from '../../components/common/PageHeader';
+import WorkflowGuide from '../../components/common/WorkflowGuide';
 import MaterialCard from '../../components/material/MaterialCard';
 import EmptyState from '../../components/common/EmptyState';
 import SemanticSearchModal from '../../components/material/SemanticSearchModal';
@@ -151,9 +152,12 @@ export default function MaterialManagementPage() {
         <PageHeader
           title="素材管理"
           extra={
-            <Button type="primary" icon={<UploadOutlined />} onClick={() => setUploadVisible(true)}>
-              {activeTab === 'reference' ? '上传参考视频' : '上传素材'}
-            </Button>
+            <Space wrap>
+              {activeTab === 'base' && <WorkflowGuide current="materials" />}
+              <Button type="primary" icon={<UploadOutlined />} onClick={() => setUploadVisible(true)}>
+                {activeTab === 'reference' ? '上传参考视频' : '上传素材'}
+              </Button>
+            </Space>
           }
         />
 

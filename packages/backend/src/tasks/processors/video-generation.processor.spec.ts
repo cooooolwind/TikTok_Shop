@@ -75,6 +75,7 @@ function makeTask(overrides: Partial<GenerationTask> = {}): GenerationTask {
   return {
     id: 'task-1',
     scriptId: 'script-1',
+    displayName: null,
     status: 'queued',
     progress: null as never,
     result: null as never,

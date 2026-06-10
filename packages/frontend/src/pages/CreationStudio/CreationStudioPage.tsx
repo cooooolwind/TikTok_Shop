@@ -56,7 +56,6 @@ export default function CreationStudioPage() {
           </Space>
         }
       />
-
       <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
         <Col>
           <Select

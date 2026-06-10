@@ -110,6 +110,7 @@ export interface GenerationTask {
 
 export interface CreateVideoRequest {
   script_id: string;
+  display_name?: string;
   options?: VideoOptions;
 }
 

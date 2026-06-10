@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Card, Form, Select, Slider, Button, Typography,
+  Card, Form, Select, Slider, Button, Typography, Input,
   Row, Col, Divider, Spin, Alert, Image, message,
 } from 'antd';
 import { ThunderboltOutlined } from '@ant-design/icons';
@@ -46,6 +46,7 @@ export default function CreateTask() {
       }
       createVideo({
         script_id: values.script_id,
+        display_name: values.display_name?.trim() || undefined,
         options: {
           resolution: values.resolution,
           tts_voice: values.tts_voice,
@@ -76,6 +77,13 @@ export default function CreateTask() {
             <Form form={form} layout="vertical" initialValues={{ resolution: '1080x1920', tts_speed: 1.0, bgm_volume: 0.3 }}>
               <Text strong style={{ fontSize: 16 }}>选择剧本</Text>
               <Divider />
+              <Form.Item
+                name="display_name"
+                label="任务名称"
+                extra="可选；不填写时会自动使用系统编号。"
+              >
+                <Input maxLength={120} placeholder="例如：夏季连衣裙主推视频" />
+              </Form.Item>
               <Form.Item name="script_id" label="已确认的剧本" rules={[{ required: true, message: '请选择剧本' }]}>
                 <Select
                   showSearch

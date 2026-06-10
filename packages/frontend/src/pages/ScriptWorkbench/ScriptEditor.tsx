@@ -26,6 +26,7 @@ import {
 } from '@ant-design/icons';
 import type { BlueprintScene, Scene, ScriptBlueprint, TaskProgress } from '@aigc/shared-types';
 import PageHeader from '../../components/common/PageHeader';
+import WorkflowGuide from '../../components/common/WorkflowGuide';
 import StatusTag from '../../components/common/StatusTag';
 import { SCRIPT_MODE_LABELS, SCRIPT_STATUS_LABELS } from '../../constants';
 import { subscribeTask, unsubscribeTask, onScriptGenerated, onTaskFailed, onTaskProgress } from '../../services/socket';
@@ -213,6 +214,7 @@ export default function ScriptEditor() {
         ]}
         extra={
           <Space wrap>
+            <WorkflowGuide current="script" />
             <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/scripts')}>
               返回列表
             </Button>

@@ -96,6 +96,9 @@ export class GenerationTask {
   @Column({ name: 'script_id' })
   scriptId: string;
 
+  @Column({ name: 'display_name', type: 'varchar', length: 120, nullable: true })
+  displayName: string | null;
+
   @Column({
     type: 'enum',
     enum: ['queued', 'processing', 'done', 'failed'],

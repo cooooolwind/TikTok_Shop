@@ -140,7 +140,7 @@ export interface CreationState {
   fetchTasks: (params?: GenerationListQuery) => Promise<void>;
   fetchTask: (taskId: string) => Promise<void>;
 
-  createVideo: (params: { script_id: string; options?: VideoOptions }) => Promise<GenerationTask>;
+  createVideo: (params: { script_id: string; display_name?: string; options?: VideoOptions }) => Promise<GenerationTask>;
   quickGenerate: (params: { product_info: ProductInfo; template_id?: string; options?: VideoOptions }) => Promise<GenerationTask>;
 
   retry: (taskId: string) => Promise<void>;

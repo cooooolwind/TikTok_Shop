@@ -9,6 +9,7 @@ import {
   BarChartOutlined,
 } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
+import WorkflowGuide from '../../components/common/WorkflowGuide';
 import { analyticsApi } from '../../services/analytics.api';
 import type { HomeStats } from '@aigc/shared-types';
 
@@ -32,7 +33,10 @@ export default function HomePage() {
 
   return (
     <div>
-      <PageHeader title="欢迎使用 AIGC 带货视频生成平台" />
+      <PageHeader
+        title="欢迎使用 AIGC 带货视频生成平台"
+        extra={<WorkflowGuide current="materials" nextStep="materials" />}
+      />
 
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col span={24}>

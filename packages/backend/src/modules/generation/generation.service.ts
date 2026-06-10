@@ -96,6 +96,7 @@ export class GenerationService {
     const task = await this.tasksRepository.save(
       this.tasksRepository.create({
         scriptId: script.id,
+        displayName: this.normalizeDisplayName(data.display_name),
         status: 'queued',
         progress: DEFAULT_PROGRESS,
         result: null,
@@ -362,6 +363,11 @@ export class GenerationService {
     return String(error);
   }
 
+  private normalizeDisplayName(displayName?: string) {
+    const normalized = displayName?.trim();
+    return normalized ? normalized.slice(0, 120) : null;
+  }
+
   private async enqueue(taskId: string, scriptId: string, options?: CreateVideoRequest['options']) {
     await this.videoQueue.add(
       'generate',
@@ -394,11 +400,12 @@ export class GenerationService {
   private toTaskResponse(task: GenerationTask, script?: Script): GenerationTaskResponse {
     const scriptDisplayId = toScriptDisplayId(script?.createdAt ?? task.script?.createdAt);
     const taskParts = getBeijingCompactParts(task.createdAt);
+    const displayName = task.displayName?.trim();
     return {
       id: task.id,
-      display_id: scriptDisplayId
+      display_id: displayName || (scriptDisplayId
         ? `${scriptDisplayId}-SP${taskParts.hour}${taskParts.minute}`
-        : `SP${taskParts.year}${taskParts.month}${taskParts.day}-${taskParts.hour}${taskParts.minute}`,
+        : `SP${taskParts.year}${taskParts.month}${taskParts.day}-${taskParts.hour}${taskParts.minute}`),
       script_id: task.scriptId,
       script_display_id: scriptDisplayId,
       status: task.status,

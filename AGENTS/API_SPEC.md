@@ -491,6 +491,7 @@ interface RegenerateSceneRequest {
 ```typescript
 interface CreateVideoRequest {
   script_id: string;            // 已确认的剧本 ID
+  display_name?: string;        // 可选任务名称；不填写时系统返回默认 JB...SP... 编号
   options?: {
     resolution: "1080x1920" | "1920x1080" | "1080x1080";
     aspect_ratio: "9:16" | "16:9" | "1:1";
@@ -508,6 +509,7 @@ interface CreateVideoRequest {
 ```typescript
 interface GenerationTask {
   id: string;
+  display_id?: string;           // 用户任务名称或系统默认任务编号
   script_id: string;
   status: "queued" | "processing" | "done" | "failed";
   progress: {
