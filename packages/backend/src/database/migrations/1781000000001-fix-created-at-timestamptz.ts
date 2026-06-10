@@ -20,7 +20,7 @@ export class FixCreatedAtTimestamptz1781000000001 implements MigrationInterface 
       `ALTER TABLE "materials" ALTER COLUMN "created_at" TYPE TIMESTAMPTZ, ALTER COLUMN "updated_at" TYPE TIMESTAMPTZ`,
     );
     await queryRunner.query(
-      `ALTER TABLE "material_analyses" ALTER COLUMN "created_at" TYPE TIMESTAMPTZ, ALTER COLUMN "updated_at" TYPE TIMESTAMPTZ`,
+      `ALTER TABLE "material_analysis" ALTER COLUMN "created_at" TYPE TIMESTAMPTZ, ALTER COLUMN "updated_at" TYPE TIMESTAMPTZ`,
     );
     await queryRunner.query(
       `ALTER TABLE "video_slices" ALTER COLUMN "created_at" TYPE TIMESTAMPTZ`,
@@ -50,7 +50,7 @@ export class FixCreatedAtTimestamptz1781000000001 implements MigrationInterface 
       `ALTER TABLE "materials" ALTER COLUMN "created_at" TYPE TIMESTAMP, ALTER COLUMN "updated_at" TYPE TIMESTAMP`,
     );
     await queryRunner.query(
-      `ALTER TABLE "material_analyses" ALTER COLUMN "created_at" TYPE TIMESTAMP, ALTER COLUMN "updated_at" TYPE TIMESTAMP`,
+      `ALTER TABLE "material_analysis" ALTER COLUMN "created_at" TYPE TIMESTAMP, ALTER COLUMN "updated_at" TYPE TIMESTAMP`,
     );
     await queryRunner.query(
       `ALTER TABLE "video_slices" ALTER COLUMN "created_at" TYPE TIMESTAMP`,
