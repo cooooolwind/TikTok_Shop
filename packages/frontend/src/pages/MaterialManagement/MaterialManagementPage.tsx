@@ -233,8 +233,8 @@ export default function MaterialManagementPage() {
         {/* 素材列表 */}
         {!loading && items.length === 0 ? (
           <EmptyState
-            description="暂无素材"
-            actionText="上传素材"
+            description={activeTab === 'reference' ? '暂无参考视频' : '暂无素材'}
+            actionText={activeTab === 'reference' ? '上传参考视频' : '上传素材'}
             onAction={() => setUploadVisible(true)}
           />
         ) : (
@@ -308,6 +308,7 @@ export default function MaterialManagementPage() {
         onCancel={() => setUploadVisible(false)}
         footer={null}
         width={560}
+        destroyOnClose
       >
         <UploadForm
           isReferenceMode={activeTab === 'reference'}
@@ -431,7 +432,7 @@ function UploadForm({
   );
 
   return (
-    <Form form={form} layout="vertical" initialValues={{ category: isReferenceMode ? 'beauty' : 'product', source_declaration: isReferenceMode ? 'reference' : 'owned' }}>
+    <Form form={form} layout="vertical" initialValues={{ category: isReferenceMode ? 'beauty_skincare' : 'product', source_declaration: isReferenceMode ? 'reference' : 'owned' }}>
       {isReferenceMode ? (
         <Tabs activeKey={activeUploadTab} onChange={setActiveUploadTab} items={[
           { key: 'upload', label: '本地上传', children: renderFormContent() },

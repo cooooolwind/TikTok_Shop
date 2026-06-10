@@ -30,6 +30,12 @@ vi.mock('../../stores/useTemplateStore', () => ({
   }),
 }));
 
+vi.mock('../../services/materials.api', () => ({
+  materialsApi: {
+    list: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+  },
+}));
+
 vi.mock('../../stores/useMaterialStore', () => ({
   useMaterialStore: () => ({
     items: [
