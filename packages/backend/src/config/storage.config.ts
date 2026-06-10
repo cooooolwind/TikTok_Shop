@@ -1,6 +1,6 @@
 import { registerAs } from '@nestjs/config';
 import { isAbsolute, join } from 'path';
-import { existsSync } from 'fs';
+
 
 function resolveUploadDir(value?: string) {
   if (value && isAbsolute(value)) {
