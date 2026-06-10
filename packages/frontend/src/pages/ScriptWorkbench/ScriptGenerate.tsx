@@ -14,6 +14,11 @@ import {
   type ScriptEntryMode,
   type ScriptGenerateFormValues,
 } from './scriptGenerate.helpers';
+import {
+  MATERIAL_CATEGORY_LABELS,
+  MATERIAL_STATUS_LABELS,
+  REFERENCE_CATEGORY_LABELS,
+} from '../../constants';
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -58,7 +63,7 @@ export default function ScriptGenerate() {
           return typeRank(a) - typeRank(b) || categoryRank(a) - categoryRank(b);
         })
         .map((material) => ({
-          label: `${material.name} · ${materialTypeLabel(material.type)} · ${material.category} · ${material.status}`,
+          label: `${material.name} · ${materialTypeLabel(material.type)} · ${MATERIAL_CATEGORY_LABELS[material.category] || material.category} · ${MATERIAL_STATUS_LABELS[material.status] || material.status}`,
           value: material.id,
         })),
     [materials],
@@ -218,7 +223,7 @@ export default function ScriptGenerate() {
                       options={references
                         .filter((r) => r.status === 'ready')
                         .map((ref) => ({
-                          label: `${ref.name} · ${ref.category}${ref.reference_analysis?.hook ? ` · Hook: ${ref.reference_analysis.hook}` : ''}`,
+                          label: `${ref.name} · ${REFERENCE_CATEGORY_LABELS[ref.category] || ref.category}${ref.reference_analysis?.hook ? ` · Hook: ${ref.reference_analysis.hook}` : ''}`,
                           value: ref.id,
                         }))}
                     />
