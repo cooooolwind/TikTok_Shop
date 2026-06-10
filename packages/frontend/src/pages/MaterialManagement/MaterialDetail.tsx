@@ -184,9 +184,9 @@ export default function MaterialDetail() {
         title={
           <Space>
             {material.status === 'processing' && material.name === material.filename ? (
-              <span className="ai-shimmer-text">AI 智能命名中...</span>
+              <span className="ai-shimmer-text" style={{ '--shimmer-base': isVideo ? '#1677ff' : '#52c41a', '--shimmer-highlight': isVideo ? '#87e8de' : '#b7eb8f' } as React.CSSProperties}>AI 智能命名中...</span>
             ) : (
-              <span>{material.name}</span>
+              <span style={{ color: isVideo ? '#1677ff' : '#52c41a' }}>{material.name}</span>
             )}
             <Button type="text" icon={<EditOutlined />} onClick={handleRename} />
           </Space>
@@ -287,9 +287,9 @@ export default function MaterialDetail() {
             <Descriptions column={1} size="small" bordered>
               <Descriptions.Item label={material.source_declaration === 'reference' ? "参考视频名称" : "素材名称"}>
                 {material.status === 'processing' && material.name === material.filename ? (
-                  <span className="ai-shimmer-text">AI 智能命名中...</span>
+                  <span className="ai-shimmer-text" style={{ '--shimmer-base': isVideo ? '#1677ff' : '#52c41a', '--shimmer-highlight': isVideo ? '#87e8de' : '#b7eb8f' } as React.CSSProperties}>AI 智能命名中...</span>
                 ) : (
-                  <span>{material.name}</span>
+                  <span style={{ color: isVideo ? '#1677ff' : '#52c41a' }}>{material.name}</span>
                 )}
               </Descriptions.Item>
               <Descriptions.Item label="文件名">{material.filename}</Descriptions.Item>

@@ -407,7 +407,9 @@ function UploadForm({
 
       <Form.Item name="category" label="分类" rules={[{ required: true }]}>
         <Select
-          options={Object.entries(isReferenceMode ? REFERENCE_CATEGORY_LABELS : MATERIAL_CATEGORY_LABELS).map(([k, v]) => ({ label: v, value: k }))}
+          options={isReferenceMode 
+            ? [{ label: 'AI自动分析', value: 'auto' }, ...Object.entries(REFERENCE_CATEGORY_LABELS).map(([k, v]) => ({ label: v, value: k }))]
+            : Object.entries(MATERIAL_CATEGORY_LABELS).map(([k, v]) => ({ label: v, value: k }))}
         />
       </Form.Item>
 
@@ -445,7 +447,7 @@ function UploadForm({
   );
 
   return (
-    <Form form={form} layout="vertical" initialValues={{ category: isReferenceMode ? 'beauty_skincare' : 'product', source_declaration: isReferenceMode ? 'reference' : 'owned' }}>
+    <Form form={form} layout="vertical" initialValues={{ category: isReferenceMode ? 'auto' : 'product', source_declaration: isReferenceMode ? 'reference' : 'owned' }}>
       {isReferenceMode ? (
         <Tabs activeKey={activeUploadTab} onChange={setActiveUploadTab} items={[
           { key: 'upload', label: '本地上传', children: renderFormContent() },

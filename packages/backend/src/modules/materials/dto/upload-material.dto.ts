@@ -2,7 +2,7 @@ import { Transform } from 'class-transformer';
 import { IsArray, IsIn, IsOptional, IsString } from 'class-validator';
 
 const MATERIAL_CATEGORIES = [
-  'product', 'scene', 'model', 'apparel_underwear', 'shoes_bags',
+  'auto', 'product', 'scene', 'model', 'apparel_underwear', 'shoes_bags',
   'food_beverage', 'beauty_skincare', 'sports_outdoors', 'daily_necessities',
   'home_textiles', 'maternity_baby', 'health_care', '3c_digital',
   'kitchen_appliances', 'furniture_building', 'jewelry_accessories',

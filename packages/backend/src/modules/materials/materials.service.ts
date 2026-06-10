@@ -95,7 +95,7 @@ export class MaterialsService {
       'jewelry_accessories', 'toys_instruments', 'books_education', 'gifts_culture',
       'fresh_produce', 'flowers_plants', 'pet_supplies', 'auto_motorcycle',
       'watches_accessories', 'local_life', 'second_hand', 'luxury',
-      'raw_materials_packaging', 'other',
+      'raw_materials_packaging', 'other', 'auto',
     ];
     const validCategories = dto.source_declaration === 'reference' ? REFERENCE_CATEGORIES : BASE_CATEGORIES;
     if (dto.category && !validCategories.includes(dto.category)) {
@@ -151,7 +151,7 @@ export class MaterialsService {
       filename: originalFilename,
       size: file.size,
       mimeType: file.mimetype,
-      category: (dto.category as MaterialCategory) ?? 'other',
+      category: dto.category === 'auto' ? 'other' : (dto.category as MaterialCategory) ?? 'other',
       tags: dto.tags ?? [],
       sourceDeclaration: dto.source_declaration,
       sourcePlatform: dto.source_platform,
@@ -169,7 +169,7 @@ export class MaterialsService {
 
     // 自动触发多模态分析任务
     try {
-      await this.analyze(saved.id, { autoGenerateName: !dto.name });
+      await this.analyze(saved.id, { autoGenerateName: !dto.name, autoGenerateCategory: dto.category === 'auto' });
     } catch (e) {
       const error = e instanceof Error ? e.message : String(e);
       this.logger.error(`Failed to trigger auto-analysis for material ${saved.id}: ${error}`);
@@ -270,7 +270,7 @@ export class MaterialsService {
         'jewelry_accessories', 'toys_instruments', 'books_education', 'gifts_culture',
         'fresh_produce', 'flowers_plants', 'pet_supplies', 'auto_motorcycle',
         'watches_accessories', 'local_life', 'second_hand', 'luxury',
-        'raw_materials_packaging', 'other',
+        'raw_materials_packaging', 'other', 'auto',
       ];
       const validCategories = material.sourceDeclaration === 'reference' ? REFERENCE_CATEGORIES : BASE_CATEGORIES;
       if (!validCategories.includes(dto.category)) {
@@ -312,7 +312,7 @@ export class MaterialsService {
     return { message: 'deleted', deleted: materials.length };
   }
 
-  async analyze(id: string, options?: { autoGenerateName?: boolean }) {
+  async analyze(id: string, options?: { autoGenerateName?: boolean; autoGenerateCategory?: boolean }) {
     const material = await this.materialsRepository.findOne({
       where: { id, merchantId: DEFAULT_MERCHANT_ID },
     });
@@ -326,6 +326,7 @@ export class MaterialsService {
     const job = await this.analysisQueue.add('analyze', { 
       materialId: material.id,
       autoGenerateName: options?.autoGenerateName,
+      autoGenerateCategory: options?.autoGenerateCategory,
     });
 
     return { task_id: job.id, status: 'queued' as const };

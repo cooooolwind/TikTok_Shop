@@ -187,9 +187,9 @@ body {
 .ai-shimmer-text {
   background: linear-gradient(
     120deg,
-    #1677ff 40%,
-    #87e8de 50%,
-    #1677ff 60%
+    var(--shimmer-base, #1677ff) 40%,
+    var(--shimmer-highlight, #87e8de) 50%,
+    var(--shimmer-base, #1677ff) 60%
   );
   background-size: 200% auto;
   color: transparent;

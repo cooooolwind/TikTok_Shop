@@ -130,10 +130,10 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
         title={
           material.status === 'processing' && material.name === material.filename ? (
             <Text ellipsis style={{ maxWidth: '100%' }} title="AI 智能命名中...">
-              <span className="ai-shimmer-text">AI 智能命名中...</span>
+              <span className="ai-shimmer-text" style={{ '--shimmer-base': isVideo ? '#1677ff' : '#52c41a', '--shimmer-highlight': isVideo ? '#87e8de' : '#b7eb8f' } as React.CSSProperties}>AI 智能命名中...</span>
             </Text>
           ) : (
-            <Text ellipsis style={{ maxWidth: '100%' }} title={material.name}>
+            <Text ellipsis style={{ maxWidth: '100%', color: isVideo ? '#1677ff' : '#52c41a' }} title={material.name}>
               {material.name}
             </Text>
           )
