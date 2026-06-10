@@ -60,7 +60,7 @@ export default function ScriptEditor() {
   const [sceneModalOpen, setSceneModalOpen] = useState(false);
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'blueprint' | 'preview'>('blueprint');
-  const [collapsedBlueprintScenes, setCollapsedBlueprintScenes] = useState<Set<number | string>>(new Set());
+  const [expandedBlueprintScenes, setExpandedBlueprintScenes] = useState<Set<number | string>>(new Set());
   const [saving, setSaving] = useState(false);
   const addSceneRef = useRef<((defaultValue?: Partial<BlueprintScene>) => void) | null>(null);
   const [sceneForm] = Form.useForm();
@@ -180,7 +180,7 @@ export default function ScriptEditor() {
   };
 
   const toggleBlueprintScene = (sceneKey: number | string) => {
-    setCollapsedBlueprintScenes((current) => {
+    setExpandedBlueprintScenes((current) => {
       const next = new Set(current);
       if (next.has(sceneKey)) {
         next.delete(sceneKey);
@@ -446,7 +446,7 @@ export default function ScriptEditor() {
                     return (
                     <div className={styles.sceneStack}>
                       {fields.map((field, index) => {
-                        const isCollapsed = collapsedBlueprintScenes.has(field.key);
+                        const isCollapsed = !expandedBlueprintScenes.has(field.key);
                         const sceneValues = blueprintForm.getFieldValue(['scenes', field.name]) as
                           | Partial<BlueprintScene>
                           | undefined;
