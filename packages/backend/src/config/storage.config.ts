@@ -4,13 +4,19 @@ import { isAbsolute, join } from 'path';
 
 function resolveUploadDir(value?: string) {
   if (value && isAbsolute(value)) {
+    console.log(`[StorageConfig] Using absolute path: ${value}`);
     return value;
   }
   
   const backendPath = join(__dirname, '..', '..');
-
-  if (!value) return join(backendPath, 'uploads');
-  return join(backendPath, value);
+  const resolved = value ? join(backendPath, value) : join(backendPath, 'uploads');
+  console.log(`[StorageConfig] Resolved upload dir:`);
+  console.log(`  - __dirname: ${__dirname}`);
+  console.log(`  - backendPath: ${backendPath}`);
+  console.log(`  - value: ${value || 'undefined'}`);
+  console.log(`  - final path: ${resolved}`);
+  
+  return resolved;
 }
 
 export default registerAs('storage', () => ({
