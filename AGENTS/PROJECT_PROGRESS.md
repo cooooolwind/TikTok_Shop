@@ -116,7 +116,7 @@
 | #  | 任务                                            | 状态 | 说明                                                                                                                                     |
 | -- | ----------------------------------------------- | :--: | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | G1 | 后端核心逻辑单元测试                            |  ✅  | 12 个核心模块及 Service 的 spec 测试文件，覆盖剧本、生成、素材分析、视频拼接、火山客户端等                                               |
-| G2 | 前端组件测试                                    |  🔨  | 12 个前端测试文件，覆盖编辑器组件（VideoEditor/Playhead/RemotionPreview）、辅助函数、MaterialCard、TaskCard 和进度；但核心页面测试仍缺失 |
+| G2 | 前端组件测试                                    |  ✅  | 前端测试覆盖了编辑器组件（VideoEditor/Playhead/RemotionPreview）、辅助函数、MaterialCard、TaskCard 和核心页面（Home, Analytics, Material, TemplateMarket） |
 | G3 | E2E 冒烟测试（一键成片链路）                    |  ⬜  | 无 Playwright 或其他 E2E 配置                                                                                                            |
 | G4 | 结构化日志（Pino）+ traceId                     |  🔨  | `LoggingInterceptor` 输出带 traceId 的请求日志，但异常过滤器未记录，且未使用 Pino                                                      |
 | G5 | CI Pipeline：lint + test + build + Docker image |  ✅  | 完整 CI（turbo --affected）+ CD（ACR 推送 + ECS 部署）                                                                                   |
@@ -161,7 +161,7 @@
 | Phase 3        | C8（剧本自动化）   |      1      |      0      |      0      |      1      |
 | Phase 3        | D6–D9（智能剪辑） |      4      |      1      |      2      |      1      |
 | Phase 3        | E4（响应式）       |      1      |      1      |      0      |      0      |
-| Phase 3        | G1–G5（质量）     |      5      |      2      |      2      |      1      |
+| Phase 3        | G1–G5（质量）     |      5      |      3      |      1      |      1      |
 | Phase 4        | F1–F3（看板）     |      3      |      3      |      0      |      0      |
 | Phase 4        | H1–H4（加分项）   |      4      |      0      |      1      |      3      |
-| **合计** |                    | **46** | **32** | **5** | **9** |
+| **合计** |                    | **46** | **33** | **4** | **9** |
