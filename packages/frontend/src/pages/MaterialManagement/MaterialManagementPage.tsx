@@ -165,7 +165,7 @@ export default function MaterialManagementPage() {
           activeKey={activeTab}
           onChange={(k) => {
             setActiveTab(k);
-            setFilters({ page: 1 });
+            setFilters({ page: 1, category: undefined, type: undefined, status: undefined });
             pagination.reset();
           }}
           items={[

@@ -128,6 +128,10 @@ describe('ScriptEditor blueprint editor', () => {
     expect(screen.getByRole('button', { name: '蓝图编辑' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('heading', { name: '剧本蓝图' })).toBeInTheDocument();
     expect(screen.getByAltText('商品图')).toHaveAttribute('src', 'https://example.com/product.png');
+    expect(screen.queryByLabelText('分镜 1 台词')).not.toBeInTheDocument();
+    
+    // 展开分镜 1
+    fireEvent.click(screen.getByRole('button', { name: '展开' }));
     expect(screen.getByLabelText('分镜 1 台词')).toHaveValue(
       '镜头看这里，这款清道夫机器人正在穿过复古街道。',
     );
@@ -138,9 +142,12 @@ describe('ScriptEditor blueprint editor', () => {
     expect(screen.queryByText('visual_prompt')).not.toBeInTheDocument();
     expect(screen.queryByText(script.scenes[0].visual_prompt)).not.toBeInTheDocument();
 
+    // 折叠分镜 1
     fireEvent.click(screen.getByRole('button', { name: '折叠' }));
     expect(screen.queryByLabelText('分镜 1 台词')).not.toBeInTheDocument();
     expect(screen.getByText('主体从画面下方进入街道。')).toBeInTheDocument();
+    
+    // 再次展开
     fireEvent.click(screen.getByRole('button', { name: '展开' }));
     expect(screen.getByLabelText('分镜 1 台词')).toHaveValue(
       '镜头看这里，这款清道夫机器人正在穿过复古街道。',

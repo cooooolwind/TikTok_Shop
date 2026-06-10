@@ -32,7 +32,11 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
         loading: false,
       }));
     } catch {
-      set({ loading: false });
+      set((s) => ({
+        loading: false,
+        items: append ? s.items : [],
+        total: append ? s.total : 0,
+      }));
       useUIStore.getState().pushNotification({ type: 'error', title: '加载素材列表失败' });
     }
   },
