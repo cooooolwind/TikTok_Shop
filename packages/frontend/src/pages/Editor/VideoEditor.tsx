@@ -93,7 +93,7 @@ const TRANSITION_PRESETS: {
   { label: '缩放模糊', value: 'zoom_blur', description: '更有动势，适合促单和高光片段。' },
 ];
 
-const RESOURCE_TABS = ['素材片段', '字幕', '商品素材', '文本', '音频', '转场'];
+const RESOURCE_TABS = ['素材片段', '转场', '字幕', '商品素材', '文本', '音频'];
 
 function getTransitionTarget(
   selection: { type: 'clip' | 'transition' | 'subtitle'; id: string } | null,

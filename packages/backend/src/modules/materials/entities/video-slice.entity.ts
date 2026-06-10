@@ -34,7 +34,7 @@ export class VideoSlice {
   @Column({ type: 'vector', length: 2048, nullable: true })
   embedding: number[];
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
   @ManyToOne(() => Material, (material) => material.slices, { onDelete: 'CASCADE' })

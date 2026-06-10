@@ -28,9 +28,9 @@ export class MaterialAnalysis {
   @Column({ type: 'jsonb', nullable: true })
   storyboard: { order: number; duration: number; description: string; camera_motion: string; visual_elements: string[] }[];
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

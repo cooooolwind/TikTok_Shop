@@ -108,10 +108,10 @@ export class Material {
   @Column({ name: 'metadata', type: 'jsonb', nullable: true })
   metadata: Record<string, unknown>;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 
   @OneToMany(() => VideoSlice, (slice) => slice.material, { cascade: true })

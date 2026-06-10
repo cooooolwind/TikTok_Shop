@@ -27,6 +27,6 @@ export class MyVideoEntity {
   @Column({ type: 'jsonb' })
   result: TemplateGenerateResult;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 }

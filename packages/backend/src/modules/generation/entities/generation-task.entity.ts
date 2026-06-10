@@ -118,7 +118,7 @@ export class GenerationTask {
   @Column({ name: 'retry_count', type: 'int', default: 0 })
   retryCount: number;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
   @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })

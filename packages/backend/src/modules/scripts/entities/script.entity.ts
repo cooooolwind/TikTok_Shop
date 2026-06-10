@@ -67,10 +67,10 @@ export class Script {
   @Column({ type: 'enum', enum: ['generating', 'draft', 'failed', 'confirmed'], default: 'draft' })
   status: ScriptStatus;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 
   @OneToMany(() => Scene, (scene) => scene.script)

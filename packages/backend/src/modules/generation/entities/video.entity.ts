@@ -43,7 +43,7 @@ export class Video {
   @Column({ name: 'export_formats', type: 'jsonb', default: () => "'[]'" })
   exportFormats: Record<string, unknown>[];
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
   @OneToOne(() => GenerationTask, (task) => task.video, { onDelete: 'CASCADE' })
