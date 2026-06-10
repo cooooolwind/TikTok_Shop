@@ -35,7 +35,7 @@ describe('TaskCard', () => {
 
     render(<TaskCard task={task} onClick={onClick} onDelete={onDelete} />);
 
-    fireEvent.click(screen.getByLabelText('delete task'));
+    fireEvent.click(screen.getByLabelText('删除任务'));
 
     expect(onDelete).toHaveBeenCalledOnce();
     expect(onClick).not.toHaveBeenCalled();
