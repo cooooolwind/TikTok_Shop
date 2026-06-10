@@ -94,7 +94,7 @@ describe('ScriptGenerate', () => {
     fireEvent.change(screen.getByLabelText('商品描述'), { target: { value: 'Tiny camera for travel' } });
 
     fireEvent.mouseDown(screen.getByLabelText('选择图片或视频素材'));
-    fireEvent.click(await screen.findByText('Travel clip · 视频 · product · ready'));
+    fireEvent.click(await screen.findByText('Travel clip · 视频 · 商品 · 就绪'));
     fireEvent.mouseDown(screen.getByLabelText('台词生成'));
     fireEvent.click(await screen.findByText('不生成台词'));
     fireEvent.click(screen.getByRole('button', { name: /提交生成任务/ }));
@@ -119,7 +119,7 @@ describe('ScriptGenerate', () => {
     fireEvent.change(screen.getByLabelText('商品类目'), { target: { value: 'electronics' } });
     fireEvent.change(screen.getByLabelText('商品描述'), { target: { value: 'Tiny camera for travel' } });
     fireEvent.mouseDown(screen.getByLabelText('选择图片或视频素材'));
-    fireEvent.click(await screen.findByText('Travel clip · 视频 · product · ready'));
+    fireEvent.click(await screen.findByText('Travel clip · 视频 · 商品 · 就绪'));
 
     expect(screen.getByRole('slider', { name: '整条剧本目标时长' })).toHaveAttribute(
       'aria-valuemax',
