@@ -144,7 +144,8 @@ export class MaterialAnalysisProcessor extends WorkerHost {
         }
         
         // 2. Prepare input for Responses API (Supports file_id correctly)
-        this.tasksGateway.emitMaterialAnalysisStep(materialId, 'analyzing');
+        const stepName = autoGenerateName ? 'naming' : 'analyzing';
+        this.tasksGateway.emitMaterialAnalysisStep(materialId, stepName);
         if (material.sourceDeclaration === 'reference') {
           const input = buildReferenceVideoAnalysisInput(fileId);
           const aiResponse = await this.volcanoClient.createResponse(input, {
@@ -180,7 +181,8 @@ export class MaterialAnalysisProcessor extends WorkerHost {
         }
       } else {
         // 3. Use Base64 for images (Fast and no double-hop)
-        this.tasksGateway.emitMaterialAnalysisStep(materialId, 'analyzing');
+        const stepName = autoGenerateName ? 'naming' : 'analyzing';
+        this.tasksGateway.emitMaterialAnalysisStep(materialId, stepName);
         const buffer = await fs.readFile(filePath);
         const base64Data = `data:${material.mimeType};base64,${buffer.toString('base64')}`;
         const messages = buildImageAnalysisMessages(base64Data);

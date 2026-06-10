@@ -11,6 +11,7 @@ import type { Material } from '@aigc/shared-types';
 import StatusTag from '../../common/StatusTag';
 import { MATERIAL_STATUS_LABELS, MATERIAL_CATEGORY_LABELS, REFERENCE_CATEGORY_LABELS } from '../../../constants';
 import { formatBytes } from '../../../utils/format';
+import { useMaterialStore } from '../../../stores/useMaterialStore';
 
 const { Text } = Typography;
 
@@ -26,6 +27,7 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
   const [isHovered, setIsHovered] = useState(false);
   const isVideo = material.type === 'video';
   const previewSrc = material.url || material.thumbnail_url;
+  const analysisStep = useMaterialStore((state) => state.analysisStepById[material.id]);
 
   const handlePreview = (event?: React.MouseEvent) => {
     event?.stopPropagation();
@@ -128,7 +130,7 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
     >
       <Card.Meta
         title={
-          material.status === 'processing' && material.name === material.filename ? (
+          analysisStep === 'naming' && material.name === material.filename ? (
             <Text ellipsis style={{ maxWidth: '100%' }} title="AI 智能命名中...">
               <span className="ai-shimmer-text" style={{ '--shimmer-base': isVideo ? '#1677ff' : '#52c41a', '--shimmer-highlight': isVideo ? '#87e8de' : '#b7eb8f' } as React.CSSProperties}>AI 智能命名中...</span>
             </Text>

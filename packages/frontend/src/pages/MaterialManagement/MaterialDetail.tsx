@@ -116,10 +116,12 @@ export default function MaterialDetail() {
     if (isVideo) {
       if (analysisStep === 'transcoding') return '转码中';
       if (analysisStep === 'uploading') return '上传处理中';
+      if (analysisStep === 'naming') return 'AI 智能命名与分析中';
       if (analysisStep === 'analyzing') return 'AI 分析中';
       if (analysisStep === 'embedding') return '向量化中';
       return '处理中';
     }
+    if (analysisStep === 'naming') return 'AI 智能命名与分析中';
     if (analysisStep === 'analyzing') return 'AI 分析中';
     if (analysisStep === 'embedding') return '向量化中';
     return '分析中';
@@ -183,7 +185,7 @@ export default function MaterialDetail() {
       <PageHeader
         title={
           <Space>
-            {material.status === 'processing' && material.name === material.filename ? (
+            {analysisStep === 'naming' && material.name === material.filename ? (
               <span className="ai-shimmer-text" style={{ '--shimmer-base': isVideo ? '#1677ff' : '#52c41a', '--shimmer-highlight': isVideo ? '#87e8de' : '#b7eb8f' } as React.CSSProperties}>AI 智能命名中...</span>
             ) : (
               <span style={{ color: isVideo ? '#1677ff' : '#52c41a' }}>{material.name}</span>
@@ -196,7 +198,7 @@ export default function MaterialDetail() {
             title: material.source_declaration === 'reference' ? '参考视频' : '基础素材', 
             path: `/materials?tab=${material.source_declaration === 'reference' ? 'reference' : 'base'}` 
           },
-          { title: material.status === 'processing' && material.name === material.filename ? 'AI 智能命名中...' : material.name },
+          { title: analysisStep === 'naming' && material.name === material.filename ? 'AI 智能命名中...' : material.name },
         ]}
         extra={
           <Space wrap>
@@ -286,7 +288,7 @@ export default function MaterialDetail() {
           <Card title="基本信息" style={{ marginBottom: 24 }}>
             <Descriptions column={1} size="small" bordered>
               <Descriptions.Item label={material.source_declaration === 'reference' ? "参考视频名称" : "素材名称"}>
-                {material.status === 'processing' && material.name === material.filename ? (
+                {analysisStep === 'naming' && material.name === material.filename ? (
                   <span className="ai-shimmer-text" style={{ '--shimmer-base': isVideo ? '#1677ff' : '#52c41a', '--shimmer-highlight': isVideo ? '#87e8de' : '#b7eb8f' } as React.CSSProperties}>AI 智能命名中...</span>
                 ) : (
                   <span style={{ color: isVideo ? '#1677ff' : '#52c41a' }}>{material.name}</span>

@@ -21,7 +21,7 @@ export const WsEvent = {
 
 // ===== 素材分析步骤 =====
 
-export type MaterialAnalysisStep = 'transcoding' | 'uploading' | 'analyzing' | 'embedding';
+export type MaterialAnalysisStep = 'transcoding' | 'uploading' | 'naming' | 'analyzing' | 'embedding';
 
 // ===== 事件负载类型 =====
 
