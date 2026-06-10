@@ -318,9 +318,18 @@ export default function MaterialManagementPage() {
           isReferenceMode={activeTab === 'reference'}
           uploading={uploading}
           uploadProgress={uploadProgress}
-          onUpload={(values: { file: UploadFile | File; name?: string; category: string; source_declaration: string; tags: string[]; source_platform?: string }) => {
+          onUpload={async (values: { file: UploadFile | File; name?: string; category: string; source_declaration: string; tags: string[]; source_platform?: string }) => {
             const file = ('originFileObj' in values.file ? values.file.originFileObj : values.file) as File;
-            upload(file, values.category, values.source_declaration, values.tags, values.name, values.source_platform);
+            await upload(file, values.category, values.source_declaration, values.tags, values.name, values.source_platform);
+            
+            // 手动触发刷新以保留当前 tab 状态的正确参数
+            const fetchFilters = { ...filters, keyword: debouncedKeyword || undefined };
+            if (activeTab === 'reference') {
+              fetchFilters.source_declaration = 'reference';
+            } else {
+              (fetchFilters as any).exclude_source_declaration = 'reference';
+            }
+            fetchList({ ...fetchFilters, page: 1, pageSize: 20 }, false);
           }}
           onCancel={() => setUploadVisible(false)}
         />

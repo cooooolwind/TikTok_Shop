@@ -88,7 +88,15 @@ export class MaterialsService {
     }
 
     const BASE_CATEGORIES = ['product', 'scene', 'model', 'other'];
-    const REFERENCE_CATEGORIES = ['beauty', 'apparel', '3c', 'other'];
+    const REFERENCE_CATEGORIES = [
+      'apparel_underwear', 'shoes_bags', 'food_beverage', 'beauty_skincare',
+      'sports_outdoors', 'daily_necessities', 'home_textiles', 'maternity_baby',
+      'health_care', '3c_digital', 'kitchen_appliances', 'furniture_building',
+      'jewelry_accessories', 'toys_instruments', 'books_education', 'gifts_culture',
+      'fresh_produce', 'flowers_plants', 'pet_supplies', 'auto_motorcycle',
+      'watches_accessories', 'local_life', 'second_hand', 'luxury',
+      'raw_materials_packaging', 'other',
+    ];
     const validCategories = dto.source_declaration === 'reference' ? REFERENCE_CATEGORIES : BASE_CATEGORIES;
     if (dto.category && !validCategories.includes(dto.category)) {
       throw new BadRequestException(`Invalid category for source_declaration ${dto.source_declaration}`);
@@ -255,7 +263,15 @@ export class MaterialsService {
 
     if (dto.category !== undefined) {
       const BASE_CATEGORIES = ['product', 'scene', 'model', 'other'];
-      const REFERENCE_CATEGORIES = ['beauty', 'apparel', '3c', 'other'];
+      const REFERENCE_CATEGORIES = [
+        'apparel_underwear', 'shoes_bags', 'food_beverage', 'beauty_skincare',
+        'sports_outdoors', 'daily_necessities', 'home_textiles', 'maternity_baby',
+        'health_care', '3c_digital', 'kitchen_appliances', 'furniture_building',
+        'jewelry_accessories', 'toys_instruments', 'books_education', 'gifts_culture',
+        'fresh_produce', 'flowers_plants', 'pet_supplies', 'auto_motorcycle',
+        'watches_accessories', 'local_life', 'second_hand', 'luxury',
+        'raw_materials_packaging', 'other',
+      ];
       const validCategories = material.sourceDeclaration === 'reference' ? REFERENCE_CATEGORIES : BASE_CATEGORIES;
       if (!validCategories.includes(dto.category)) {
         throw new BadRequestException(`Invalid category for source_declaration ${material.sourceDeclaration}`);

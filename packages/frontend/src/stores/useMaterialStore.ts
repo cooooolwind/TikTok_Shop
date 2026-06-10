@@ -76,7 +76,6 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       await materialsApi.upload(formData);
       set({ uploading: false, uploadVisible: false, uploadProgress: 100 });
       useUIStore.getState().pushNotification({ type: 'success', title: '上传成功', message: file.name });
-      get().fetchList();
     } catch {
       set({ uploading: false, uploadProgress: 0 });
       useUIStore.getState().pushNotification({ type: 'error', title: '上传失败' });
