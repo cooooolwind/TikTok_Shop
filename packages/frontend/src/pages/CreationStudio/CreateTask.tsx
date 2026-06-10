@@ -104,7 +104,7 @@ export default function CreateTask() {
               </Form.Item>
 
               {selectedScript && (
-                <Card size="small" style={{ background: '#f6f8fa', marginBottom: 16 }}>
+                <Card size="small" type="inner" style={{ marginBottom: 16 }}>
                   <Row gutter={16}>
                     <Col span={8}><Text type="secondary">分镜数：</Text><Text strong>{selectedScript.scenes.length}</Text></Col>
                     <Col span={8}><Text type="secondary">总时长：</Text><Text strong>{selectedScript.total_duration}s</Text></Col>

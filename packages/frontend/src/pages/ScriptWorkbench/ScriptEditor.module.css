@@ -303,3 +303,72 @@
     flex: 1;
   }
 }
+
+:global([data-theme='dark']) .panel {
+  background: #1f2029;
+  border-color: #2b2d36;
+}
+
+:global([data-theme='dark']) .panelHeader,
+:global([data-theme='dark']) .sceneHead {
+  border-bottom-color: #2b2d36;
+}
+
+:global([data-theme='dark']) .viewSwitch {
+  background: #161823;
+  border-color: #2b2d36;
+}
+
+:global([data-theme='dark']) .viewButton {
+  color: #a3a6ad;
+}
+
+:global([data-theme='dark']) .viewButtonActive {
+  background: #3e404b;
+  color: #e5e6eb;
+}
+
+:global([data-theme='dark']) .scene {
+  background: #1f2029;
+  border-color: #2b2d36;
+}
+
+:global([data-theme='dark']) .sceneSummary,
+:global([data-theme='dark']) .previewItem {
+  background: #252632;
+  border-color: #3e404b;
+  color: #e5e6eb;
+}
+
+:global([data-theme='dark']) .previewNote {
+  background: #2a2200;
+  border-color: #8c6a00;
+  color: #e6b800;
+}
+
+:global([data-theme='dark']) .sceneName span,
+:global([data-theme='dark']) .panelSubtitle,
+:global([data-theme='dark']) .label {
+  color: #86909c;
+}
+
+:global([data-theme='dark']) .value {
+  color: #e5e6eb;
+}
+
+:global([data-theme='dark']) .dot {
+  background: #1f2029;
+  border-color: #3e404b;
+  color: #86909c;
+}
+
+:global([data-theme='dark']) .stepActive .dot {
+  background: #115e59;
+  border-color: #115e59;
+  color: #fff;
+}
+
+:global([data-theme='dark']) .sceneIndex {
+  background: rgba(17, 94, 89, 0.4);
+  color: #5eead4;
+}

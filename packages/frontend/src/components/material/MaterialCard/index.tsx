@@ -60,7 +60,7 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
         <div
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
-          style={{ position: 'relative', height: 160, overflow: 'hidden', background: '#f5f5f5' }}
+          style={{ position: 'relative', height: 160, overflow: 'hidden', background: 'var(--bg-color)' }}
         >
           {material.thumbnail_url ? (
             <>
