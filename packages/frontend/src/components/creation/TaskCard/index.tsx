@@ -1,10 +1,11 @@
-import { Button, Card, Progress, Space, Tag, Tooltip, Typography } from 'antd';
-import { ClockCircleOutlined, DeleteOutlined } from '@ant-design/icons';
+import { useRef, useState } from 'react';
+import { Typography } from 'antd';
+import { DeleteOutlined, LoadingOutlined } from '@ant-design/icons';
 import type { GenerationTask } from '@aigc/shared-types';
 import StatusTag from '../../common/StatusTag';
 import { TASK_STATUS_LABELS } from '../../../constants';
-import { getDisplayProgress, getProgressShortText } from '../TaskProgressPanel/progress';
 import { formatBeijingDateTime, formatGenerationTaskDisplayId } from '../../../utils/format';
+import styles from './index.module.css';
 
 const { Text } = Typography;
 
@@ -14,100 +15,130 @@ interface TaskCardProps {
   onDelete?: () => void;
 }
 
-function compactErrorMessage(message: string) {
-  if (!message) return '生成失败';
-  const codeMatch = message.match(/"code"\s*:\s*"([^"]+)"/);
-  const nestedMessageMatch = message.match(/"message"\s*:\s*"([^"]+)"/);
-  if (codeMatch && nestedMessageMatch) return `${codeMatch[1]}：${nestedMessageMatch[1]}`;
-  return message.replace(/\s+/g, ' ').trim();
+function getCardAspect(task: GenerationTask): number {
+  const ratio = task.result?.aspect_ratio ?? '9:16';
+  const [w, h] = ratio.split(':').map(Number);
+  return (w || 9) / (h || 16);
 }
 
 export default function TaskCard({ task, onClick, onDelete }: TaskCardProps) {
-  const isActive = task.status === 'queued' || task.status === 'processing';
   const isDone = task.status === 'done';
-  const progress = getDisplayProgress(task);
-  const errorMessage = compactErrorMessage(task.error?.message ?? '');
+  const isActive = task.status === 'queued' || task.status === 'processing';
+  const isFailed = task.status === 'failed';
+  const [hovering, setHovering] = useState(false);
+  const [videoLoaded, setVideoLoaded] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const segmentPreviewUrl = isDone ? task.result?.segments?.[0]?.video_url : undefined;
+  const thumbnailUrl = isDone ? task.result?.thumbnail_url : undefined;
+  const hasPreview = Boolean(segmentPreviewUrl);
+  const aspectRatio = getCardAspect(task);
+
+  const showPreview = hovering && hasPreview;
+
+  const handleMouseEnter = () => {
+    setHovering(true);
+    if (videoRef.current && segmentPreviewUrl) {
+      videoRef.current.src = segmentPreviewUrl;
+      videoRef.current.load();
+      videoRef.current.play().catch(() => {});
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setHovering(false);
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.removeAttribute('src');
+      videoRef.current.load();
+      setVideoLoaded(false);
+    }
+  };
+
+  const handleVideoLoaded = () => setVideoLoaded(true);
 
   return (
-    <Card
-      hoverable
+    <div
+      className={styles.card}
+      style={{ aspectRatio: `${aspectRatio.toFixed(2)}` }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       onClick={onClick}
-      styles={{
-        body: {
-          height: 136,
-          padding: 20,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        },
-      }}
-      style={{ cursor: 'pointer', height: '100%', width: '100%', overflow: 'hidden' }}
+      role="button"
+      tabIndex={0}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%', minWidth: 0 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto auto', gap: 8, alignItems: 'center' }}>
-          <Text strong ellipsis style={{ minWidth: 0 }}>
-            任务 {formatGenerationTaskDisplayId(task)}
+      {hasPreview && (
+        <video
+          ref={videoRef}
+          className={`${styles.videoPreview} ${showPreview && videoLoaded ? styles.visible : ''}`}
+          muted
+          loop
+          playsInline
+          disablePictureInPicture
+          onLoadedData={handleVideoLoaded}
+        />
+      )}
+
+      {thumbnailUrl && (
+        <img
+          className={`${styles.thumbnail} ${showPreview && videoLoaded ? styles.hidden : ''}`}
+          src={thumbnailUrl}
+          alt=""
+          loading="lazy"
+        />
+      )}
+
+      {!thumbnailUrl && !hasPreview && (
+        <div className={styles.placeholder}>
+          {isActive && <LoadingOutlined spin style={{ fontSize: 28, color: '#1677ff' }} />}
+          {isFailed && <Text type="danger" style={{ fontSize: 13 }}>生成失败</Text>}
+          {task.status === 'queued' && <Text type="secondary" style={{ fontSize: 13 }}>排队中</Text>}
+        </div>
+      )}
+
+      <div className={styles.overlay}>
+        <div className={styles.topRow}>
+          <Text className={styles.taskName}>
+            {formatGenerationTaskDisplayId(task)}
           </Text>
           <StatusTag status={task.status} labels={TASK_STATUS_LABELS} />
-          {onDelete && (
-            <Tooltip title="删除任务">
-              <Button
-                danger
-                type="text"
-                size="small"
-                aria-label="delete task"
-                icon={<DeleteOutlined />}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onDelete();
-                }}
-              />
-            </Tooltip>
-          )}
         </div>
 
-        <div style={{ height: 40, minHeight: 40, maxHeight: 40, overflow: 'hidden', display: 'flex', alignItems: 'center' }}>
-          {isActive && (
-            <Space direction="vertical" size={2} style={{ width: '100%' }}>
-              <Progress percent={progress.percentage} size="small" style={{ width: '100%' }} showInfo={false} />
-              <Text type="secondary" style={{ fontSize: 12 }} ellipsis>
-                {getProgressShortText(progress)}
+        <div className={styles.bottomRow}>
+          <div>
+            {isDone && task.result && (
+              <Text className={styles.infoText}>
+                {task.result.duration}秒 · {task.result.resolution}
               </Text>
-            </Space>
-          )}
-
-          {isDone && task.result && (
-            <Space size={8} wrap={false}>
-              <Tag icon={<ClockCircleOutlined />}>{task.result.duration}s</Tag>
-              <Tag>{task.result.resolution}</Tag>
-            </Space>
-          )}
-
-          {task.status === 'failed' && task.error && (
-            <Text
-              type="danger"
-              style={{
-                width: '100%',
-                minWidth: 0,
-                fontSize: 12,
-                lineHeight: '18px',
-                maxHeight: 36,
-                overflow: 'hidden',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                wordBreak: 'break-word',
-              }}
-            >
-              {task.error.segment_index ? `第 ${task.error.segment_index} 个镜头失败：${errorMessage}` : errorMessage}
+            )}
+            {isActive && (
+              <Text className={styles.infoText}>
+                {task.progress?.percentage ?? 0}%
+              </Text>
+            )}
+            {isFailed && task.error && (
+              <Text className={styles.infoText} style={{ color: '#ff4d4f' }}>
+                {task.error.message?.slice(0, 60)}
+              </Text>
+            )}
+            <Text className={styles.timeText}>
+              {formatBeijingDateTime(task.created_at)}
             </Text>
+          </div>
+          {onDelete && (
+            <button
+              className={styles.deleteBtn}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              aria-label="删除任务"
+            >
+              <DeleteOutlined />
+            </button>
           )}
         </div>
-
-        <Text type="secondary" style={{ fontSize: 12, marginTop: 'auto', whiteSpace: 'nowrap' }}>
-          创建于 {formatBeijingDateTime(task.created_at)}
-        </Text>
       </div>
-    </Card>
+    </div>
   );
 }

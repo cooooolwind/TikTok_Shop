@@ -1,31 +1,82 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Col, Modal, Row, Select, Space } from 'antd';
+import { Button, Modal, Select, Space, Spin } from 'antd';
 import { PlusOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import PageHeader from '../../components/common/PageHeader';
 import TaskCard from '../../components/creation/TaskCard';
 import EmptyState from '../../components/common/EmptyState';
 import { useCreationStore } from '../../stores/useGenerationStore';
-import { usePagination } from '../../hooks/usePagination';
+import { generationApi } from '../../services/generation.api';
 import { TASK_STATUS_LABELS } from '../../constants';
 import { formatGenerationTaskDisplayId } from '../../utils/format';
-import type { GenerationTask } from '@aigc/shared-types';
+import type { GenerationTask, GenerationStatus } from '@aigc/shared-types';
+
+const PAGE_SIZE = 20;
 
 export default function CreationStudioPage() {
   const navigate = useNavigate();
-  const {
-    tasks, total, loading, filters,
-    fetchTasks, setFilters, remove,
-  } = useCreationStore();
-  const pagination = usePagination({ defaultPageSize: 12 });
+  const { remove } = useCreationStore();
+  const [tasks, setTasks] = useState<GenerationTask[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<GenerationStatus | undefined>();
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const fetchPage = useCallback(
+    async (pageNum: number, append: boolean) => {
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+      try {
+        const res = await generationApi.listTasks({
+          page: pageNum,
+          pageSize: PAGE_SIZE,
+          status: statusFilter,
+        });
+        const data = res as unknown as { items: GenerationTask[]; total: number };
+        if (append) {
+          setTasks((prev) => [...prev, ...(data.items ?? [])]);
+        } else {
+          setTasks(data.items ?? []);
+        }
+        setTotal(data.total ?? 0);
+      } catch {
+        /* handled by store */
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [statusFilter],
+  );
 
   useEffect(() => {
-    fetchTasks({ ...filters, ...pagination.query });
-  }, [filters.status, pagination.page, pagination.pageSize]);
+    setPage(1);
+    fetchPage(1, false);
+  }, [statusFilter, fetchPage]);
 
   useEffect(() => {
-    pagination.setTotal(total);
-  }, [total]);
+    const sentinel = sentinelRef.current;
+    if (!sentinel || loading || loadingMore || tasks.length >= total) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          const nextPage = page + 1;
+          setPage(nextPage);
+          fetchPage(nextPage, true);
+        }
+      },
+      { rootMargin: '200px' },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loading, loadingMore, tasks.length, total, page, fetchPage]);
 
   const deleteTask = (task: GenerationTask) => {
     Modal.confirm({
@@ -36,13 +87,14 @@ export default function CreationStudioPage() {
       okType: 'danger',
       onOk: async () => {
         await remove(task.id);
-        fetchTasks({ ...filters, ...pagination.query });
+        setTasks((prev) => prev.filter((t) => t.id !== task.id));
+        setTotal((prev) => Math.max(prev - 1, 0));
       },
     });
   };
 
   return (
-    <div>
+    <div style={{ minHeight: 'calc(100vh - 200px)' }}>
       <PageHeader
         title="创作工作室"
         extra={
@@ -56,17 +108,17 @@ export default function CreationStudioPage() {
           </Space>
         }
       />
-      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-        <Col>
-          <Select
-            placeholder="任务状态"
-            allowClear
-            style={{ width: 140 }}
-            onChange={(v) => setFilters({ status: v })}
-            options={Object.entries(TASK_STATUS_LABELS).map(([k, v]) => ({ label: v, value: k }))}
-          />
-        </Col>
-      </Row>
+
+      <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'flex-end' }}>
+        <Select
+          placeholder="任务状态"
+          allowClear
+          style={{ width: 140 }}
+          value={statusFilter}
+          onChange={(v) => setStatusFilter(v)}
+          options={Object.entries(TASK_STATUS_LABELS).map(([k, v]) => ({ label: v, value: k }))}
+        />
+      </div>
 
       {!loading && tasks.length === 0 ? (
         <EmptyState
@@ -76,35 +128,28 @@ export default function CreationStudioPage() {
         />
       ) : (
         <>
-          <Row gutter={[16, 16]} align="stretch">
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(226px, 1fr))',
+              gap: 4,
+            }}
+          >
             {tasks.map((task) => (
-              <Col xs={24} sm={12} md={8} lg={6} key={task.id} style={{ display: 'flex' }}>
-                <TaskCard
-                  task={task}
-                  onClick={() => navigate(`/creation/tasks/${task.id}`)}
-                  onDelete={() => deleteTask(task)}
-                />
-              </Col>
+              <TaskCard
+                key={task.id}
+                task={task}
+                onClick={() => navigate(`/creation/tasks/${task.id}`)}
+                onDelete={() => deleteTask(task)}
+              />
             ))}
-          </Row>
+          </div>
 
-          <div style={{ textAlign: 'right', marginTop: 24 }}>
-            <Button
-              disabled={pagination.page <= 1}
-              onClick={() => pagination.onChange(pagination.page - 1, pagination.pageSize)}
-              style={{ marginRight: 8 }}
-            >
-              上一页
-            </Button>
-            <span style={{ margin: '0 12px' }}>
-              第 {pagination.page} / {Math.ceil(pagination.total / pagination.pageSize) || 1} 页
-            </span>
-            <Button
-              disabled={pagination.page * pagination.pageSize >= pagination.total}
-              onClick={() => pagination.onChange(pagination.page + 1, pagination.pageSize)}
-            >
-              下一页
-            </Button>
+          <div ref={sentinelRef} style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {loadingMore && <Spin size="small" />}
+            {tasks.length >= total && total > 0 && (
+              <span style={{ color: '#666', fontSize: 12 }}>已加载全部 {total} 个任务</span>
+            )}
           </div>
         </>
       )}

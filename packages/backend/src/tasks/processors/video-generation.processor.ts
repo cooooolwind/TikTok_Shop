@@ -174,8 +174,17 @@ export class VideoGenerationProcessor extends WorkerHost {
       task.error = null;
       task.completedAt = new Date();
       await this.tasksRepository.save(task);
-      await this.videosRepository.save(
-        this.videosRepository.create({
+      let video = await this.videosRepository.findOne({ where: { taskId: task.id } });
+      if (video) {
+        video.url = result.video_url;
+        video.thumbnailUrl = result.thumbnail_url;
+        video.duration = result.duration;
+        video.resolution = result.resolution;
+        video.aspectRatio = result.aspect_ratio;
+        video.fileSize = result.file_size;
+        video.exportFormats = [{ format: 'mp4', resolution: result.resolution, quality: 'high' }];
+      } else {
+        video = this.videosRepository.create({
           taskId: task.id,
           merchantId: script.merchantId,
           scriptId: script.id,
@@ -186,8 +195,9 @@ export class VideoGenerationProcessor extends WorkerHost {
           aspectRatio: result.aspect_ratio,
           fileSize: result.file_size,
           exportFormats: [{ format: 'mp4', resolution: result.resolution, quality: 'high' }],
-        }),
-      );
+        });
+      }
+      await this.videosRepository.save(video);
       this.tasksGateway.emitTaskCompleted(task.id, result);
       return { status: 'done', taskId: task.id, result };
     } catch (error) {

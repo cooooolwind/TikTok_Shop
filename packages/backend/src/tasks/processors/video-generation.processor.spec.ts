@@ -108,6 +108,7 @@ function makeProcessor(
   const videosRepository = {
     create: jest.fn((data) => data),
     save: jest.fn(async (data) => data),
+    findOne: jest.fn(async () => null),
   };
   let firstFrameIndex = 0;
   const volcanoClient = {
