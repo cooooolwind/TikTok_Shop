@@ -186,7 +186,7 @@ export default function MaterialDetail() {
             {material.status === 'processing' && material.name === material.filename ? (
               <span className="ai-shimmer-text">AI 智能命名中...</span>
             ) : (
-              <span key={material.name} className="name-fade-in">{material.name}</span>
+              <span>{material.name}</span>
             )}
             <Button type="text" icon={<EditOutlined />} onClick={handleRename} />
           </Space>
@@ -289,7 +289,7 @@ export default function MaterialDetail() {
                 {material.status === 'processing' && material.name === material.filename ? (
                   <span className="ai-shimmer-text">AI 智能命名中...</span>
                 ) : (
-                  <span key={material.name} className="name-fade-in">{material.name}</span>
+                  <span>{material.name}</span>
                 )}
               </Descriptions.Item>
               <Descriptions.Item label="文件名">{material.filename}</Descriptions.Item>

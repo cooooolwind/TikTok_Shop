@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button, Card, Image, Modal, Tag, Space, Typography } from 'antd';
 import {
   FileImageOutlined,
@@ -36,9 +36,22 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
     setPreviewOpen(true);
   };
 
+  const [justAnalyzed, setJustAnalyzed] = useState(false);
+  const prevStatus = useRef(material.status);
+
+  useEffect(() => {
+    if (prevStatus.current === 'processing' && material.status === 'ready') {
+      setJustAnalyzed(true);
+      const timer = setTimeout(() => setJustAnalyzed(false), 800);
+      return () => clearTimeout(timer);
+    }
+    prevStatus.current = material.status;
+  }, [material.status]);
+
   return (
     <Card
       hoverable
+      className={justAnalyzed ? 'card-fade-in' : ''}
       style={{
         borderColor: selected ? '#1677ff' : undefined,
         borderWidth: selected ? 2 : 1,
@@ -120,7 +133,7 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
               <span className="ai-shimmer-text">AI 智能命名中...</span>
             </Text>
           ) : (
-            <Text key={material.name} className="name-fade-in" ellipsis style={{ maxWidth: '100%' }} title={material.name}>
+            <Text ellipsis style={{ maxWidth: '100%' }} title={material.name}>
               {material.name}
             </Text>
           )

@@ -206,19 +206,20 @@ body {
   }
 }
 
-/* Name update fade-in animation */
-.name-fade-in {
-  animation: nameFadeIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-  display: inline-block;
+/* Card fade-in animation */
+.card-fade-in {
+  animation: cardFadeIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-@keyframes nameFadeIn {
-  from {
-    opacity: 0;
-    filter: blur(2px);
+@keyframes cardFadeIn {
+  0% {
+    opacity: 0.5;
+    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.5);
+    transform: scale(0.98);
   }
-  to {
+  100% {
     opacity: 1;
-    filter: blur(0);
+    box-shadow: 0 0 0 0 rgba(22, 119, 255, 0);
+    transform: scale(1);
   }
 }
