@@ -377,7 +377,7 @@ export class GenerationService {
   }
 
   private async hasProductImageInput(script: Script) {
-    if ((script.productInfo.images ?? []).some((url) => Boolean(url))) return true;
+    if ((script.productInfo?.images ?? []).some((url) => Boolean(url))) return true;
     const materialIds = script.sourceMaterialIds ?? [];
     if (materialIds.length === 0) return false;
     const materials = await this.materialsRepository.findBy({ id: In(materialIds), merchantId: script.merchantId });

@@ -65,10 +65,10 @@ export function buildSegmentVideoPrompt(
     visualAction,
     '',
     '产品信息：',
-    `产品：${script.productInfo.name || '该产品'}`,
-    `品类：${script.productInfo.category || '电商产品'}`,
-    `卖点：${(script.productInfo.selling_points ?? []).join('、') || '核心产品优势'}`,
-    script.productInfo.description ? `描述：${script.productInfo.description}` : '',
+    `产品：${script.productInfo?.name || '该产品'}`,
+    `品类：${script.productInfo?.category || '电商产品'}`,
+    `卖点：${(script.productInfo?.selling_points ?? []).join('、') || '核心产品优势'}`,
+    script.productInfo?.description ? `描述：${script.productInfo.description}` : '',
     '',
     blueprintContext,
     '',
@@ -111,10 +111,10 @@ export function buildFirstFramePrompt(script: PromptScript, segment: PromptSegme
 
   return [
     '为抖音小店生成一张电商视频首帧画面。',
-    `产品：${script.productInfo.name || '该产品'}。`,
-    `品类：${script.productInfo.category || '电商产品'}。`,
-    `卖点：${(script.productInfo.selling_points ?? []).join('、') || '核心产品优势'}。`,
-    script.productInfo.description ? `描述：${script.productInfo.description}。` : '',
+    `产品：${script.productInfo?.name || '该产品'}。`,
+    `品类：${script.productInfo?.category || '电商产品'}。`,
+    `卖点：${(script.productInfo?.selling_points ?? []).join('、') || '核心产品优势'}。`,
+    script.productInfo?.description ? `描述：${script.productInfo.description}。` : '',
     blueprintContext,
     `分镜视觉动作：${action}。`,
     `镜头方向：${scene?.cameraMotion || '固定产品镜头'}。`,
@@ -134,7 +134,7 @@ export function buildFirstFrameRetryPrompt(script: PromptScript, segment: Prompt
 
   return [
     '根据参考产品图生成一张简洁的电商视频首帧。',
-    `产品：${script.productInfo.name || '该产品'}。`,
+    `产品：${script.productInfo?.name || '该产品'}。`,
     `分镜：${action}。`,
     '保持参考产品清晰可见，忠实地还原其真实形状、颜色、材质、logo和包装。',
     '不要在画面中生成字幕、标题、促销文字、说明文字、水印或乱码文字。',

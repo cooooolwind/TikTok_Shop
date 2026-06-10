@@ -406,7 +406,7 @@ export class VideoGenerationProcessor extends WorkerHost {
       }
     }
 
-    for (const url of script.productInfo.images ?? []) {
+    for (const url of script.productInfo?.images ?? []) {
       const normalized = await this.toProductImageInput(url);
       if (normalized) urls.add(normalized);
     }
