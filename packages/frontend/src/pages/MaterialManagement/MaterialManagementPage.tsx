@@ -374,8 +374,8 @@ function UploadForm({
 
   const renderFormContent = () => (
     <>
-      <Form.Item name="name" label="素材名称">
-        <Input placeholder="如果不填写，将默认使用原始文件名" />
+      <Form.Item name="name" label={isReferenceMode ? "参考视频名称" : "素材名称"}>
+        <Input placeholder="如果不填写，将由 AI 根据内容自动智能命名" />
       </Form.Item>
 
       <Form.Item label="选择文件" required>

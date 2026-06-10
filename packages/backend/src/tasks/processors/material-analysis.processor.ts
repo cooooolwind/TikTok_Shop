@@ -18,6 +18,7 @@ import { QUEUES } from '../queues';
 
 interface MaterialAnalysisJob {
   materialId: string;
+  autoGenerateName?: boolean;
 }
 
 interface AiSliceResult {
@@ -28,12 +29,14 @@ interface AiSliceResult {
 }
 
 interface AiAnalysisResult {
+  name?: string;
   tags: string[];
   description: string;
   slices?: AiSliceResult[];
 }
 
 interface ReferenceAnalysisResult {
+  name?: string;
   hook: string;
   selling_points: string[];
   style: string;
@@ -61,7 +64,7 @@ export class MaterialAnalysisProcessor extends WorkerHost {
   }
 
   async process(job: Job<MaterialAnalysisJob>): Promise<AiAnalysisResult> {
-    const { materialId } = job.data;
+    const { materialId, autoGenerateName } = job.data;
     this.logger.log(`Starting multimodal analysis for material: ${materialId}`);
 
     let fileId: string | null = null;
@@ -159,7 +162,7 @@ export class MaterialAnalysisProcessor extends WorkerHost {
           });
           await this.analysisRepository.save(analysisRecord);
           
-          result = { tags: ['reference'], description: refResult.hook || '参考视频', slices: [] };
+          result = { name: refResult.name, tags: ['reference'], description: refResult.hook || '参考视频', slices: [] };
         } else {
           const input = buildVideoAnalysisInput(fileId);
 
@@ -184,6 +187,10 @@ export class MaterialAnalysisProcessor extends WorkerHost {
       }
 
       // 4. Update Material
+      if (autoGenerateName && result.name && result.name !== 'auto-tagged') {
+        material.name = result.name;
+        this.logger.log(`Auto-generated name for material ${materialId}: ${result.name}`);
+      }
       material.aiTags = result.tags;
       material.aiDescription = result.description;
       const isFallback = result.tags.length === 1 && result.tags[0] === 'auto-tagged';
@@ -200,7 +207,7 @@ export class MaterialAnalysisProcessor extends WorkerHost {
       if (isFallback) {
         this.tasksGateway.emitMaterialAnalysisFailed(material.id, result.description);
       } else {
-        this.tasksGateway.emitMaterialAnalyzed(material.id, material.aiTags, material.aiDescription);
+        this.tasksGateway.emitMaterialAnalyzed(material.id, material.aiTags, material.aiDescription, autoGenerateName ? material.name : undefined);
       }
 
       // 8. Generate embeddings (semantic vectorization)
@@ -286,6 +293,7 @@ export class MaterialAnalysisProcessor extends WorkerHost {
       const jsonStr = content.replace(/```json\n?|\n?```/g, '').trim();
       const parsed = JSON.parse(jsonStr);
       return {
+        name: typeof parsed.name === 'string' ? parsed.name : undefined,
         tags: Array.isArray(parsed.tags) ? parsed.tags : [],
         description: typeof parsed.description === 'string' ? parsed.description : 'No description provided.',
         slices: Array.isArray(parsed.slices) ? parsed.slices : undefined,
@@ -304,6 +312,7 @@ export class MaterialAnalysisProcessor extends WorkerHost {
       const jsonStr = content.replace(/```json\n?|\n?```/g, '').trim();
       const parsed = JSON.parse(jsonStr);
       return {
+        name: typeof parsed.name === 'string' ? parsed.name : undefined,
         hook: typeof parsed.hook === 'string' ? parsed.hook : '',
         selling_points: Array.isArray(parsed.selling_points) ? parsed.selling_points : [],
         style: typeof parsed.style === 'string' ? parsed.style : '',

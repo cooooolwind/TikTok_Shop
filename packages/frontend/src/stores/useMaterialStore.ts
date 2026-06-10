@@ -132,16 +132,16 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
     }
   },
 
-  setMaterialAnalyzed: (id, tags, description) => {
+  setMaterialAnalyzed: (id, tags, description, name) => {
     set((s) => {
       const updateDetail = (m: MaterialDetail | null) => {
         if (m?.id !== id) return m;
-        return { ...m, ai_tags: tags, ai_description: description, status: 'processing' as const };
+        return { ...m, ai_tags: tags, ai_description: description, status: 'processing' as const, ...(name ? { name } : {}) };
       };
 
       const updateItem = (m: Material) => {
         if (m.id !== id) return m;
-        return { ...m, ai_tags: tags, ai_description: description, status: 'processing' as const };
+        return { ...m, ai_tags: tags, ai_description: description, status: 'processing' as const, ...(name ? { name } : {}) };
       };
 
       return {

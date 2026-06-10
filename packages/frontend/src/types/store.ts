@@ -41,7 +41,7 @@ export interface MaterialState {
   remove: (id: string) => Promise<void>;
   batchRemove: (ids: string[]) => Promise<void>;
   triggerAnalysis: (id: string) => Promise<void>;
-  setMaterialAnalyzed: (id: string, tags: string[], description: string) => void;
+  setMaterialAnalyzed: (id: string, tags: string[], description: string, name?: string) => void;
   setMaterialAnalysisFailed: (id: string, error: string) => void;
   setMaterialAnalysisStep: (id: string, step: MaterialAnalysisStep) => void;
   setMaterialEmbeddingComplete: (id: string) => void;

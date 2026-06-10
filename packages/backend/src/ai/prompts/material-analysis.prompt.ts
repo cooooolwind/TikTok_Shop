@@ -1,16 +1,18 @@
 /** 素材图片分析 —— 系统提示词 */
 export const IMAGE_ANALYSIS_PROMPT = `你是一位抖音小店内容分析专家。
 分析图片并返回 JSON 对象，包含：
-1. "tags"：5-8 个描述性标签。
-2. "description"：简洁的一句话摘要。
+1. "name"：根据图片内容生成的简短名称（不超过10个字）。
+2. "tags"：5-8 个描述性标签。
+3. "description"：简洁的一句话摘要。
 输出必须为 JSON 格式。`;
 
 /** 素材视频分析与切片 —— 系统提示词 */
 export const VIDEO_MATERIAL_ANALYSIS_PROMPT = `你是一位抖音小店视频分析与场景分割专家。
 分析视频并返回 JSON 对象，包含：
-1. "tags"：5-8 个视频整体标签。
-2. "description"：视频内容的简洁摘要。
-3. "slices"：场景对象数组，每个包含：
+1. "name"：根据视频场景生成的简短精炼名称（不超过10个字）。
+2. "tags"：5-8 个视频整体标签。
+3. "description"：视频内容的简洁摘要。
+4. "slices"：场景对象数组，每个包含：
    - "start_time"：开始时间（秒，浮点数）。
    - "end_time"：结束时间（秒，浮点数）。
    - "description"：该场景的内容描述。

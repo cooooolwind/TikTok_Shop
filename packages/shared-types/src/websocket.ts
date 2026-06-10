@@ -52,6 +52,7 @@ export interface MaterialAnalyzedEvent {
   material_id: string;
   ai_tags: string[];
   ai_description: string;
+  name?: string;
 }
 
 export interface MaterialAnalysisFailedEvent {

@@ -161,7 +161,7 @@ export class MaterialsService {
 
     // 自动触发多模态分析任务
     try {
-      await this.analyze(saved.id);
+      await this.analyze(saved.id, { autoGenerateName: !dto.name });
     } catch (e) {
       const error = e instanceof Error ? e.message : String(e);
       this.logger.error(`Failed to trigger auto-analysis for material ${saved.id}: ${error}`);
@@ -296,7 +296,7 @@ export class MaterialsService {
     return { message: 'deleted', deleted: materials.length };
   }
 
-  async analyze(id: string) {
+  async analyze(id: string, options?: { autoGenerateName?: boolean }) {
     const material = await this.materialsRepository.findOne({
       where: { id, merchantId: DEFAULT_MERCHANT_ID },
     });
@@ -307,7 +307,10 @@ export class MaterialsService {
     material.status = 'processing';
     await this.materialsRepository.save(material);
 
-    const job = await this.analysisQueue.add('analyze', { materialId: material.id });
+    const job = await this.analysisQueue.add('analyze', { 
+      materialId: material.id,
+      autoGenerateName: options?.autoGenerateName,
+    });
 
     return { task_id: job.id, status: 'queued' as const };
   }

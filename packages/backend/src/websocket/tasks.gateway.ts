@@ -77,11 +77,12 @@ export class TasksGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(`task:${taskId}`).emit(WsEvent.TASK_FAILED, { task_id: taskId, error });
   }
 
-  emitMaterialAnalyzed(materialId: string, aiTags: string[], aiDescription: string) {
+  emitMaterialAnalyzed(materialId: string, aiTags: string[], aiDescription: string, name?: string) {
     const payload: MaterialAnalyzedEvent = {
       material_id: materialId,
       ai_tags: aiTags,
       ai_description: aiDescription,
+      name,
     };
     this.server.emit(WsEvent.MATERIAL_ANALYZED, payload);
   }

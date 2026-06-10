@@ -5,6 +5,7 @@ import {
   VideoCameraOutlined,
   DeleteOutlined,
   EyeOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons';
 import type { Material } from '@aigc/shared-types';
 import StatusTag from '../../common/StatusTag';
@@ -114,9 +115,15 @@ export default function MaterialCard({ material, onClick, onDelete, selected }: 
     >
       <Card.Meta
         title={
-          <Text ellipsis style={{ maxWidth: '100%' }} title={material.name}>
-            {material.name}
-          </Text>
+          material.status === 'processing' && material.name === material.filename ? (
+            <Text ellipsis style={{ maxWidth: '100%' }} title="AI 智能命名中...">
+              <span className="ai-shimmer-text">AI 智能命名中...</span>
+            </Text>
+          ) : (
+            <Text key={material.name} className="name-fade-in" ellipsis style={{ maxWidth: '100%' }} title={material.name}>
+              {material.name}
+            </Text>
+          )
         }
         description={
           <Space direction="vertical" size={4} style={{ width: '100%' }}>
