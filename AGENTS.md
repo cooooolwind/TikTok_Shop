@@ -54,7 +54,8 @@ pnpm --filter @aigc/backend migration:generate
 - **Vite proxies `/api`, `/socket.io`, `/uploads`** to `http://localhost:3000` in dev.
 - **Local uploads** are served statically at `/uploads` and physically saved to `UPLOAD_DIR/materials`.
 - **WebSocket events** must use the constants and payload types defined in `packages/shared-types/src/websocket.ts`.
-- **TypeORM `synchronize: true` in dev** (gated on `NODE_ENV !== 'production'`). Schema auto-syncs from entities — no migrations needed locally. Production must use migrations.
+- **TypeORM `synchronize: true` in dev** (gated on `NODE_ENV !== 'production'`). Schema auto-syncs from entities — no migrations needed locally.
+- **Production Schema Initialization & Migrations (CRITICAL)**: Production must use explicit TypeORM migrations (`migration:run`). Do NOT use `init.sql` to create business tables. `docker/postgres/init.sql` is strictly for installing database extensions (e.g., `vector`, `pg_trgm`) that require superuser privileges. All table creation, including the initial schema, must be managed and tracked by TypeORM migrations. If production is a fresh database, ensure a full initialization migration exists.
 - **Entities auto-loaded** via `autoLoadEntities: true` in `DatabaseModule`. Register entities in their feature module's `TypeOrmModule.forFeature([...])`.
 - **Backend `strictPropertyInitialization: false`** in tsconfig — TypeORM entities don't need definite assignment assertions.
 
