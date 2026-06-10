@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Alert,
@@ -51,6 +51,8 @@ export default function ScriptEditor() {
     retry,
     updateScript,
     updateScene,
+    addScene,
+    removeScene,
     resetCurrentScript,
   } = useScriptStore();
   const { selectedMaterial: selectedReference, fetchDetail: fetchReferenceDetail } = useMaterialStore();
@@ -59,6 +61,8 @@ export default function ScriptEditor() {
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'blueprint' | 'preview'>('blueprint');
   const [collapsedBlueprintScenes, setCollapsedBlueprintScenes] = useState<Set<number | string>>(new Set());
+  const [saving, setSaving] = useState(false);
+  const addSceneRef = useRef<((defaultValue?: Partial<BlueprintScene>) => void) | null>(null);
   const [sceneForm] = Form.useForm();
   const [blueprintForm] = Form.useForm<ScriptBlueprint>();
 
@@ -131,11 +135,47 @@ export default function ScriptEditor() {
   const submitBlueprint = async () => {
     const values = await blueprintForm.validateFields();
     const normalized = normalizeBlueprint(values);
-    await updateScript(script.id, { script_blueprint: normalized });
-    for (const blueprintScene of normalized.scenes) {
-      const scene = scenes.find((item) => item.order === blueprintScene.order);
-      if (!scene) continue;
-      await updateScene(script.id, scene.id, blueprintSceneToScenePatch(normalized, blueprintScene));
+
+    setSaving(true);
+    try {
+      await updateScript(script.id, { script_blueprint: normalized });
+
+      const blueprintOrders = new Set(normalized.scenes.map((bs) => bs.order));
+      const existingScenes = sortScenes(script.scenes ?? []);
+
+      for (const scene of existingScenes) {
+        if (!blueprintOrders.has(scene.order)) {
+          removeScene(script.id, scene.id);
+        }
+      }
+
+      for (const blueprintScene of normalized.scenes) {
+        const existingScene = existingScenes.find((s) => s.order === blueprintScene.order);
+        if (!existingScene) {
+          const patch = blueprintSceneToScenePatch(normalized, blueprintScene);
+          await addScene(script.id, blueprintScene.order > 1 ? blueprintScene.order - 1 : 0, {
+            description: '',
+            camera_motion: patch.camera_motion ?? 'fixed',
+            duration: patch.duration ?? 4,
+            dialogue: patch.dialogue ?? '',
+            bgm_style: patch.bgm_style ?? '',
+            subtitle: patch.subtitle ?? '',
+            visual_prompt: patch.visual_prompt ?? '',
+            constraints: [],
+          });
+        }
+      }
+
+      for (const blueprintScene of normalized.scenes) {
+        const existingScene = existingScenes.find((s) => s.order === blueprintScene.order);
+        if (existingScene) {
+          updateScene(script.id, existingScene.id, blueprintSceneToScenePatch(normalized, blueprintScene));
+        }
+      }
+
+      await fetchDetail(script.id);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -346,7 +386,7 @@ export default function ScriptEditor() {
                 </button>
               </div>
               {activeView === 'blueprint' && script.status !== 'generating' ? (
-                <Button type="primary" size="small" onClick={submitBlueprint}>
+                <Button type="primary" size="small" onClick={submitBlueprint} loading={saving}>
                   保存蓝图并同步分镜
                 </Button>
               ) : null}
@@ -376,9 +416,34 @@ export default function ScriptEditor() {
               <section className={styles.section}>
                 <div className={styles.sectionHead}>
                   <div className={styles.sectionTitle}>分镜蓝图</div>
+                  <Button
+                    size="small"
+                    type="dashed"
+                    onClick={() => {
+                      const add = addSceneRef.current;
+                      if (!add) return;
+                      const formScenes = blueprintForm.getFieldValue('scenes') as BlueprintScene[] | undefined;
+                      const nextOrder = (formScenes?.length ?? 0) + 1;
+                      add({
+                        order: nextOrder,
+                        time_range: '',
+                        shot_size: '',
+                        composition: '',
+                        camera_movement: '',
+                        visual_content: '',
+                        audio: '',
+                        dialogue: '',
+                        subtitle: '',
+                      });
+                    }}
+                  >
+                    新增分镜
+                  </Button>
                 </div>
                 <Form.List name="scenes">
-                  {(fields) => (
+                  {(fields, { add, remove }) => {
+                    addSceneRef.current = add;
+                    return (
                     <div className={styles.sceneStack}>
                       {fields.map((field, index) => {
                         const isCollapsed = collapsedBlueprintScenes.has(field.key);
@@ -398,14 +463,25 @@ export default function ScriptEditor() {
                               <strong>蓝图分镜 {index + 1}</strong>
                               <span>修改这里会同步生成视频分镜预览</span>
                             </div>
-                            <Button
-                              size="small"
-                              aria-label={isCollapsed ? '展开' : '折叠'}
-                              aria-expanded={!isCollapsed}
-                              onClick={() => toggleBlueprintScene(field.key)}
-                            >
-                              {isCollapsed ? '展开' : '折叠'}
-                            </Button>
+                            <Space size={4}>
+                              <Button
+                                size="small"
+                                aria-label={isCollapsed ? '展开' : '折叠'}
+                                aria-expanded={!isCollapsed}
+                                onClick={() => toggleBlueprintScene(field.key)}
+                              >
+                                {isCollapsed ? '展开' : '折叠'}
+                              </Button>
+                              {fields.length > 1 && (
+                                <Button
+                                  size="small"
+                                  danger
+                                  icon={<DeleteOutlined />}
+                                  aria-label={`删除分镜 ${index + 1}`}
+                                  onClick={() => remove(field.name)}
+                                />
+                              )}
+                            </Space>
                           </div>
                           {isCollapsed ? (
                             <div className={styles.sceneSummary}>{sceneSummary}</div>
@@ -453,7 +529,8 @@ export default function ScriptEditor() {
                         );
                       })}
                     </div>
-                  )}
+                    );
+                  }}
                 </Form.List>
               </section>
               </Form>
