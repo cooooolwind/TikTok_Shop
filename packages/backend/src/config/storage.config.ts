@@ -3,13 +3,14 @@ import { isAbsolute, join } from 'path';
 import { existsSync } from 'fs';
 
 function resolveUploadDir(value?: string) {
-  const cwd = process.cwd();
-  const backendPath = existsSync(join(cwd, 'packages', 'backend')) 
-    ? join(cwd, 'packages', 'backend') 
-    : cwd;
+  if (value && isAbsolute(value)) {
+    return value;
+  }
+  
+  const backendPath = join(__dirname, '..', '..');
 
   if (!value) return join(backendPath, 'uploads');
-  return isAbsolute(value) ? value : join(backendPath, value);
+  return join(backendPath, value);
 }
 
 export default registerAs('storage', () => ({
