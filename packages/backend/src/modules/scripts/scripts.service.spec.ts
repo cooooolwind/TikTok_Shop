@@ -148,6 +148,8 @@ describe('ScriptsService', () => {
         camera_movement: '缓慢上摇',
         visual_content: '主体从画面下方进入街道。',
         audio: '风声。',
+        dialogue: '',
+        subtitle: '',
       },
     ],
   };

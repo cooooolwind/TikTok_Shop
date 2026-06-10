@@ -4,7 +4,33 @@ import type { PaginationQuery } from './common';
 
 export type MaterialType = 'image' | 'video';
 export type BaseMaterialCategory = 'product' | 'scene' | 'model' | 'other';
-export type ReferenceMaterialCategory = 'beauty' | 'apparel' | '3c' | 'other';
+export type ReferenceMaterialCategory =
+  | 'apparel_underwear'
+  | 'shoes_bags'
+  | 'food_beverage'
+  | 'beauty_skincare'
+  | 'sports_outdoors'
+  | 'daily_necessities'
+  | 'home_textiles'
+  | 'maternity_baby'
+  | 'health_care'
+  | '3c_digital'
+  | 'kitchen_appliances'
+  | 'furniture_building'
+  | 'jewelry_accessories'
+  | 'toys_instruments'
+  | 'books_education'
+  | 'gifts_culture'
+  | 'fresh_produce'
+  | 'flowers_plants'
+  | 'pet_supplies'
+  | 'auto_motorcycle'
+  | 'watches_accessories'
+  | 'local_life'
+  | 'second_hand'
+  | 'luxury'
+  | 'raw_materials_packaging'
+  | 'other';
 export type MaterialCategory = BaseMaterialCategory | ReferenceMaterialCategory;
 export type MaterialStatus = 'uploaded' | 'processing' | 'ready' | 'failed';
 export type SourceDeclaration = 'owned' | 'public_commercial' | 'reference';

@@ -13,9 +13,32 @@ export const MATERIAL_CATEGORY_LABELS: Record<string, string> = {
 };
 
 export const REFERENCE_CATEGORY_LABELS: Record<string, string> = {
-  beauty: '美妆',
-  apparel: '服饰',
-  '3c': '3C',
+  apparel_underwear: '服饰内衣',
+  shoes_bags: '鞋靴箱包',
+  food_beverage: '食品饮料',
+  beauty_skincare: '美妆护肤',
+  sports_outdoors: '运动户外',
+  daily_necessities: '日用百货',
+  home_textiles: '家居家纺',
+  maternity_baby: '母婴用品',
+  health_care: '医药保健',
+  '3c_digital': '3C数码',
+  kitchen_appliances: '厨卫家电',
+  furniture_building: '家具建材',
+  jewelry_accessories: '珠宝饰品',
+  toys_instruments: '玩具乐器',
+  books_education: '图书教育',
+  gifts_culture: '礼品文创',
+  fresh_produce: '生鲜蔬果',
+  flowers_plants: '鲜花绿植',
+  pet_supplies: '宠物用品',
+  auto_motorcycle: '汽配摩托',
+  watches_accessories: '钟表配饰',
+  local_life: '本地生活',
+  second_hand: '二手商品',
+  luxury: '奢侈品',
+  raw_materials_packaging: '原料包装',
+  other: '其他',
 };
 
 export const SOURCE_DECLARATION_LABELS: Record<string, string> = {

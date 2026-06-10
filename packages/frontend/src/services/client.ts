@@ -9,7 +9,7 @@ const client = axios.create({
 
 // 请求拦截器 — 注入 Token
 client.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
