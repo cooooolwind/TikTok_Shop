@@ -34,7 +34,10 @@ export interface AiSettingsDto {
   volcano_embedding_endpoint?: string;
 }
 
-export type SetTempApiKeyDto = AiSettingsDto;
+// 设置临时 API Key 的请求 Payload (由于加入了 AES 加密，现在直接传输密文)
+export interface SetTempApiKeyDto {
+  payload: string;
+}
 
 export interface TempApiKeyResponse {
   has_temp_settings: boolean;

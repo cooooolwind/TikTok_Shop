@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Modal, Form, Input, Button, message, Typography, Collapse } from 'antd';
 import { systemApi } from '../services/system.api';
 import type { AiSettingsDto } from '@aigc/shared-types';
+import CryptoJS from 'crypto-js';
 
 const { Text } = Typography;
 
@@ -17,6 +18,9 @@ export const TempApiKeyModal: React.FC<TempApiKeyModalProps> = ({ open, onCancel
   });
   const [loading, setLoading] = React.useState(false);
 
+  // Read secret from Vite env, fallback to hardcoded string to avoid crash if not set in some env
+  const SECRET = import.meta.env.VITE_TEMP_KEY_SECRET || 'your_secret_passphrase';
+
   const fetchStatus = async () => {
     try {
       const res = await systemApi.getTempApiKey();
@@ -25,9 +29,6 @@ export const TempApiKeyModal: React.FC<TempApiKeyModalProps> = ({ open, onCancel
         settings: res.settings,
       });
       if (res.has_temp_settings && res.settings) {
-        // Only set endpoints back to form, mask keys are for display only, not for editing directly,
-        // but for better UX we keep inputs empty if they are masked so user can type new ones.
-        // If we put "***" in the input, submitting it would send "***".
         form.setFieldsValue({
           volcano_api_key: '',
           volcano_text_api_key: '',
@@ -56,13 +57,16 @@ export const TempApiKeyModal: React.FC<TempApiKeyModalProps> = ({ open, onCancel
   const onFinish = async (values: AiSettingsDto) => {
     setLoading(true);
     try {
-      // Remove empty fields to avoid overriding with empty strings unless intended
       const payload: AiSettingsDto = {};
       Object.entries(values).forEach(([key, val]) => {
         if (val) payload[key as keyof AiSettingsDto] = val;
       });
 
-      await systemApi.setTempApiKey(payload);
+      // 加盐 AES 加密传输
+      const jsonStr = JSON.stringify(payload);
+      const ciphertext = CryptoJS.AES.encrypt(jsonStr, SECRET).toString();
+
+      await systemApi.setTempApiKey({ payload: ciphertext });
       message.success('临时配置已设置，仅在本次服务器运行期间有效。');
       await fetchStatus();
       onCancel();
@@ -76,7 +80,9 @@ export const TempApiKeyModal: React.FC<TempApiKeyModalProps> = ({ open, onCancel
   const handleClear = async () => {
     setLoading(true);
     try {
-      await systemApi.setTempApiKey({});
+      // 传递空对象的加密串
+      const ciphertext = CryptoJS.AES.encrypt('{}', SECRET).toString();
+      await systemApi.setTempApiKey({ payload: ciphertext });
       message.success('已清除临时配置，恢复系统默认。');
       form.resetFields();
       await fetchStatus();
