@@ -80,6 +80,33 @@ describe('RemotionPreview', () => {
     expect(playMock).not.toHaveBeenCalled();
   });
 
+  it('播放器本身使用固定预览尺寸', () => {
+    render(
+      <RemotionPreview
+        segmentByIndex={new Map([[0, segment]])}
+        playheadSeconds={0}
+        onFrameChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('remotion-preview-shell').getAttribute('style')).toContain(
+      'width: 300px',
+    );
+    expect(screen.getByTestId('remotion-preview-shell').getAttribute('style')).toContain(
+      'height: 533px',
+    );
+    expect(lastPlayerProps?.style).toEqual(
+      expect.objectContaining({
+        width: 300,
+        height: 533,
+        minWidth: 300,
+        minHeight: 533,
+        maxWidth: 300,
+        maxHeight: 533,
+      }),
+    );
+  });
+
   it('点击预览区域时切换播放和暂停', () => {
     render(
       <RemotionPreview

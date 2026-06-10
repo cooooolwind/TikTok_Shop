@@ -92,9 +92,40 @@ const multiSegmentTask: GenerationTask = {
   created_at: '2026-05-25T00:00:00.000Z',
 };
 
-function renderEditor({ strict = false }: { strict?: boolean } = {}) {
+const shortSegmentTask: GenerationTask = {
+  ...multiSegmentTask,
+  id: 'task-2',
+  script_id: 'script-2',
+  result: {
+    ...multiSegmentTask.result!,
+    video_url: '/uploads/generated/task-2.mp4',
+    duration: 5,
+    segments: [
+      {
+        index: 0,
+        video_url: 'https://example.com/task-2-segment-1.mp4',
+        thumbnail_url: 'https://example.com/task-2-segment-1.jpg',
+        duration: 2,
+        resolution: '1080x1920',
+        aspect_ratio: '9:16',
+        scene_orders: [1],
+      },
+      {
+        index: 1,
+        video_url: 'https://example.com/task-2-segment-2.mp4',
+        thumbnail_url: 'https://example.com/task-2-segment-2.jpg',
+        duration: 3,
+        resolution: '1080x1920',
+        aspect_ratio: '9:16',
+        scene_orders: [2],
+      },
+    ],
+  },
+};
+
+function renderEditor({ strict = false, taskId = 'task-1' }: { strict?: boolean; taskId?: string } = {}) {
   const view = (
-    <MemoryRouter initialEntries={['/editor/task-1']}>
+    <MemoryRouter initialEntries={[`/editor/${taskId}`]}>
       <Routes>
         <Route path="/editor/:taskId" element={<VideoEditor />} />
       </Routes>
@@ -200,6 +231,25 @@ describe('VideoEditor', () => {
     });
   });
 
+  it('切换到新剪辑任务时不会用旧任务分镜时长初始化时间线', async () => {
+    useCreationStore.setState({
+      currentTask: multiSegmentTask,
+      fetchTask: vi.fn(async () => {
+        useCreationStore.setState({ currentTask: shortSegmentTask });
+      }),
+    });
+
+    renderEditor({ taskId: 'task-2' });
+
+    await waitFor(() => {
+      expect(useCreationStore.getState().currentTask?.id).toBe('task-2');
+      expect(useEditorStore.getState().clips).toEqual([
+        { id: 'clip-0', segment_index: 0, start_seconds: 0, end_seconds: 2 },
+        { id: 'clip-1', segment_index: 1, start_seconds: 0, end_seconds: 3 },
+      ]);
+    });
+  });
+
   it('用户删除时间线片段后不会被默认初始化再次填回', async () => {
     renderEditor();
 
@@ -270,6 +320,40 @@ describe('VideoEditor', () => {
     expect(screen.getByTestId('preview-stage')).toBeTruthy();
     expect(screen.getByTestId('remotion-preview')).toBeTruthy();
     expect(screen.queryByText('基础预览')).toBeNull();
+  });
+
+  it('时间轴缩放只影响时间轴，不改变整体预览容器结构', async () => {
+    renderEditor();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('timeline-inner')).toBeTruthy();
+    });
+
+    const timelineWidth = screen.getByTestId('timeline-inner').style.width;
+    const subtitleTrackWidth = screen.getByTestId('subtitle-track-inner').style.width;
+    const previewPanel = screen.getByTestId('preview-panel');
+    const previewPanelStyle = previewPanel.getAttribute('style');
+    const previewFrame = screen.getByTestId('preview-frame');
+    const previewClassName = previewFrame.className;
+    const previewStyle = previewFrame.getAttribute('style');
+    const previewPlayer = screen.getByTestId('remotion-preview');
+
+    act(() => {
+      useEditorStore.getState().setZoom(180);
+    });
+
+    expect(useEditorStore.getState().pixelsPerSecond).toBe(180);
+    expect(screen.getByTestId('timeline-inner').style.width).not.toBe(timelineWidth);
+    expect(screen.getByTestId('subtitle-track-inner').style.width).not.toBe(subtitleTrackWidth);
+    expect(screen.getByTestId('preview-panel')).toBe(previewPanel);
+    expect(screen.getByTestId('preview-panel').getAttribute('style')).toBe(previewPanelStyle);
+    expect(previewPanelStyle).toContain('width: 520px');
+    expect(screen.getByTestId('preview-frame')).toBe(previewFrame);
+    expect(screen.getByTestId('preview-frame').className).toBe(previewClassName);
+    expect(screen.getByTestId('preview-frame').getAttribute('style')).toBe(previewStyle);
+    expect(previewStyle).toContain('width: 300px');
+    expect(previewStyle).toContain('height: 533px');
+    expect(screen.getByTestId('remotion-preview')).toBe(previewPlayer);
   });
 
   it('转场预设可拖入两个片段之间的间隙并创建转场', async () => {

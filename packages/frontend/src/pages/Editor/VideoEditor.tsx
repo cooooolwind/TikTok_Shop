@@ -1,5 +1,5 @@
 import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ErrorInfo, ReactNode } from 'react';
+import type { CSSProperties, ErrorInfo, ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Alert, Button, Empty, Input, InputNumber, Select, Space, Spin, Tag, Typography } from 'antd';
 import {
@@ -33,6 +33,19 @@ const { Text, Title } = Typography;
 
 const TRANSITION_DND_TYPE = 'application/timeline-transition';
 const SUBTITLE_PROJECT_VERSION = 1;
+const PREVIEW_FRAME_STYLE: CSSProperties = {
+  width: 300,
+  height: 533,
+  minWidth: 300,
+  minHeight: 533,
+  maxWidth: 300,
+  maxHeight: 533,
+};
+const PREVIEW_PANEL_STYLE: CSSProperties = {
+  width: 520,
+  minWidth: 520,
+  maxWidth: 520,
+};
 
 class PreviewErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; message: string }> {
   constructor(props: { children: ReactNode }) {
@@ -142,6 +155,7 @@ export default function VideoEditor() {
   const [isUserSeeking, setIsUserSeeking] = useState(false);
   const [seekVersion, setSeekVersion] = useState(0);
   const initializedTimelineTaskId = useRef<string | null>(null);
+  const activeTask = currentTask?.id === taskId ? currentTask : null;
 
   useEffect(() => {
     initializedTimelineTaskId.current = null;
@@ -153,10 +167,10 @@ export default function VideoEditor() {
   }, [fetchTask, taskId, resetEditor]);
 
   useEffect(() => {
-    if (!currentTask?.id) return;
+    if (!activeTask?.id) return;
     let cancelled = false;
     generationApi
-      .getSubtitles(currentTask.id)
+      .getSubtitles(activeTask.id)
       .then((project) => {
         if (!cancelled) setSubtitles(project.cues ?? []);
       })
@@ -166,14 +180,14 @@ export default function VideoEditor() {
     return () => {
       cancelled = true;
     };
-  }, [currentTask?.id, setSubtitles]);
+  }, [activeTask?.id, setSubtitles]);
 
   const sourceSegments = useMemo(
     () =>
-      (currentTask?.result?.segments ?? []).filter(
+      (activeTask?.result?.segments ?? []).filter(
         (segment) => segment.status !== 'failed' && segment.video_url,
       ).sort((a, b) => a.index - b.index),
-    [currentTask?.result?.segments],
+    [activeTask?.result?.segments],
   );
 
   const segmentByIndex = useMemo(
@@ -194,7 +208,7 @@ export default function VideoEditor() {
   const selectedSegment = selectedClip ? segmentByIndex.get(selectedClip.segment_index) : undefined;
 
   const canExport =
-    currentTask?.status === 'done' &&
+    activeTask?.status === 'done' &&
     clips.length > 0 &&
     !clips.some((clip) => {
       const segment = segmentByIndex.get(clip.segment_index);
@@ -205,9 +219,14 @@ export default function VideoEditor() {
         clip.end_seconds > segment.duration
       );
     });
+  const totalTimelineDuration = clips.reduce(
+    (sum, clip) => sum + Math.max(clip.end_seconds - clip.start_seconds, 0),
+    0,
+  );
+  const timelineContentWidth = Math.max(totalTimelineDuration * pixelsPerSecond + 40, 400);
 
   useEffect(() => {
-    if (!currentTask?.id || initializedTimelineTaskId.current === currentTask.id) return;
+    if (!activeTask?.id || initializedTimelineTaskId.current === activeTask.id) return;
     if (clips.length > 0 || sourceSegments.length === 0) return;
 
     setClips(
@@ -218,8 +237,8 @@ export default function VideoEditor() {
         end_seconds: segment.duration,
       })),
     );
-    initializedTimelineTaskId.current = currentTask.id;
-  }, [clips.length, currentTask?.id, setClips, sourceSegments]);
+    initializedTimelineTaskId.current = activeTask.id;
+  }, [activeTask?.id, clips.length, setClips, sourceSegments]);
 
   const handleAddSegment = (segment: VideoSegmentResult) => {
     if (clips.some((clip) => clip.segment_index === segment.index)) {
@@ -325,7 +344,7 @@ export default function VideoEditor() {
   };
 
   const handleExport = async () => {
-    if (!canExport || !currentTask) return;
+    if (!canExport || !activeTask) return;
     setExporting(true);
     setExportError(undefined);
     try {
@@ -336,15 +355,15 @@ export default function VideoEditor() {
         render_engine: 'remotion',
         edit_project: { clips, transitions, subtitles },
       };
-      await generationApi.saveSubtitles(currentTask.id, {
+      await generationApi.saveSubtitles(activeTask.id, {
         version: SUBTITLE_PROJECT_VERSION,
-        task_id: currentTask.id,
+        task_id: activeTask.id,
         source: 'editor',
         cues: subtitles,
       });
-      const result = await generationApi.export(currentTask.id, request);
-      downloadExportUrl(result.download_url, `aigc-video-${currentTask.display_id ?? currentTask.id}.mp4`);
-      await fetchTask(currentTask.id);
+      const result = await generationApi.export(activeTask.id, request);
+      downloadExportUrl(result.download_url, `aigc-video-${activeTask.display_id ?? activeTask.id}.mp4`);
+      await fetchTask(activeTask.id);
     } catch (error) {
       setExportError(error instanceof Error ? error.message : '转场视频导出失败');
     } finally {
@@ -352,7 +371,7 @@ export default function VideoEditor() {
     }
   };
 
-  if (!currentTask) {
+  if (!activeTask) {
     return (
       <div className={styles.loading}>
         <Spin size="large" />
@@ -372,7 +391,7 @@ export default function VideoEditor() {
             <Space wrap className={styles.mobilePromptActions}>
               <Button
                 type="primary"
-                onClick={() => navigate(routePath.creationTask(taskId ?? currentTask.id))}
+                onClick={() => navigate(routePath.creationTask(taskId ?? activeTask.id))}
               >
                 返回任务详情
               </Button>
@@ -392,13 +411,13 @@ export default function VideoEditor() {
             剪辑工作台
           </Title>
           <Text type="secondary">
-            任务 {currentTask.display_id ?? currentTask.id} · 草稿会随当前页面状态自动保留
+            任务 {activeTask.display_id ?? activeTask.id} · 草稿会随当前页面状态自动保留
           </Text>
         </div>
         <Space wrap>
           <Button
             icon={<ArrowLeftOutlined />}
-            onClick={() => navigate(routePath.creationTask(taskId ?? currentTask.id))}
+            onClick={() => navigate(routePath.creationTask(taskId ?? activeTask.id))}
           >
             返回任务
           </Button>
@@ -562,23 +581,33 @@ export default function VideoEditor() {
           )}
         </aside>
 
-        <main className={styles.previewPanel}>
+        <main
+          className={styles.previewPanel}
+          data-testid="preview-panel"
+          style={PREVIEW_PANEL_STYLE}
+        >
           <div className={styles.previewHeader}>
             <Text strong>整体预览</Text>
             <Text type="secondary">9:16 · {clips.length} 个片段</Text>
           </div>
           <div className={styles.previewCanvas} data-testid="preview-stage">
-            <PreviewErrorBoundary>
-              <Suspense fallback={<Spin />}>
-                <RemotionPreview
-                  segmentByIndex={segmentByIndex}
-                  playheadSeconds={playheadSeconds}
-                  seekVersion={seekVersion}
-                  onFrameChange={setPlayhead}
-                  isUserSeeking={isUserSeeking}
-                />
-              </Suspense>
-            </PreviewErrorBoundary>
+            <div
+              className={styles.previewFrame}
+              data-testid="preview-frame"
+              style={PREVIEW_FRAME_STYLE}
+            >
+              <PreviewErrorBoundary>
+                <Suspense fallback={<Spin />}>
+                  <RemotionPreview
+                    segmentByIndex={segmentByIndex}
+                    playheadSeconds={playheadSeconds}
+                    seekVersion={seekVersion}
+                    onFrameChange={setPlayhead}
+                    isUserSeeking={isUserSeeking}
+                  />
+                </Suspense>
+              </PreviewErrorBoundary>
+            </div>
           </div>
         </main>
 
@@ -783,24 +812,30 @@ export default function VideoEditor() {
         <div className={styles.subtitleTimelineTrack} data-testid="subtitle-timeline-track">
           <span className={styles.subtitleTrackLabel}>字幕</span>
           <div className={styles.subtitleTrackRail}>
-            {subtitles.map((cue) => (
-              <button
-                key={cue.id}
-                type="button"
-                className={`${styles.subtitleTimelineCue} ${
-                  selection?.type === 'subtitle' && selection.id === cue.id
-                    ? styles.subtitleTimelineCueActive
-                    : ''
-                }`}
-                style={{
-                  left: cue.start_seconds * pixelsPerSecond,
-                  width: Math.max((cue.end_seconds - cue.start_seconds) * pixelsPerSecond, 48),
-                }}
-                onClick={() => setSelection({ type: 'subtitle', id: cue.id })}
-              >
-                {cue.text}
-              </button>
-            ))}
+            <div
+              className={styles.subtitleTrackInner}
+              data-testid="subtitle-track-inner"
+              style={{ width: timelineContentWidth }}
+            >
+              {subtitles.map((cue) => (
+                <button
+                  key={cue.id}
+                  type="button"
+                  className={`${styles.subtitleTimelineCue} ${
+                    selection?.type === 'subtitle' && selection.id === cue.id
+                      ? styles.subtitleTimelineCueActive
+                      : ''
+                  }`}
+                  style={{
+                    left: cue.start_seconds * pixelsPerSecond,
+                    width: Math.max((cue.end_seconds - cue.start_seconds) * pixelsPerSecond, 48),
+                  }}
+                  onClick={() => setSelection({ type: 'subtitle', id: cue.id })}
+                >
+                  {cue.text}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </section>
