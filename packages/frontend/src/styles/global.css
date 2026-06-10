@@ -223,3 +223,28 @@ body {
     transform: scale(1);
   }
 }
+
+/* Remove focus shadow for search box input and default buttons */
+.no-highlight-search .ant-input:hover,
+.no-highlight-search .ant-input:focus,
+.no-highlight-search .ant-input-focused,
+.no-highlight-search .ant-btn-default:hover,
+.no-highlight-search .ant-btn-default:focus {
+  box-shadow: none !important;
+}
+.no-highlight-search .ant-input:hover,
+.no-highlight-search .ant-input:focus,
+.no-highlight-search .ant-input-focused {
+  border-color: #424242 !important;
+}
+.no-highlight-search .ant-btn-default:hover,
+.no-highlight-search .ant-btn-default:focus {
+  border-color: #424242 !important;
+}
+:root[data-theme='light'] .no-highlight-search .ant-input:hover,
+:root[data-theme='light'] .no-highlight-search .ant-input:focus,
+:root[data-theme='light'] .no-highlight-search .ant-input-focused,
+:root[data-theme='light'] .no-highlight-search .ant-btn-default:hover,
+:root[data-theme='light'] .no-highlight-search .ant-btn-default:focus {
+  border-color: #d9d9d9 !important;
+}

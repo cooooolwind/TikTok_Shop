@@ -16,18 +16,8 @@ interface Props {
 export default function SemanticSearchModal({ open, onClose }: Props) {
   const navigate = useNavigate();
   const { semanticResults, semanticLoading, semanticQuery, semanticSearch, clearSemanticSearch } = useMaterialStore();
-  const [query, setQuery] = useState('');
-  const [type, setType] = useState<MaterialType | undefined>(undefined);
-
-  const handleSearch = useCallback(() => {
-    if (!query.trim()) return;
-    semanticSearch(query.trim(), type);
-  }, [query, type, semanticSearch]);
-
   const handleClose = useCallback(() => {
     clearSemanticSearch();
-    setQuery('');
-    setType(undefined);
     onClose();
   }, [clearSemanticSearch, onClose]);
 
@@ -45,31 +35,7 @@ export default function SemanticSearchModal({ open, onClose }: Props) {
       width={800}
       destroyOnClose
     >
-      <Space direction="vertical" style={{ width: '100%' }} size="middle">
-        <Space.Compact style={{ width: '100%' }}>
-          <Input
-            placeholder="输入自然语言描述搜索相似素材，如「夏日清凉产品图」「户外运动场景」"
-            prefix={<SearchOutlined />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onPressEnter={handleSearch}
-            size="large"
-          />
-          <Select
-            placeholder="类型"
-            allowClear
-            style={{ width: 120 }}
-            value={type}
-            onChange={(v) => setType(v)}
-            options={[
-              { label: '图片', value: 'image' },
-              { label: '视频', value: 'video' },
-            ]}
-            size="large"
-          />
-        </Space.Compact>
-
-        {semanticLoading && (
+      <Space direction="vertical" style={{ width: '100%' }} size="middle">        {semanticLoading && (
           <div style={{ textAlign: 'center', padding: 40 }}>
             <Spin size="large" tip="语义搜索中..." />
           </div>
