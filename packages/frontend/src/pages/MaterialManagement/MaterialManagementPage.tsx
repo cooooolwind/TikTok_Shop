@@ -176,7 +176,7 @@ export default function MaterialManagementPage() {
 
         {/* 筛选栏 */}
         <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={12} md={10} lg={12}>
+          <Col xs={24} sm={24} md={24} lg={12} xl={10}>
             <div style={{ display: 'flex', gap: 8, width: '100%' }} className="no-highlight-search">
               <Input
                 style={{ flex: 1 }}
