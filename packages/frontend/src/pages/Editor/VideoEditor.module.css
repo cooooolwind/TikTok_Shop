@@ -11,9 +11,12 @@
   --editor-accent-soft: rgba(254, 44, 85, 0.16);
 
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto;
   gap: 16px;
+  width: 100%;
+  max-width: 100%;
   min-height: calc(100vh - 160px);
+  overflow-x: hidden;
   color: var(--editor-text);
 }
 
@@ -52,7 +55,10 @@
 
 .workbench {
   display: grid;
-  grid-template-columns: 268px minmax(520px, 1fr) 252px;
+  grid-template-columns: 268px 520px 252px;
+  width: 100%;
+  max-width: 100%;
+  height: 600px;
   min-height: 560px;
   overflow: hidden;
   background: var(--editor-bg);
@@ -253,7 +259,9 @@
 }
 
 .previewPanel {
-  min-width: 0;
+  width: 520px;
+  min-width: 520px;
+  max-width: 520px;
   display: grid;
   grid-template-rows: 48px minmax(0, 1fr);
   background: var(--editor-surface);
@@ -272,11 +280,22 @@
   display: grid;
   place-items: center;
   min-height: 0;
+  overflow: hidden;
   padding: 16px;
 }
 
-.previewCanvas > div {
-  width: min(100%, 72vh);
+.previewFrame {
+  display: grid;
+  place-items: stretch;
+  width: 300px;
+  height: 533px;
+  aspect-ratio: 9 / 16;
+  flex: 0 0 300px;
+}
+
+.previewFrame > * {
+  min-width: 0;
+  min-height: 0;
 }
 
 .previewError,
@@ -299,10 +318,10 @@
 
 .remotionPreviewShell {
   overflow: hidden;
-  width: min(100%, 620px);
+  width: 300px;
+  height: 533px;
   aspect-ratio: 9 / 16;
-  max-height: calc(100vh - 360px);
-  min-height: 420px;
+  flex: 0 0 300px;
   background: var(--editor-bg);
   border: 1px solid var(--editor-border);
   border-radius: 6px;
@@ -367,6 +386,9 @@
 }
 
 .timelinePanel {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   padding: 14px;
   background: var(--editor-panel);
   border: 1px solid var(--editor-border);
@@ -399,10 +421,17 @@
 .subtitleTrackRail {
   position: relative;
   min-height: 34px;
+  min-width: 0;
   overflow-x: auto;
+  overflow-y: hidden;
   background: var(--editor-bg);
   border: 1px dashed var(--editor-border);
   border-radius: 8px;
+}
+
+.subtitleTrackInner {
+  position: relative;
+  min-height: 34px;
 }
 
 .subtitleTimelineCue {

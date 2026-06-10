@@ -11,8 +11,12 @@ const FPS = 30;
 const WIDTH = 1080;
 const HEIGHT = 1920;
 const PLAYER_STYLE = {
-  width: '100%',
-  height: '100%',
+  width: 300,
+  height: 533,
+  minWidth: 300,
+  minHeight: 533,
+  maxWidth: 300,
+  maxHeight: 533,
 };
 
 interface RemotionPreviewProps {
@@ -228,6 +232,7 @@ export default function RemotionPreview({
     <div
       className={styles.remotionPreviewShell}
       data-testid="remotion-preview-shell"
+      style={PLAYER_STYLE}
       onClick={(event) => {
         if (shouldIgnorePlaybackShortcut(event.target)) return;
         togglePlayback();

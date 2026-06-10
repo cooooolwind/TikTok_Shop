@@ -12,6 +12,8 @@
   --timeline-accent: #fe2c55;
 
   position: relative;
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   background: var(--timeline-bg);
