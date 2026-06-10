@@ -139,17 +139,19 @@ TikTok_Shop/
 
 ### 核心环境变量
 
-| 变量                                                                                | 说明                                                                                                   |
-| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `MOCK_MODE`                                                                       | 开发阶段可设为 `true`，使用 AI mock 流程                                                             |
-| `MOCK_DASHBOARD`                                                                  | 是否为数据看板使用 Mock 数据，设为 `false` 时将请求外部统计系统                                      |
-| `STATISTIC_API_URL`                                                               | 外部统计系统的 API 基础地址 (当 MOCK_DASHBOARD=false 时必填)                                           |
-| `VOLCANO_API_KEY`                                                                 | 火山引擎 API Key，禁止提交真实密钥                                                                     |
-| `VOLCANO_IMAGE_API_KEY` / `VOLCANO_IMAGE_ENDPOINT` / `VOLCANO_IMAGE_BASE_URL` | Seedream 首帧生成配置；未单独配置时 API Key/Base URL 可复用 `VOLCANO_API_KEY` / `VOLCANO_BASE_URL` |
-| `VOLCANO_BASE_URL`                                                                | 火山引擎 API 基础地址                                                                                  |
-| `JWT_SECRET`                                                                      | JWT 密钥，生产环境必须更换                                                                             |
-| `UPLOAD_DIR`                                                                      | 本地上传与生成文件目录                                                                                 |
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`                         | PostgreSQL 配置                                                                                        |
+| 变量/前缀                                                                           | 说明                                                                                             |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `NODE_ENV` / `PROJECT_NAME`                                                         | 基础运行环境配置，`development` 模式下自动开启数据库同步                                         |
+| `POSTGRES_*` / `REDIS_*`                                                            | PostgreSQL 数据库与 Redis 缓存连接配置                                                           |
+| `BACKEND_PORT` / `FRONTEND_PORT` / `API_PREFIX`                                     | 网络服务端口与 API 路由前缀                                                                      |
+| `VOLCANO_API_KEY` / `VOLCANO_BASE_URL`                                              | 火山引擎通用 API Key 与基础地址，默认作为各模态的回退配置（禁止提交真实密钥）                    |
+| `VOLCANO_TEXT_*` / `VOLCANO_IMAGE_*` / `VOLCANO_VIDEO_*` / `VOLCANO_EMBEDDING_*`    | 文本、图片、视频、向量化大模型的独立 Endpoint、计费单价及独立鉴权配置                            |
+| `VOLCANO_VIDEO_...` / `VOLCANO_CHAT_TIMEOUT_MS`                                     | 视频生成任务与文本生成接口的精细化参数配置（时长限制、重试次数、轮询间隔与 HTTP 超时时间）       |
+| `MOCK_MODE` / `MOCK_DASHBOARD` / `MOCK_*_URL`                                       | 开发与调试使用的 Mock 数据流程开关及模拟素材 URL 配置                                            |
+| `STATISTIC_API_URL`                                                                 | 外部统计系统的 API 基础地址（当 `MOCK_DASHBOARD=false` 时必填）                                  |
+| `JWT_SECRET` / `VITE_TEMP_KEY_SECRET`                                               | JWT 鉴权密钥及前后端临时 API Key 加密传输密钥（生产环境必须更换）                                |
+| `STORAGE_TYPE` / `UPLOAD_DIR` / `MAX_FILE_SIZE_*`                                   | 本地存储驱动、上传目录及音视频图片等媒体的单文件大小限制配置                                     |
+| `FFMPEG_PATH`                                                                       | 视频拼接与抽帧所依赖的 FFmpeg 路径配置（若系统环境中已有则无需设置）                             |
 
 ### CI 流程
 
